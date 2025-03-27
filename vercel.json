@@ -4,8 +4,14 @@
       "src": "package.json",
       "use": "@vercel/next",
       "config": {
-        "installCommand": "npm install --legacy-peer-deps"
+        "installCommand": "npm install --legacy-peer-deps",
+        "buildCommand": "next build"
       }
     }
-  ]
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://api.yourdomain.com",
+    "NEXT_PUBLIC_SOCKET_URL": "https://api.yourdomain.com",
+    "NODE_OPTIONS": "--max-old-space-size=4096"
+  }
 } 
