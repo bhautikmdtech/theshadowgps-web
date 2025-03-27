@@ -11,9 +11,7 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
   ssr: false,
   loading: () => (
     <div className="h-full bg-gray-100 flex flex-col">
-      {/* Map area placeholder */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Simple grid background */}
         <div
           className="absolute inset-0"
           style={{
@@ -24,11 +22,9 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
           }}
         ></div>
 
-        {/* Blue loading bar at top (Google Maps style) */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 loading-progress"></div>
       </div>
 
-      {/* Fixed loading indicator */}
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white py-3 px-5 rounded-lg shadow-md flex items-center">
         <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mr-3"></div>
         <span className="text-gray-700">Loading map...</span>
@@ -67,7 +63,9 @@ export default function ShareLocation() {
   const [showPanel, setShowPanel] = useState<boolean>(false);
   const [livePosition, setLivePosition] = useState<any>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [viewerStats, setViewerStats] = useState<any>(null);
   const isMounted = useRef<boolean>(true);
+  const pingIntervalRef = useRef<any>(null);
 
   const convertPointsArrayToObjects = (
     pointsArray: LocationPoints
@@ -88,26 +86,14 @@ export default function ShareLocation() {
 
     setLoading(true);
     try {
-      console.log("Fetching location data with token:", token);
-      const endpoint = `/api/common/getSharedLocation/${token}`;
-      console.log("API endpoint:", endpoint);
-      
-      const response = await axiosInstance.get(endpoint);
-      console.log("API response received:", response.status);
-      
-      // Check if response data is valid JSON
-      let data;
-      try {
-        data = response.data;
-        console.log("Data successfully parsed");
-      } catch (parseError) {
-        console.error("JSON parsing error:", parseError);
-        throw new Error("Invalid JSON response from server");
-      }
+      const response = await axiosInstance.get(
+        `/api/common/getSharedLocation/${token}`
+      );
+
+      let data = response.data;
 
       if (!data || !data.data) {
         console.error("Invalid data structure:", data);
-        throw new Error("Invalid data structure received from server");
       }
 
       setDeviceInfo({
@@ -123,7 +109,6 @@ export default function ShareLocation() {
       setConnected(true);
       setError(null);
 
-      // If we have positions, set the last one as the live position
       if (positionObjects.length > 0) {
         const lastPosition = positionObjects[positionObjects.length - 1];
         setLivePosition({
@@ -137,10 +122,8 @@ export default function ShareLocation() {
         });
       }
 
-      console.log("Location data processed successfully");
       return data;
     } catch (err: any) {
-      console.error("Error fetching location data:", err);
       setError(err.response?.data?.message || "Failed to load location data");
       setConnected(false);
       return null;
@@ -156,79 +139,124 @@ export default function ShareLocation() {
     };
   }, []);
 
-  // Set up socket connection when token is available
   useEffect(() => {
     if (!shareToken) return;
 
-    // Connect to socket
-    try {
-      console.log("Attempting to connect to socket with token:", shareToken);
-      const socketInstance = io({
-        path: "/share-socket",
+    const socketInstance = io(
+      process.env.NEXT_PUBLIC_API_URL || window.location.origin,
+      {
         auth: { shareToken },
         transports: ["websocket", "polling"],
-        reconnectionAttempts: 5,
-        reconnectionDelay: 1000,
-        timeout: 10000,
-      });
+        path: "/share-socket",
+      }
+    );
 
-      socketInstance.on("connect", () => {
-        console.log("Connected to shared location socket");
-        if (isMounted.current) setConnected(true);
-      });
+    socketInstance.on("connect", () => {
+      if (isMounted.current) {
+        setConnected(true);
+        setError(null);
+      }
+      console.log("Socket connected");
+    });
 
-      socketInstance.on("shareConnected", (data) => {
-        console.log("Share connection status:", data);
-      });
+    socketInstance.on("disconnect", (reason) => {
+      if (isMounted.current) {
+        setConnected(false);
+      }
+      console.log("Socket disconnected:", reason);
+    });
 
-      socketInstance.on("sharedPositionUpdate", (newPosition: any) => {
-        console.log("New position update:", newPosition);
-        if (isMounted.current) {
-          setLivePosition(newPosition);
+    socketInstance.on("connect_error", (err) => {
+      if (isMounted.current) {
+        setConnected(false);
+        setError(`Connection error: ${err.message}`);
+      }
+      console.error("Socket connection error:", err);
+    });
 
-          // Also add to positions array for history
-          if (positions.length > 0) {
-            const newPositionObj: Position = {
-              latitude: newPosition.lat,
-              longitude: newPosition.lng,
-              speed: newPosition.speed,
-              timestamp: newPosition.tm,
-              direction: newPosition.direction,
-              address: newPosition.address,
-            };
-
-            // Update the last position in our positions array
-            const updatedPositions = [...positions];
-            updatedPositions[updatedPositions.length - 1] = newPositionObj;
-            setPositions(updatedPositions);
-          }
+    socketInstance.on("shareConnected", (status: any) => {
+      if (isMounted.current) {
+        setConnected(status.connected);
+        if (status.viewers) {
+          setViewerStats({
+            count: status.viewers,
+            deviceId: status.deviceId || "",
+          });
         }
-      });
+      }
+    });
 
-      socketInstance.on("disconnect", (reason) => {
-        console.log("Disconnected from shared location socket:", reason);
-        if (isMounted.current) setConnected(false);
-      });
+    socketInstance.on("sharedPositionUpdate", (newPosition: any) => {
+      if (isMounted.current) {
+        setLivePosition(newPosition);
 
-      socketInstance.on("connect_error", (err) => {
-        console.error("Connection error:", err.message);
-        if (isMounted.current) {
-          setError(`Connection error: ${err.message}`);
-          setConnected(false);
+        if (positions.length > 0) {
+          const newPositionObj: Position = {
+            latitude: newPosition.lat,
+            longitude: newPosition.lng,
+            speed: newPosition.speed,
+            timestamp: newPosition.tm,
+            direction: newPosition.direction,
+            address: newPosition.address,
+          };
+
+          // Update positions array with new position
+          const updatedPositions = [...positions];
+          updatedPositions[updatedPositions.length - 1] = newPositionObj;
+          setPositions(updatedPositions);
         }
-      });
 
-      setSocket(socketInstance);
+        if (newPosition._meta?.viewers) {
+          setViewerStats({
+            count: newPosition._meta.viewers,
+            deviceId: newPosition.deviceId || "",
+          });
+        }
+      }
+    });
 
-      return () => {
-        console.log("Cleaning up socket connection");
-        socketInstance.disconnect();
-      };
-    } catch (error) {
-      console.error("Error setting up socket:", error);
-      setError("Failed to initialize socket connection");
-    }
+    socketInstance.on("viewerStats", (stats: any) => {
+      if (isMounted.current) {
+        setViewerStats(stats);
+      }
+    });
+
+    socketInstance.on("pong", (data: { viewers: number }) => {
+      if (isMounted.current && viewerStats) {
+        setViewerStats({
+          ...viewerStats,
+          count: data.viewers,
+        });
+      }
+    });
+
+    pingIntervalRef.current = setInterval(() => {
+      if (socketInstance.connected) {
+        socketInstance.emit("ping");
+      }
+    }, 30000);
+
+    setSocket(socketInstance);
+
+    return () => {
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
+      socketInstance.disconnect();
+      setSocket(null);
+    };
   }, [shareToken, positions]);
+
+  useEffect(() => {
+    return () => {
+      if (socket) {
+        socket.disconnect();
+      }
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
+    };
+  }, [socket]);
 
   useEffect(() => {
     const tokenFromUrl = searchParams.get("token");
@@ -249,11 +277,9 @@ export default function ShareLocation() {
     setShowPanel(!showPanel);
   };
 
-  // Get the latest position (for map display)
   const latestPosition =
     positions.length > 0 ? positions[positions.length - 1] : null;
 
-  // Calculate expiry based on expiresAt
   const calculateExpiryMinutes = () => {
     if (!deviceInfo?.expiresAt) return null;
 
@@ -267,7 +293,6 @@ export default function ShareLocation() {
 
   const expiresInMinutes = calculateExpiryMinutes();
 
-  // Format date from timestamp
   const formatDate = (timestamp: number) => {
     if (!timestamp) return "";
     const date = new Date(timestamp * 1000);
