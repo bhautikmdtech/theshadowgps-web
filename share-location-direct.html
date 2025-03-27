@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Direct Share Location Tracking</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        line-height: 1.6;
+      }
+      #map {
+        height: 400px;
+        width: 100%;
+        margin-bottom: 20px;
+        border: 1px solid #ccc;
+      }
+      .status {
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+      }
+      .connected {
+        background-color: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+      }
+      .disconnected {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+      }
+      pre {
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+      }
+      .panel {
+        background-color: #f8f9fa;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Direct Share Location Tracking</h1>
+
+    <div class="panel">
+      <h2>Connection</h2>
+      <div>
+        <label for="shareToken">Share Token:</label>
+        <input
+          type="text"
+          id="shareToken"
+          style="width: 300px"
+          placeholder="Enter share token"
+        />
+        <button id="viewLocation">View Location</button>
+      </div>
+      <p>
+        <small
+          >This demo connects directly to the share location API, which
+          automatically establishes a socket connection.</small
+        >
+      </p>
+    </div>
+
+    <div id="connectionStatus" class="status disconnected">Disconnected</div>
+
+    <h2>Map</h2>
+    <div id="map"></div>
+
+    <div class="panel">
+      <h2>Device Information</h2>
+      <div id="deviceInfo">Loading...</div>
+    </div>
+
+    <div class="panel">
+      <h2>Position Data</h2>
+      <pre id="positionData">No data yet</pre>
+    </div>
+ 
+
+    <!-- Load Google Maps -->
+    <script
+      src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&callback=initMap"
+      async
+      defer
+    ></script>
+
+    <script>
+      // Map initialization
+      let map, marker, socket;
+      function initMap() {
+        map = new google.maps.Map(document.getElementById("map"), {
+          center: { lat: 40.7128, lng: -74.006 }, // Default to New York
+          zoom: 12,
+        });
+      }
+
+      // Update connection status display
+      function updateConnectionStatus(connected) {
+        const statusDiv = document.getElementById("connectionStatus");
+        if (connected) {
+          statusDiv.className = "status connected";
+          statusDiv.textContent = "Connected";
+        } else {
+          statusDiv.className = "status disconnected";
+          statusDiv.textContent = "Disconnected";
+        }
+      }
+
+      // Update position on map
+      function updatePosition(position) {
+        console.log(position);
+        if (!position || !position.latitude || !position.longitude) return;
+
+        const pos = {
+          lat: position.latitude,
+          lng: position.longitude,
+        };
+      }
+ 
+
+      async function fetchLocationData(token) {
+        try {
+          const response = await fetch(
+            `/api/common/getSharedLocation/${token}`
+          );
+
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || "Failed to fetch location data");
+          }
+
+          const data = await response.json();
+          console.log("Location data:", data);
+
+          // Show device info
+          const deviceHtml = `
+          <p><strong>Device Name:</strong> ${
+            data.data.deviceInfo?.name || "Unknown"
+          }</p>
+          <p><strong>Device ID:</strong> ${
+            data.data.deviceInfo?.deviceId || "Unknown"
+          }</p>
+          <p><strong>Expires In:</strong> ${
+            data.data.expiresInMinutes
+          } minutes</p>
+          <p><strong>Share Title:</strong> ${
+            data.data.shareTitle || "No title"
+          }</p>
+        `;
+          document.getElementById("deviceInfo").innerHTML = deviceHtml;
+
+          if (data.data.lastPosition) {
+            updatePosition(data.data.lastPosition);
+          }
+ 
+
+          return data;
+        } catch (error) {
+          console.error("Error fetching location data:", error);
+          document.getElementById(
+            "connectionStatus"
+          ).textContent = `Error: ${error.message}`;
+          document.getElementById(
+            "deviceInfo"
+          ).textContent = `Error: ${error.message}`;
+          return null;
+        }
+      }
+
+      // View Location button click handler
+      document.getElementById("viewLocation").addEventListener("click", () => {
+        const token = document.getElementById("shareToken").value.trim();
+        if (!token) {
+          alert("Please enter a share token");
+          return;
+        }
+
+        fetchLocationData(token);
+      }); 
+    </script>
+  </body>
+</html>

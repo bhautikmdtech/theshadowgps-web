@@ -1,0 +1,332 @@
+/* Fix for Bootstrap accordion styling issues */
+
+/* Ensure accordion content is visible */
+.accordion-collapse.show {
+  background-color: transparent !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+/* Fix accordion body */
+.accordion-body {
+  background-color: transparent !important;
+  visibility: visible !important;
+  display: block !important;
+  opacity: 1 !important;
+}
+
+/* Ensure accordion item has proper overflow */
+.accordion-item {
+  overflow: visible !important;
+}
+
+/* Style for the accordion button when not collapsed */
+.accordion-button:not(.collapsed) {
+  background-color: #f8f9fa !important;
+  color: #212529 !important;
+  box-shadow: none !important;
+}
+
+/* Fix for accordion arrow */
+.accordion-button::after {
+  background-size: 1.25rem !important;
+  transition: transform 0.2s ease-in-out !important;
+}
+
+.accordion-button:not(.collapsed)::after {
+  transform: rotate(-180deg) !important;
+}
+
+/* Make accordion content visible */
+.accordion-collapse {
+  height: auto !important;
+  max-height: none !important;
+}
+
+/* Dropdown menu fixes */
+/* Fix for dropdown not showing */
+.dropdown-menu {
+  display: none;
+}
+
+.dropdown-menu.show {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 1050 !important;
+}
+
+/* Make sure dropdowns appear above other elements */
+.dropdown {
+  position: relative;
+  z-index: 1000;
+}
+
+/* Fix Bootstrap dropdowns */
+.dropdown-toggle::after {
+  display: inline-block;
+  margin-left: 0.255em;
+  vertical-align: 0.255em;
+  content: "";
+  border-top: 0.3em solid;
+  border-right: 0.3em solid transparent;
+  border-bottom: 0;
+  border-left: 0.3em solid transparent;
+}
+
+/* Improve toast styling */
+.Toastify__toast {
+  border-radius: 4px !important;
+}
+
+/* Fix for subscriptions layout */
+.subscription-layout {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+/* Enhanced styling for payment methods and invoice history */
+
+/* Payment Methods styling */
+.payment-methods-list {
+  margin-bottom: 1rem;
+}
+
+.payment-method {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.payment-method:last-child {
+  border-bottom: none;
+}
+
+.payment-info {
+  display: flex;
+  align-items: center;
+}
+
+.card-icon {
+  margin-right: 10px;
+  width: 36px;
+  text-align: center;
+}
+
+.card-details {
+  font-size: 0.9rem;
+}
+
+.card-number {
+  font-weight: 600;
+}
+
+.card-expiry {
+  color: #6c757d;
+}
+
+.payment-actions {
+  position: relative;
+}
+
+.payment-actions .dropdown-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.payment-actions .dropdown-toggle::after {
+  display: none;
+}
+
+.payment-actions .dropdown-menu {
+  min-width: 200px;
+  padding: 8px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  right: 0;
+  left: auto;
+}
+
+.payment-actions .dropdown-item {
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.payment-actions .dropdown-item:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.payment-actions .dropdown-item i,
+.payment-actions .dropdown-item svg {
+  width: 16px;
+  margin-right: 8px;
+}
+
+/* Add payment button styling */
+.add-payment-btn {
+  display: flex;
+  align-items: center;
+  color: #007bff;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-top: 16px;
+}
+
+.add-payment-btn:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.add-payment-btn i,
+.add-payment-btn svg {
+  margin-right: 10px;
+}
+
+/* Enhanced Invoice styling to exactly match the screenshot */
+.invoice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.invoice:last-child {
+  border-bottom: none;
+}
+
+.invoice-date {
+  min-width: 150px;
+  color: #212529;
+  flex: 0 0 auto;
+  font-weight: 400;
+}
+
+.invoice-amount {
+  flex: 1;
+  text-align: right;
+  font-weight: 400;
+  color: #212529;
+  padding-right: 70px;
+}
+
+.invoice-status-container {
+  width: 70px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.invoice-status {
+  padding: 5px 10px;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 400;
+  background-color: #cee2ff !important;
+  color: #0d6efd !important;
+}
+
+.invoice-link {
+  width: 40px;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.invoice a {
+  color: #6c757d;
+}
+
+.invoice a:hover {
+  color: #0d6efd;
+}
+
+/* View More button styling exact match */
+#load-more-invoices {
+  color: #0d6efd;
+  background: none;
+  border: none;
+  font-weight: 400;
+  padding: 8px 16px;
+  transition: color 0.15s ease-in-out;
+  font-size: 0.9rem;
+}
+
+#load-more-invoices:hover {
+  color: #0a58ca;
+  text-decoration: underline;
+}
+
+/* Accordion styling improvements */
+.accordion-item {
+  border-radius: 0.25rem;
+  overflow: hidden;
+}
+
+.accordion-header {
+  border-bottom: none;
+}
+
+.accordion-header .accordion-button {
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+}
+
+/* Stripe Card Element styling */
+#card-element-container {
+  padding: 20px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  margin-bottom: 15px;
+}
+
+/* Stripe Elements fixes */
+.payment-method-modal .modal-body {
+  padding: 20px;
+}
+
+.payment-method-modal .StripeElement {
+  width: 100%;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #ced4da;
+}
+
+/* Prevent scrolling issues */
+body.modal-open {
+  overflow: auto !important;
+  padding-right: 0 !important;
+}
+
+/* Fix for active badge */
+.badge.bg-success {
+  background-color: #28a745 !important;
+  padding: 5px 10px;
+}
+
+/* View More button styling */
+.btn-outline-primary {
+  border-color: #007bff;
+  color: #007bff;
+  padding: 5px 15px;
+}
+
+.btn-outline-primary:hover {
+  background-color: #007bff;
+  color: white;
+}
+
+/* Fix for active badge */
+.badge.bg-success.rounded-pill {
+  background-color: #28a745 !important;
+  padding: 4px 8px;
+}
+
+/* Style for flat card design */
+.card-element-container {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}

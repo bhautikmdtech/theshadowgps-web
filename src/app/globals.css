@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Mapbox related styles */
+.mapboxgl-map {
+  width: 100%;
+  height: 100%;
+}
+
+.mapboxgl-canvas {
+  outline: none;
+}
+
+.mapboxgl-marker {
+  cursor: pointer;
+}
+
+/* Custom marker styles */
+.device-marker-pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.start-marker {
+  transform-origin: center;
+  animation: bounce 1s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+/* Enhance map controls */
+.mapboxgl-ctrl-logo {
+  margin: 0 !important;
+}
+
+.mapboxgl-ctrl-group {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+.mapboxgl-ctrl-group button {
+  background-color: white !important;
+}
+
+/* Ensure map container fills available space */
+.map-container {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Custom popup styles */
+.mapboxgl-popup-content {
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+
+.mapboxgl-popup-close-button {
+  font-size: 16px;
+  color: #666;
+}
+
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip {
+  border-top-color: white;
+}
+
+/* Pulsing location dot */
+.pulsing-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 0, 0, 0.7);
+  position: relative;
+}
+
+.pulsing-dot:before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border-radius: 50%;
+  background: rgba(255, 0, 0, 0.3);
+  animation: pulse 1.5s ease-in-out infinite;
+}
