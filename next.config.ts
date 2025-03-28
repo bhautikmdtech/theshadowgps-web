@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false,
+  bundlePagesRouterDependencies: true,
   experimental: {
     // Add any experimental features you need
   },
@@ -15,12 +16,12 @@ const nextConfig: NextConfig = {
   },
   webpack: (config) => {
     config.resolve.fallback = { fs: false, net: false, tls: false };
-    
+
     // Add source map support for better error debugging
-    if (process.env.NODE_ENV === 'development') {
-      config.devtool = 'eval-source-map';
+    if (process.env.NODE_ENV === "development") {
+      config.devtool = "eval-source-map";
     }
-    
+
     return config;
   },
   // Add environment variables for both development and production
