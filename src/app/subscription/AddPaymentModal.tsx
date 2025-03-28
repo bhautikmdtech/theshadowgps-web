@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { useEffect, useRef, useState } from 'react';
+import { FaSpinner } from "react-icons/fa";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { toast } from "react-toastify";
 
@@ -133,10 +132,11 @@ export default function AddPaymentModal({
           modalInstance.hide();
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Payment error:", err);
-      setError(err.message || "An unknown error occurred");
-      toast.error(err.message || "Failed to add payment method");
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      setError(errorMessage);
+      toast.error(errorMessage || "Failed to add payment method");
     } finally {
       setProcessing(false);
     }
@@ -213,7 +213,7 @@ export default function AddPaymentModal({
             >
               {processing ? (
                 <>
-                  <FontAwesomeIcon icon={faSpinner} spin className="me-2" />
+                  <FaSpinner className="me-2 animate-spin" />
                   Processing...
                 </>
               ) : (
@@ -225,6 +225,4 @@ export default function AddPaymentModal({
       </div>
     </div>
   );
-}
-
-import { useState } from 'react'; 
+} 

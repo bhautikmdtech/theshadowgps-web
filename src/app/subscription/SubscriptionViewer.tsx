@@ -38,6 +38,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import { ThreeDots } from "react-loader-spinner";
+import axiosClient from "@/lib/axiosClient";
 
 // Declare Stripe types for TypeScript
 declare global {
@@ -302,8 +303,6 @@ export default function SubscriptionViewer() {
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
 
-  const baseUrl = "http://localhost:5000";
-
   useEffect(() => {
     fetchSubscriptionData();
   }, []);
@@ -317,29 +316,20 @@ export default function SubscriptionViewer() {
         throw new Error("No authentication token found. Please log in again.");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/getStripeData`,
+      const response = await axiosClient.get(
+        "/api/app/subscription/getStripeData",
         {
-          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
             "Cache-Control": "no-cache, no-store, must-revalidate",
             Pragma: "no-cache",
             Expires: "0",
           },
-          credentials: "same-origin",
         }
       );
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        toast.error(errorText);
-        throw new Error(errorText || "Failed to load subscription data");
-      }
-
-      const data = await response.json();
+      const data = response.data;
       setSubscriptionData(data.data);
 
       if (
@@ -352,8 +342,20 @@ export default function SubscriptionViewer() {
         );
       }
     } catch (error: any) {
-      setErrorMessage(error.message || "Failed to load subscription data");
-      toast.error(error.message || "Failed to load subscription data");
+      const errorMessage =
+        error.response?.data ||
+        error.message ||
+        "Failed to load subscription data";
+      setErrorMessage(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load subscription data"
+      );
+      toast.error(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load subscription data"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -414,27 +416,20 @@ export default function SubscriptionViewer() {
       const currentCount = subscriptionData?.invoices?.data?.length || 0;
       const limit = currentCount + 10; // Request 10 more invoices than we currently have
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/invoices/${subscriptionData.customer.id}?limit=${limit}`,
+      const response = await axiosClient.get(
+        `/api/app/subscription/invoices/${subscriptionData.customer.id}?limit=${limit}`,
         {
-          method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
             "Cache-Control": "no-cache, no-store, must-revalidate",
             Pragma: "no-cache",
             Expires: "0",
           },
-          credentials: "same-origin",
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to load more invoices");
-      }
-
-      const data = await response.json();
+      const data = response.data;
 
       setSubscriptionData((prevData) => {
         if (!prevData) return null;
@@ -461,7 +456,13 @@ export default function SubscriptionViewer() {
         };
       });
     } catch (error: any) {
-      toast.error(error.message || "Failed to load invoices");
+      const errorMessage =
+        error.response?.data || error.message || "Failed to load invoices";
+      toast.error(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load invoices"
+      );
     } finally {
       setIsLoadingInvoices(false);
     }
@@ -541,33 +542,29 @@ export default function SubscriptionViewer() {
         throw new Error("Customer information is missing");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/payment-methods/${subscriptionData.customer.id}`,
+      const response = await axiosClient.post(
+        `/api/app/subscription/payment-methods/${subscriptionData.customer.id}`,
         {
-          method: "POST",
+          paymentMethodId,
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            paymentMethodId,
-          }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add payment method");
-      }
 
       toast.success("Payment method added successfully!");
       await fetchSubscriptionData();
       setShowAddPaymentModal(false);
     } catch (error: any) {
       console.error("Add payment method error:", error);
-      toast.error(error.message || "Failed to add payment method");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to add payment method";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -588,32 +585,28 @@ export default function SubscriptionViewer() {
         throw new Error("No authentication token found. Please log in again.");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/${currentSubscriptionId}/payment-method`,
+      const response = await axiosClient.put(
+        `/api/app/subscription/${currentSubscriptionId}/payment-method`,
         {
-          method: "PUT",
+          paymentMethodId: selectedPaymentMethodId,
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            paymentMethodId: selectedPaymentMethodId,
-          }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to update payment method");
-      }
 
       toast.success("Payment method updated successfully");
       setShowUpdatePaymentModal(false);
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update payment method");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to update payment method";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -634,29 +627,26 @@ export default function SubscriptionViewer() {
         throw new Error("No authentication token found. Please log in again.");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/${currentSubscriptionId}/cancel`,
+      const response = await axiosClient.post(
+        `/api/app/subscription/${currentSubscriptionId}/cancel`,
+        {},
         {
-          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to cancel subscription");
-      }
 
       toast.success("Subscription canceled successfully");
       setShowCancelSubscriptionModal(false);
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to cancel subscription");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to cancel subscription";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -694,34 +684,28 @@ export default function SubscriptionViewer() {
         return;
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/${currentSubscriptionId}/update`,
+      const response = await axiosClient.put(
+        `/api/app/subscription/${currentSubscriptionId}/update`,
         {
-          method: "PUT",
+          newPriceId: selectedPlanId,
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            newPriceId: selectedPlanId,
-          }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to update subscription plan"
-        );
-      }
 
       toast.success("Subscription plan updated successfully");
       setShowUpdatePlanModal(false);
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update subscription plan");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to update subscription plan";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -741,35 +725,29 @@ export default function SubscriptionViewer() {
         throw new Error("Customer information is missing");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/customer/${subscriptionData.customer.id}/billing`,
+      const response = await axiosClient.put(
+        `/api/app/subscription/customer/${subscriptionData.customer.id}/billing`,
         {
-          method: "PUT",
+          name: billingFormData.name,
+          email: billingFormData.email,
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            name: billingFormData.name,
-            email: billingFormData.email,
-          }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to update billing information"
-        );
-      }
 
       toast.success("Customer information updated successfully!");
       setShowUpdateBillingModal(false);
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update billing information");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to update billing information";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -784,30 +762,25 @@ export default function SubscriptionViewer() {
         throw new Error("No authentication token found. Please log in again.");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/${subscriptionId}/reactivate`,
+      const response = await axiosClient.post(
+        `/api/app/subscription/${subscriptionId}/reactivate`,
+        {},
         {
-          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to reactivate subscription"
-        );
-      }
 
       toast.success("Subscription reactivated successfully");
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to reactivate subscription");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to reactivate subscription";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -827,33 +800,27 @@ export default function SubscriptionViewer() {
         throw new Error("Customer information is missing");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/payment-methods/${subscriptionData.customer.id}/default`,
+      const response = await axiosClient.put(
+        `/api/app/subscription/payment-methods/${subscriptionData.customer.id}/default`,
         {
-          method: "PUT",
+          paymentMethodId,
+        },
+        {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            paymentMethodId,
-          }),
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Failed to set default payment method"
-        );
-      }
 
       toast.success("Default payment method updated successfully");
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to set default payment method");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to set default payment method";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -875,28 +842,24 @@ export default function SubscriptionViewer() {
         throw new Error("No authentication token found. Please log in again.");
       }
 
-      const response = await fetch(
-        `${baseUrl}/api/app/subscription/payment-methods/${paymentMethodId}`,
+      const response = await axiosClient.delete(
+        `/api/app/subscription/payment-methods/${paymentMethodId}`,
         {
-          method: "DELETE",
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
             Accept: "application/json",
           },
-          credentials: "same-origin",
         }
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to delete payment method");
-      }
 
       toast.success("Payment method deleted successfully");
       await fetchSubscriptionData();
     } catch (error: any) {
-      toast.error(error.message || "Failed to delete payment method");
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to delete payment method";
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }

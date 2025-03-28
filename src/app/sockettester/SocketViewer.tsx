@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, FormEvent, useRef } from "react";
-import { io, Socket } from "socket.io-client";
+import { io, Socket } from "../../lib/socketClient";
 
 export default function SocketCheckerViewer() {
   const [socketUrl, setSocketUrl] = useState<string>("http://localhost:5000");
@@ -9,7 +9,6 @@ export default function SocketCheckerViewer() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [requestMessage, setRequestMessage] = useState<string>("");
   const [requestIdent, setRequestIdent] = useState<string>("");
   const [selectedEvent, setSelectedEvent] = useState<string>(
     "requestLiveTripData"

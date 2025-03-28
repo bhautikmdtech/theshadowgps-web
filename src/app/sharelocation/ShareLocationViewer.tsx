@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import axiosInstance from "@/utils/axios";
+import Image from "next/image";
+
 import { Position, LocationPoints } from "@/types/location";
-import { io, Socket } from "socket.io-client";
+import { io } from "../../lib/socketClient";
 import {
   FaChevronUp,
   FaChevronDown,
@@ -14,6 +15,36 @@ import {
   FaCloud,
 } from "react-icons/fa";
 import { BiLoaderAlt } from "react-icons/bi";
+import axiosClient from "@/lib/axiosClient";
+import { LivePositionData } from "./MapComponent";
+
+// Define interfaces for our data types
+interface DeviceInfo {
+  _id: string;
+  deviceName: string;
+  imageUrl?: string;
+  shareTitle?: string;
+  expiresAt?: string;
+}
+
+// Extend the LivePositionData with additional fields needed for this component
+interface ExtendedLivePosition extends LivePositionData {
+  deviceId?: string;
+  _meta?: {
+    viewers?: number;
+  };
+}
+
+interface ViewerStats {
+  count: number;
+  deviceId: string;
+}
+
+interface ShareConnectedStatus {
+  connected: boolean;
+  viewers?: number;
+  deviceId?: string;
+}
 
 const MapComponent = dynamic(() => import("./MapComponent"), {
   ssr: false,
@@ -64,16 +95,17 @@ export default function ShareLocationViewer() {
   const searchParams = useSearchParams();
   const [shareToken, setShareToken] = useState<string>("");
   const [connected, setConnected] = useState<boolean>(false);
-  const [deviceInfo, setDeviceInfo] = useState<any>(null);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [showPanel, setShowPanel] = useState<boolean>(false);
-  const [livePosition, setLivePosition] = useState<any>(null);
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [viewerStats, setViewerStats] = useState<any>(null);
+  const [livePosition, setLivePosition] = useState<ExtendedLivePosition | null>(
+    null
+  );
+  const [viewerStats, setViewerStats] = useState<ViewerStats | null>(null);
   const isMounted = useRef<boolean>(true);
-  const pingIntervalRef = useRef<any>(null);
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const convertPointsArrayToObjects = (
     pointsArray: LocationPoints
@@ -94,11 +126,10 @@ export default function ShareLocationViewer() {
 
     setLoading(true);
     try {
-      const response = await axiosInstance.get(
+      const response = await axiosClient.get(
         `/api/common/getSharedLocation/${token}`
       );
-
-      let data = response.data;
+      const data = response.data;
 
       if (!data || !data.data) {
         console.error("Invalid data structure:", data);
@@ -131,8 +162,16 @@ export default function ShareLocationViewer() {
       }
 
       return data;
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load location data");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message || "Failed to load location data"
+          : "Failed to load location data";
+
+      setError(errorMessage);
       setConnected(false);
       return null;
     } finally {
@@ -182,7 +221,7 @@ export default function ShareLocationViewer() {
       console.error("Socket connection error:", err);
     });
 
-    socketInstance.on("shareConnected", (status: any) => {
+    socketInstance.on("shareConnected", (status: ShareConnectedStatus) => {
       if (isMounted.current) {
         setConnected(status.connected);
         if (status.viewers) {
@@ -194,36 +233,39 @@ export default function ShareLocationViewer() {
       }
     });
 
-    socketInstance.on("sharedPositionUpdate", (newPosition: any) => {
-      if (isMounted.current) {
-        setLivePosition(newPosition);
+    socketInstance.on(
+      "sharedPositionUpdate",
+      (newPosition: ExtendedLivePosition) => {
+        if (isMounted.current) {
+          setLivePosition(newPosition);
 
-        if (positions.length > 0) {
-          const newPositionObj: Position = {
-            latitude: newPosition.lat,
-            longitude: newPosition.lng,
-            speed: newPosition.speed,
-            timestamp: newPosition.tm,
-            direction: newPosition.direction,
-            address: newPosition.address,
-          };
+          if (positions.length > 0) {
+            const newPositionObj: Position = {
+              latitude: newPosition.lat,
+              longitude: newPosition.lng,
+              speed: newPosition.speed,
+              timestamp: newPosition.tm ?? Math.floor(Date.now() / 1000),
+              direction: newPosition.direction,
+              address: newPosition.address,
+            };
 
-          // Update positions array with new position
-          const updatedPositions = [...positions];
-          updatedPositions[updatedPositions.length - 1] = newPositionObj;
-          setPositions(updatedPositions);
-        }
+            // Update positions array with new position
+            const updatedPositions = [...positions];
+            updatedPositions[updatedPositions.length - 1] = newPositionObj;
+            setPositions(updatedPositions);
+          }
 
-        if (newPosition._meta?.viewers) {
-          setViewerStats({
-            count: newPosition._meta.viewers,
-            deviceId: newPosition.deviceId || "",
-          });
+          if (newPosition._meta?.viewers) {
+            setViewerStats({
+              count: newPosition._meta.viewers,
+              deviceId: newPosition.deviceId || "",
+            });
+          }
         }
       }
-    });
+    );
 
-    socketInstance.on("viewerStats", (stats: any) => {
+    socketInstance.on("viewerStats", (stats: ViewerStats) => {
       if (isMounted.current) {
         setViewerStats(stats);
       }
@@ -244,34 +286,20 @@ export default function ShareLocationViewer() {
       }
     }, 30000);
 
-    setSocket(socketInstance);
-
     return () => {
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-      }
+      clearInterval(pingIntervalRef.current as NodeJS.Timeout);
       socketInstance.disconnect();
-      setSocket(null);
     };
   }, [shareToken, positions]);
 
+  // Get the URL parameter for the share token
   useEffect(() => {
-    return () => {
-      if (socket) {
-        socket.disconnect();
-      }
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-      }
-    };
-  }, [socket]);
-
-  useEffect(() => {
-    const tokenFromUrl = searchParams.get("token");
-
-    if (tokenFromUrl) {
-      setShareToken(tokenFromUrl);
-      fetchLocationData(tokenFromUrl);
+    const token = searchParams.get("token") || "";
+    if (token) {
+      setShareToken(token);
+      fetchLocationData(token);
+    } else {
+      setError("Missing share token. Please check the URL and try again.");
     }
   }, [searchParams, fetchLocationData]);
 
@@ -308,13 +336,13 @@ export default function ShareLocationViewer() {
   };
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-gray-50">
-      <div className="absolute inset-0 z-0">
+    <div className="h-screen flex flex-col bg-gray-50">
+      <div className="flex-1 relative overflow-hidden">
         <MapComponent
           allPositions={positions}
-          deviceName={deviceInfo?.deviceName || ""}
-          deviceImage={deviceInfo?.imageUrl || ""}
-          livePosition={livePosition}
+          deviceName={deviceInfo?.deviceName || "Device"}
+          deviceImage={deviceInfo?.imageUrl}
+          livePosition={livePosition ?? undefined}
         />
       </div>
 
@@ -329,10 +357,12 @@ export default function ShareLocationViewer() {
             <div className="flex items-center gap-3">
               {deviceInfo?.imageUrl ? (
                 <div className="relative">
-                  <img
+                  <Image
                     src={deviceInfo.imageUrl}
                     alt={deviceInfo.deviceName || "Device"}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover border-2 border-white shadow-sm"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = "none";

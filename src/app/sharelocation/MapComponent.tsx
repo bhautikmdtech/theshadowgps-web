@@ -13,11 +13,21 @@ const MAPBOX_TOKEN =
 // Set the access token for Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
+// Define a type for the live position data
+export interface LivePositionData {
+  tm?: number;
+  lat: number;
+  lng: number;
+  speed?: number;
+  direction?: number;
+  address?: string;
+}
+
 interface MapComponentProps {
   allPositions?: Position[];
   deviceName?: string;
   deviceImage?: string;
-  livePosition?: any; // For socket-received position updates
+  livePosition?: LivePositionData;
 }
 
 const MapComponent = ({
@@ -29,15 +39,13 @@ const MapComponent = ({
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const positionsLoaded = useRef<boolean>(false);
-  const livePositionRef = useRef<any>(null);
+  const livePositionRef = useRef<LivePositionData | null>(null);
 
-  // Initialize map when component mounts
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
     map.current = mapService.initializeMap(mapContainer.current);
 
-    // Clean up when component unmounts
     return () => {
       mapService.removeMap();
       map.current = null;
@@ -48,11 +56,11 @@ const MapComponent = ({
   // Update positions on the map when they change
   useEffect(() => {
     if (!map.current || !mapContainer.current) return;
-    
+
     if (allPositions.length > 0) {
       positionsLoaded.current = true;
       mapService.updatePositions(allPositions, deviceName, deviceImage);
-      
+
       // Ensure that all points are visible when data initially loads
       if (map.current.loaded()) {
         setTimeout(() => {
@@ -61,7 +69,7 @@ const MapComponent = ({
           }
         }, 1000);
       } else {
-        map.current.once('load', () => {
+        map.current.once("load", () => {
           setTimeout(() => {
             if (allPositions.length > 0) {
               mapService.fitMapToPositions(allPositions);
@@ -71,39 +79,39 @@ const MapComponent = ({
       }
     }
   }, [allPositions, deviceName, deviceImage]);
-  
+
   // Handle live position updates from socket
   useEffect(() => {
     if (!map.current || !mapContainer.current || !livePosition) return;
-    
+
     // Skip if it's the same position we already processed
     if (
-      livePositionRef.current && 
+      livePositionRef.current &&
       livePosition.tm === livePositionRef.current.tm &&
       livePosition.lat === livePositionRef.current.lat &&
       livePosition.lng === livePositionRef.current.lng
     ) {
       return;
     }
-    
+
     livePositionRef.current = livePosition;
-    
+
     // Convert the live position to our Position format
     const positionObj: Position = {
       latitude: livePosition.lat,
       longitude: livePosition.lng,
       speed: livePosition.speed,
-      timestamp: livePosition.tm,
+      timestamp: livePosition.tm ?? Math.floor(Date.now() / 1000),
       direction: livePosition.direction,
       address: livePosition.address,
     };
-    
+
     // Update the last position in our all positions array
     if (allPositions.length > 0 && positionsLoaded.current) {
       // Create a copy of positions with the updated last position
       const updatedPositions = [...allPositions];
       updatedPositions[updatedPositions.length - 1] = positionObj;
-      
+
       // Update just the current position marker
       mapService.updateCurrentPosition(positionObj, deviceName, deviceImage);
     }
@@ -113,36 +121,46 @@ const MapComponent = ({
   useEffect(() => {
     const container = mapContainer.current;
     if (!container) return;
-    
+
     // Focus on specific point
     const handleFocusPoint = (e: Event) => {
       const customEvent = e as CustomEvent;
       const { index, type } = customEvent.detail || {};
-      
-      if (typeof index === 'number' && index >= 0 && index < allPositions.length) {
+
+      if (
+        typeof index === "number" &&
+        index >= 0 &&
+        index < allPositions.length
+      ) {
         mapService.handleFocusPoint(index, type, allPositions);
       }
     };
-    
+
     // Fit all points
     const handleFitAllPoints = () => {
       if (allPositions.length > 0) {
         mapService.fitMapToPositions(allPositions);
       }
     };
-    
+
     // Add event listeners
-    container.addEventListener('focus-point', handleFocusPoint);
-    container.addEventListener('fit-all-points', handleFitAllPoints);
-    
+    container.addEventListener("focus-point", handleFocusPoint);
+    container.addEventListener("fit-all-points", handleFitAllPoints);
+
     // Cleanup
     return () => {
-      container.removeEventListener('focus-point', handleFocusPoint);
-      container.removeEventListener('fit-all-points', handleFitAllPoints);
+      container.removeEventListener("focus-point", handleFocusPoint);
+      container.removeEventListener("fit-all-points", handleFitAllPoints);
     };
   }, [allPositions, mapContainer]);
 
-  return <div ref={mapContainer} style={{ width: "100%", height: "100%" }} data-testid="map-container" />;
+  return (
+    <div
+      ref={mapContainer}
+      style={{ width: "100%", height: "100%" }}
+      data-testid="map-container"
+    />
+  );
 };
 
 export default MapComponent;

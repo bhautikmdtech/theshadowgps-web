@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { FaInfoCircle, FaSpinner } from "react-icons/fa";
 
 interface ReactivateSubscriptionModalProps {
   show: boolean;
@@ -47,12 +46,17 @@ export default function ReactivateSubscriptionModal({
       }
     };
 
-    initModal();
+    if (show) {
+      initModal();
+    }
+    
+    // Store the ref value in a variable
+    const currentModalRef = modalRef.current;
     
     // Cleanup on unmount
     return () => {
-      if (modalRef.current) {
-        modalRef.current.removeEventListener('hidden.bs.modal', onClose);
+      if (currentModalRef) {
+        currentModalRef.removeEventListener('hidden.bs.modal', onClose);
       }
     };
   }, [show, onClose]);
@@ -80,10 +84,9 @@ export default function ReactivateSubscriptionModal({
           </div>
           <div className="modal-body">
             <div className="text-center mb-4">
-              <FontAwesomeIcon
-                icon={faInfoCircle}
+              <FaInfoCircle
                 className="text-primary"
-                size="3x"
+                size="3em"
               />
             </div>
             <p className="mb-3">
@@ -91,7 +94,7 @@ export default function ReactivateSubscriptionModal({
             </p>
             <div className="alert alert-info">
               <p className="mb-0">
-                Your subscription will be reactivated immediately and you'll be billed for the next billing period.
+                Your subscription will be reactivated immediately and you&apos;ll be billed for the next billing period.
               </p>
             </div>
           </div>
@@ -112,7 +115,7 @@ export default function ReactivateSubscriptionModal({
             >
               {isProcessing ? (
                 <>
-                  <FontAwesomeIcon icon={faSpinner} spin className="me-2" />
+                  <FaSpinner className="me-2 animate-spin" />
                   Processing...
                 </>
               ) : (
