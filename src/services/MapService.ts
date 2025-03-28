@@ -36,8 +36,7 @@ const addStyles = (): void => {
         z-index: 5;
         transform-origin: center bottom !important;
       }
-      .device-start-marker-container {
-        position: relative;
+      .device-start-marker-container { 
         z-index: 3;
         transition: transform 0.2s ease-in-out;
         transform-origin: center bottom !important;
@@ -124,10 +123,7 @@ const isValidPosition = (position: Position): boolean => {
     return false;
   }
 
-  if (
-    Math.abs(position.latitude) > 90 ||
-    Math.abs(position.longitude) > 180
-  ) {
+  if (Math.abs(position.latitude) > 90 || Math.abs(position.longitude) > 180) {
     return false;
   }
 
@@ -389,8 +385,7 @@ const centerMapOnPosition = (position: Position, zoom: number = 14): void => {
       const marker = markers.find((m) => {
         const lngLat = m.getLngLat();
         return (
-          lngLat.lat === position.latitude &&
-          lngLat.lng === position.longitude
+          lngLat.lat === position.latitude && lngLat.lng === position.longitude
         );
       });
 
@@ -982,10 +977,7 @@ const updateMarkerPositions = (positions: Position[]): void => {
   // Update start marker position if we have it
   if (hasStartMarker && isValidPosition(firstPosition)) {
     const startMarker = markers[0];
-    moveMarker(startMarker, [
-      firstPosition.longitude,
-      firstPosition.latitude,
-    ]);
+    moveMarker(startMarker, [firstPosition.longitude, firstPosition.latitude]);
 
     // Update popup content
     const popup = startMarker.getPopup();
@@ -1011,10 +1003,7 @@ const updateMarkerPositions = (positions: Position[]): void => {
   // Update current marker position if we have it
   if (hasCurrentMarker && isValidPosition(lastPosition)) {
     const currentMarker = markers[markers.length - 1];
-    moveMarker(currentMarker, [
-      lastPosition.longitude,
-      lastPosition.latitude,
-    ]);
+    moveMarker(currentMarker, [lastPosition.longitude, lastPosition.latitude]);
 
     // Update popup content
     const popup = currentMarker.getPopup();
@@ -1338,14 +1327,19 @@ const getBearing = (
   // Calculate bearing
   const y = Math.sin(rlng2 - rlng1) * Math.cos(rlat2);
   const x =
-    Math.cos(rlat1) * Math.sin(rlat2) - Math.sin(rlat1) * Math.cos(rlat2) * Math.cos(rlng2 - rlng1);
+    Math.cos(rlat1) * Math.sin(rlat2) -
+    Math.sin(rlat1) * Math.cos(rlat2) * Math.cos(rlng2 - rlng1);
   const bearing = (Math.atan2(y, x) * 180) / Math.PI;
 
   return bearing;
 };
 
 // Handle focus point event
-const handleFocusPoint = (index: number, type: string, positions: Position[]): void => {
+const handleFocusPoint = (
+  index: number,
+  type: string,
+  positions: Position[]
+): void => {
   if (
     !mapInstance ||
     positions.length === 0 ||
@@ -1398,10 +1392,7 @@ const updatePositions = (
       );
     });
   } else {
-    setTimeout(
-      () => processPositions(positions, deviceName, deviceImage),
-      100
-    );
+    setTimeout(() => processPositions(positions, deviceName, deviceImage), 100);
   }
 };
 
@@ -1411,32 +1402,29 @@ const updateCurrentPosition = (
   deviceName: string,
   deviceImage: string
 ): void => {
-  if (!mapInstance || !isValidPosition(position) || markers.length === 0) return;
-  
+  if (!mapInstance || !isValidPosition(position) || markers.length === 0)
+    return;
+
   // Get the current (last) marker
   const currentMarker = markers[markers.length - 1];
   if (!currentMarker) return;
-  
+
   // Smoothly move the marker to the new position
   moveMarker(
     currentMarker,
     [position.longitude, position.latitude],
     750 // Faster transition for live updates
   );
-  
+
   // Update popup content
   const popup = currentMarker.getPopup();
   if (popup) {
     // Create a new popup with updated content
-    const newPopup = createCurrentPopup(
-      position,
-      deviceName,
-      deviceImage
-    );
-    
+    const newPopup = createCurrentPopup(position, deviceName, deviceImage);
+
     // Apply new popup to marker
     currentMarker.setPopup(newPopup);
-    
+
     // If popup is open, update it
     if (popup.isOpen()) {
       // Temporarily remove and re-add popup to update content
@@ -1446,11 +1434,11 @@ const updateCurrentPosition = (
       }, 100);
     }
   }
-  
+
   // Update route line if available - just the last segment
   if (mapInstance.getSource("route-arrow") && markers.length > 1) {
     // Get positions from all markers to update route
-    const positions: Position[] = markers.map(marker => {
+    const positions: Position[] = markers.map((marker) => {
       const lngLat = marker.getLngLat();
       // For the last marker, use the new position
       if (marker === currentMarker) {
@@ -1459,14 +1447,14 @@ const updateCurrentPosition = (
       // For other markers, use their current positions
       return {
         latitude: lngLat.lat,
-        longitude: lngLat.lng
+        longitude: lngLat.lng,
       } as Position;
     });
-    
+
     // Update route with all positions
     addRouteLine(positions);
   }
-  
+
   // Update end arrow position and rotation
   updateEndArrow(position);
 };
@@ -1474,16 +1462,16 @@ const updateCurrentPosition = (
 // Update just the end arrow position and rotation
 const updateEndArrow = (position: Position): void => {
   if (!mapInstance || !isValidPosition(position) || markers.length < 2) return;
-  
+
   try {
     // Get the last position and the one before it to calculate bearing
     const lastPoint = [position.longitude, position.latitude];
-    
+
     // Get the second to last marker position
     const secondLastMarker = markers[markers.length - 2];
     const secondLastLngLat = secondLastMarker.getLngLat();
     const secondLastPoint = [secondLastLngLat.lng, secondLastLngLat.lat];
-    
+
     // Calculate new bearing
     const bearing = getBearing(
       secondLastPoint[1] as number,
@@ -1491,10 +1479,12 @@ const updateEndArrow = (position: Position): void => {
       lastPoint[1] as number,
       lastPoint[0] as number
     );
-    
+
     // Update end arrow if it exists
     if (mapInstance.getSource("end-arrow")) {
-      const source = mapInstance.getSource("end-arrow") as mapboxgl.GeoJSONSource;
+      const source = mapInstance.getSource(
+        "end-arrow"
+      ) as mapboxgl.GeoJSONSource;
       source.setData({
         type: "Feature",
         properties: { bearing },
