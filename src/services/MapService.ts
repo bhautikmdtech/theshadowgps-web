@@ -1055,8 +1055,7 @@ class MapService {
     // Calculate bearing
     const y = Math.sin(rlng2 - rlng1) * Math.cos(rlat2);
     const x =
-      Math.cos(rlat1) * Math.sin(rlat2) -
-      Math.sin(rlat1) * Math.cos(rlat2) * Math.cos(rlng2 - rlng1);
+      Math.cos(rlat1) * Math.sin(rlat2) - Math.sin(rlat1) * Math.cos(rlat2) * Math.cos(rlng2 - rlng1);
     const bearing = (Math.atan2(y, x) * 180) / Math.PI;
 
     return bearing;

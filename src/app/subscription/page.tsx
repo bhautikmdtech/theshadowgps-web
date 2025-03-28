@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SubscriptionViewer from "./SubcriptionViewer";
+import SubscriptionViewer from "./SubscriptionViewer";
 
 export const metadata: Metadata = {
   title: "Messages",

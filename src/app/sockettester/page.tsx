@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import SocketCheckerViewer from "./SocketView";
+import SocketCheckerViewer from "./SocketViewer";
 
 export const metadata: Metadata = {
   title: "Messages",
