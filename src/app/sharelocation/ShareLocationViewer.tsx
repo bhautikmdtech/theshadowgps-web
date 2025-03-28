@@ -8,11 +8,11 @@ import Image from "next/image";
 import { Position, LocationPoints } from "@/types/location";
 import { io } from "../../lib/socketClient";
 import {
-  FaChevronUp,
-  FaChevronDown,
   FaMapMarkerAlt,
   FaLocationArrow,
-  FaCloud,
+  FaCrosshairs,
+  FaInfoCircle,
+  FaSync,
 } from "react-icons/fa";
 import { BiLoaderAlt } from "react-icons/bi";
 import axiosClient from "@/lib/axiosClient";
@@ -99,7 +99,6 @@ export default function ShareLocationViewer() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [showPanel, setShowPanel] = useState<boolean>(false);
   const [livePosition, setLivePosition] = useState<ExtendedLivePosition | null>(
     null
   );
@@ -303,18 +302,53 @@ export default function ShareLocationViewer() {
     }
   }, [searchParams, fetchLocationData]);
 
-  const handleViewLocation = () => {
+  const handleRefreshData = () => {
     if (!shareToken) {
-      setError("Please enter a share token");
+      setError("No share token available");
       return;
     }
-
     fetchLocationData(shareToken);
-    setShowPanel(!showPanel);
   };
 
-  const latestPosition =
-    positions.length > 0 ? positions[positions.length - 1] : null;
+  const handleViewStart = () => {
+    const mapContainer = document.querySelector(
+      '[data-testid="map-container"]'
+    );
+    if (mapContainer) {
+      const event = new CustomEvent("focus-point", {
+        detail: { index: 0, type: "start" },
+      });
+      mapContainer.dispatchEvent(event);
+    }
+  };
+
+  const handleViewCurrent = () => {
+    const mapContainer = document.querySelector(
+      '[data-testid="map-container"]'
+    );
+
+    if (mapContainer) {
+      const popups = document.querySelectorAll(".mapboxgl-popup");
+      popups.forEach((popup) => {
+        popup.remove();
+      });
+
+      const event = new CustomEvent("focus-point", {
+        detail: { index: positions.length - 1, type: "current" },
+      });
+      mapContainer.dispatchEvent(event);
+    }
+  };
+
+  const handleViewAll = () => {
+    const mapContainer = document.querySelector(
+      '[data-testid="map-container"]'
+    );
+    if (mapContainer) {
+      const event = new CustomEvent("fit-all-points");
+      mapContainer.dispatchEvent(event);
+    }
+  };
 
   const calculateExpiryMinutes = () => {
     if (!deviceInfo?.expiresAt) return null;
@@ -337,6 +371,106 @@ export default function ShareLocationViewer() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
+      {/* Fixed header - always visible at top */}
+      <div className="bg-white shadow-sm z-10 py-2">
+        <div className="container mx-auto px-2 flex flex-col md:flex-row gap-2 items-start md:items-center  justify-between">
+          {/* Left section: Device info */}
+          <div className="flex items-center gap-2">
+            {/* Device image/avatar */}
+            <div className="relative">
+              {deviceInfo?.imageUrl ? (
+                <Image
+                  src={deviceInfo.imageUrl}
+                  alt={deviceInfo.deviceName || "Device"}
+                  width={28}
+                  height={28}
+                  className="rounded-full object-cover border-2 border-white shadow-sm"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = "none";
+                  }}
+                />
+              ) : deviceInfo?.deviceName ? (
+                <div className="w-7 h-7 rounded-full bg-orange-500 text-white flex items-center justify-center font-medium text-xs border-2 border-white shadow-sm">
+                  {deviceInfo.deviceName.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center border-2 border-white shadow-sm">
+                  <FaMapMarkerAlt className="text-gray-600 h-3 w-3" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col">
+              <h6 className="text-sm font-medium text-gray-800 mb-0">
+                {deviceInfo?.deviceName
+                  ? deviceInfo.deviceName
+                  : "Location Tracking"}
+              </h6>
+              <div className="flex items-center text-xs text-gray-600">
+                <span
+                  className={`mr-1 w-2 h-2 rounded-full border border-white ${
+                    connected ? "bg-green-500" : "bg-red-500"
+                  }`}
+                ></span>{" "}
+                <span>Connected • {positions.length} points</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right section: Expiry and action buttons */}
+          <div className="flex items-center gap-1">
+            {expiresInMinutes !== null && (
+              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-md mr-1">
+                Expires in {expiresInMinutes}m
+              </span>
+            )}
+
+            <button
+              onClick={handleRefreshData}
+              disabled={loading}
+              title="Refresh"
+              className="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-md"
+            >
+              {loading ? (
+                <BiLoaderAlt className="animate-spin h-4 w-4" />
+              ) : (
+                <FaSync className="h-4 w-4" />
+              )}
+            </button>
+
+            {positions.length > 0 && (
+              <>
+                <button
+                  onClick={handleViewStart}
+                  title="View start location"
+                  className="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-md"
+                >
+                  <FaMapMarkerAlt className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={handleViewCurrent}
+                  title="View current location"
+                  className="bg-green-500 hover:bg-green-600 text-white p-1.5 rounded-md"
+                >
+                  <FaLocationArrow className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={handleViewAll}
+                  title="View all points"
+                  className="bg-purple-500 hover:bg-purple-600 text-white p-1.5 rounded-md"
+                >
+                  <FaCrosshairs className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Map component */}
       <div className="flex-1 relative overflow-hidden">
         <MapComponent
           allPositions={positions}
@@ -345,217 +479,6 @@ export default function ShareLocationViewer() {
           livePosition={livePosition ?? undefined}
         />
       </div>
-
-      {/* Header Panel */}
-      <div
-        className={`absolute top-0 left-0 right-0 z-10 bg-white/95 backdrop-blur-md shadow-lg transition-transform duration-300 ease-in-out ${
-          showPanel ? "translate-y-0" : "-translate-y-full"
-        }`}
-      >
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-3">
-              {deviceInfo?.imageUrl ? (
-                <div className="relative">
-                  <Image
-                    src={deviceInfo.imageUrl}
-                    alt={deviceInfo.deviceName || "Device"}
-                    width={40}
-                    height={40}
-                    className="rounded-full object-cover border-2 border-white shadow-sm"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                    }}
-                  />
-                  <span
-                    className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                      connected ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  ></span>
-                </div>
-              ) : deviceInfo?.deviceName ? (
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold border-2 border-white shadow-sm">
-                    {deviceInfo.deviceName.charAt(0).toUpperCase()}
-                  </div>
-                  <span
-                    className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                      connected ? "bg-green-500" : "bg-red-500"
-                    }`}
-                  ></span>
-                </div>
-              ) : null}
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">
-                  {deviceInfo?.deviceName
-                    ? deviceInfo.deviceName
-                    : "Location Tracking"}
-                </h1>
-                {deviceInfo?.shareTitle && (
-                  <p className="text-sm text-gray-500">
-                    {deviceInfo.shareTitle}
-                  </p>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={() => setShowPanel(!showPanel)}
-              className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-full"
-            >
-              {showPanel ? (
-                <FaChevronUp className="h-5 w-5" />
-              ) : (
-                <FaChevronDown className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-
-          <div className="mb-3">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={shareToken}
-                onChange={(e) => setShareToken(e.target.value)}
-                className="flex-grow px-4 py-2 text-sm border rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Enter share token"
-              />
-              <button
-                onClick={handleViewLocation}
-                disabled={loading}
-                className={`px-4 py-2 rounded-r-lg text-white text-sm font-medium ${
-                  loading ? "bg-blue-400" : "bg-blue-500 hover:bg-blue-600"
-                } transition-colors duration-200`}
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <BiLoaderAlt className="animate-spin h-4 w-4 text-white" />
-                    Loading...
-                  </span>
-                ) : (
-                  "Track"
-                )}
-              </button>
-            </div>
-            {error && (
-              <div className="text-sm text-red-600 mt-1 px-1">{error}</div>
-            )}
-          </div>
-
-          {/* Status indicator */}
-          <div className="flex items-center gap-2">
-            <div
-              className={`h-2 w-2 rounded-full ${
-                connected
-                  ? "bg-green-500"
-                  : error
-                  ? "bg-red-500"
-                  : "bg-yellow-500"
-              }`}
-            ></div>
-            <span className="text-sm text-gray-600">
-              {loading
-                ? "Connecting..."
-                : connected
-                ? `Connected • ${positions.length} location${
-                    positions.length !== 1 ? "s" : ""
-                  }`
-                : "Disconnected"}
-            </span>
-            {positions.length > 1 && (
-              <div className="col-span-2 flex items-center justify-center gap-3 mt-2 mb-1">
-                <button
-                  onClick={() => {
-                    const mapElement = document.querySelector(
-                      "[data-testid='map-container']"
-                    );
-                    if (mapElement) {
-                      mapElement.dispatchEvent(
-                        new CustomEvent("focus-point", {
-                          detail: { index: 0, type: "start" },
-                        })
-                      );
-                    }
-                    setShowPanel(!showPanel);
-                  }}
-                  className="flex items-center justify-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
-                >
-                  <FaMapMarkerAlt className="h-3.5 w-3.5 mr-1" />
-                  View Start
-                </button>
-
-                <button
-                  onClick={() => {
-                    const mapElement = document.querySelector(
-                      "[data-testid='map-container']"
-                    );
-                    if (mapElement) {
-                      mapElement.dispatchEvent(
-                        new CustomEvent("focus-point", {
-                          detail: {
-                            index: positions.length - 1,
-                            type: "current",
-                          },
-                        })
-                      );
-                    }
-                    setShowPanel(!showPanel);
-                  }}
-                  className="flex items-center justify-center px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium hover:bg-orange-200 transition-colors"
-                >
-                  <FaLocationArrow className="h-3.5 w-3.5 mr-1" />
-                  View Current
-                </button>
-
-                <button
-                  onClick={() => {
-                    const mapElement = document.querySelector(
-                      "[data-testid='map-container']"
-                    );
-                    if (mapElement) {
-                      mapElement.dispatchEvent(
-                        new CustomEvent("fit-all-points")
-                      );
-                    }
-                    setShowPanel(!showPanel);
-                  }}
-                  className="flex items-center justify-center px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full text-xs font-medium hover:bg-gray-300 transition-colors"
-                >
-                  <FaCloud className="h-3.5 w-3.5 mr-1" />
-                  View All
-                </button>
-                {deviceInfo && latestPosition && (
-                  <div>
-                    <span className="text-gray-500 block text-xs">
-                      Last Updated: {formatDate(latestPosition.timestamp)},
-                      Speed:{" "}
-                      {latestPosition?.speed
-                        ? Math.round(latestPosition?.speed)
-                        : 0}{" "}
-                      km/h,
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-            {expiresInMinutes !== null && (
-              <span className="ml-auto text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                Expires in {expiresInMinutes} min
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Toggle button when panel is hidden */}
-      {!showPanel && (
-        <button
-          onClick={() => setShowPanel(true)}
-          className="absolute top-4 right-4 z-10 bg-white shadow-lg rounded-full p-3 text-gray-700 hover:bg-gray-50 transition-all duration-200"
-        >
-          <FaChevronDown className="h-5 w-5" />
-        </button>
-      )}
     </div>
   );
 }

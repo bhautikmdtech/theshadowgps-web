@@ -127,19 +127,29 @@ const MapComponent = ({
       const customEvent = e as CustomEvent;
       const { index, type } = customEvent.detail || {};
 
-      if (
-        typeof index === "number" &&
-        index >= 0 &&
-        index < allPositions.length
-      ) {
-        mapService.handleFocusPoint(index, type, allPositions);
+      if (typeof index === "number" && allPositions.length > 0) {
+        if (index >= 0 && index < allPositions.length) {
+          // Make sure any open popups are closed first
+          document.querySelectorAll(".mapboxgl-popup").forEach((popup) => {
+            popup.remove();
+          });
+
+          // Call the map service to handle the focus
+          mapService.handleFocusPoint(index, type, allPositions);
+        }
       }
     };
 
     // Fit all points
     const handleFitAllPoints = () => {
       if (allPositions.length > 0) {
-        mapService.fitMapToPositions(allPositions);
+        document.querySelectorAll(".mapboxgl-popup").forEach((popup) => {
+          popup.remove();
+        });
+
+        setTimeout(() => {
+          mapService.fitMapToPositions(allPositions);
+        }, 100);
       }
     };
 

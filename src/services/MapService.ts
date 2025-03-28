@@ -3,21 +3,16 @@
 import mapboxgl from "mapbox-gl";
 import type { Position } from "@/types/location";
 
-// Mapbox access token
 const MAPBOX_TOKEN =
   "pk.eyJ1IjoiYWJoaXNoZWtiaGF0aWEwMiIsImEiOiJjbTZpZXlwd2kwOGhtMmpxMmo4cXQ1YzBvIn0.6VmLnWwyzFJ8PvgY6-3jXA";
 
-// Set the access token for Mapbox
 mapboxgl.accessToken = MAPBOX_TOKEN;
 
-// State variables
 let mapInstance: mapboxgl.Map | null = null;
 let markers: mapboxgl.Marker[] = [];
 let clickHandlerAdded = false;
 
-// Additional styles for markers and animations
 const addStyles = (): void => {
-  // Add marker animations style if not already present
   if (!document.getElementById("marker-animations")) {
     const style = document.createElement("style");
     style.id = "marker-animations";
@@ -34,12 +29,12 @@ const addStyles = (): void => {
       .device-marker {
         position: relative;
         z-index: 5;
-        transform-origin: center bottom !important;
+        transform-origin: center !important;
       }
       .device-start-marker-container { 
         z-index: 3;
         transition: transform 0.2s ease-in-out;
-        transform-origin: center bottom !important;
+        transform-origin: center !important;
       }
       .device-start-marker-container:hover {
         transform: scale(1.1);
@@ -52,7 +47,8 @@ const addStyles = (): void => {
         animation: pulse 2s ease-in-out infinite;
       }
       .device-end-marker-container {
-         top: 16px !important;
+        transform-origin: center !important;
+        z-index: 4;
       }
       
       /* Custom popup styling */
@@ -63,6 +59,34 @@ const addStyles = (): void => {
         padding: 15px;
         border-radius: 12px;
         box-shadow: 0 3px 14px rgba(0,0,0,0.15);
+      }
+      
+      /* Improved popup styling */
+      .custom-popup .mapboxgl-popup-content {
+        padding: 0;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+        border-radius: 8px;
+        min-width: 220px;
+      }
+      
+      .custom-popup .mapboxgl-popup-close-button {
+        font-size: 18px;
+        color: #666;
+        right: 8px;
+        top: 8px;
+      }
+      
+      .mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+        border-bottom-color: white;
+      }
+      
+      .mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
+      .mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+        border-top-color: white;
       }
       
       /* Custom control button styling */
@@ -104,7 +128,6 @@ const addStyles = (): void => {
   }
 };
 
-// Helper function to check if a position is valid
 const isValidPosition = (position: Position): boolean => {
   if (
     !position ||
@@ -130,27 +153,31 @@ const isValidPosition = (position: Position): boolean => {
   return true;
 };
 
-// Add event listeners to the map
 const addMapListeners = (): void => {
   if (!mapInstance) return;
 
-  // Log when map is loaded
   mapInstance.on("load", () => {
     console.log("Map loaded successfully");
 
-    // Enable scroll zoom after the map is loaded
     if (mapInstance) {
       mapInstance.scrollZoom.enable();
     }
   });
 
-  // Event listener for map errors
   mapInstance.on("error", (e) => {
     console.error("Mapbox error:", e.error);
   });
+
+  mapInstance.on("zoomend", () => {
+    if (markers.length > 0) {
+      markers.forEach((marker) => {
+        const currentLngLat = marker.getLngLat();
+        marker.setLngLat([currentLngLat.lng, currentLngLat.lat]);
+      });
+    }
+  });
 };
 
-// Add a custom control button to the map
 const addCustomControl = ({
   title,
   className,
@@ -166,7 +193,6 @@ const addCustomControl = ({
 }): void => {
   if (!mapInstance) return;
 
-  // Create a custom control class
   class CustomControl implements mapboxgl.IControl {
     private container: HTMLDivElement;
     private map?: mapboxgl.Map;
@@ -206,14 +232,12 @@ const addCustomControl = ({
     }
   }
 
-  // Add the control to the map
   mapInstance.addControl(
     new CustomControl(title, className, icon, onClick),
     position
   );
 };
 
-// Add custom controls to the map
 const addCustomControls = (): void => {
   if (!mapInstance) return;
 
@@ -254,7 +278,6 @@ const addCustomControls = (): void => {
     icon: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>`,
     position: "bottom-right",
     onClick: () => {
-      // Get all positions from markers
       if (markers.length > 0) {
         const positions: Position[] = markers.map((marker) => {
           const lngLat = marker.getLngLat();
@@ -264,10 +287,8 @@ const addCustomControls = (): void => {
           } as Position;
         });
 
-        // Fit map to show all positions
-        fitMapToPositions(positions);
+        mapService.fitMapToPositions(positions);
 
-        // Close all popups
         markers.forEach((marker) => {
           if (marker.getPopup()?.isOpen()) {
             marker.getPopup()?.remove();
@@ -278,11 +299,9 @@ const addCustomControls = (): void => {
   });
 };
 
-// Add standard controls to the map
 const addControls = (): void => {
   if (!mapInstance) return;
 
-  // Add attribution control
   mapInstance.addControl(
     new mapboxgl.AttributionControl({
       compact: true,
@@ -298,149 +317,6 @@ const addControls = (): void => {
   addCustomControls();
 };
 
-// Initialize the Mapbox map
-const initializeMap = (container: HTMLElement): mapboxgl.Map => {
-  console.log("Initializing map");
-
-  // Add styles for markers and popups
-  addStyles();
-
-  // Initialize map with a default center
-  mapInstance = new mapboxgl.Map({
-    container,
-    style: "mapbox://styles/mapbox/streets-v11",
-    center: [0, 0],
-    zoom: 2,
-    minZoom: 1,
-    attributionControl: false,
-    renderWorldCopies: true,
-    failIfMajorPerformanceCaveat: false,
-    preserveDrawingBuffer: true,
-    scrollZoom: false, // Disable scroll zoom initially for better UX
-  });
-
-  // Set data-testid for map container
-  container.setAttribute("data-testid", "map-container");
-
-  // Add controls
-  addControls();
-
-  // Add listeners
-  addMapListeners();
-
-  return mapInstance;
-};
-
-// Fit the map to show all positions
-const fitMapToPositions = (positions: Position[]): void => {
-  if (!mapInstance || positions.length === 0) return;
-
-  try {
-    const bounds = new mapboxgl.LngLatBounds();
-    let validPointsAdded = 0;
-
-    // Extend bounds with valid positions
-    positions.forEach((pos) => {
-      if (isValidPosition(pos)) {
-        bounds.extend([pos.longitude, pos.latitude]);
-        validPointsAdded++;
-      }
-    });
-
-    if (validPointsAdded === 0) {
-      console.warn("No valid coordinates to fit bounds");
-      return;
-    }
-
-    // Fit map to bounds with padding
-    mapInstance.fitBounds(bounds, {
-      padding: { top: 120, bottom: 120, left: 120, right: 120 },
-      maxZoom: 15,
-      duration: 1000,
-    });
-  } catch (error) {
-    console.error("Error fitting bounds:", error);
-
-    // Fallback to last position
-    if (positions.length > 0) {
-      centerMapOnPosition(positions[positions.length - 1]);
-    }
-  }
-};
-
-// Center the map on a specific position
-const centerMapOnPosition = (position: Position, zoom: number = 14): void => {
-  if (!mapInstance || !isValidPosition(position)) return;
-
-  try {
-    mapInstance.flyTo({
-      center: [position.longitude, position.latitude],
-      zoom,
-      essential: true,
-      duration: 1000,
-    });
-
-    // Show popup for the position
-    setTimeout(() => {
-      const marker = markers.find((m) => {
-        const lngLat = m.getLngLat();
-        return (
-          lngLat.lat === position.latitude && lngLat.lng === position.longitude
-        );
-      });
-
-      if (marker && marker.getPopup()) {
-        marker.togglePopup();
-      }
-    }, 1200);
-  } catch (error) {
-    console.error("Error centering on position:", error);
-  }
-};
-
-// Set up click handler to close popups when clicking outside
-const setupClickHandler = (): void => {
-  if (!mapInstance || clickHandlerAdded) return;
-
-  // For closing popups when clicking outside markers
-  mapInstance.on("click", (e) => {
-    // Check if the click target is a marker or popup
-    const element = e.originalEvent.target as HTMLElement;
-    const isMarkerClick = element.closest(".mapboxgl-marker") !== null;
-    const isPopupClick = element.closest(".mapboxgl-popup") !== null;
-
-    // Only close popups if clicking outside markers and popups
-    if (!isMarkerClick && !isPopupClick) {
-      // Close all popups
-      markers.forEach((marker) => {
-        const popup = marker.getPopup();
-        if (popup?.isOpen()) {
-          popup.remove();
-        }
-      });
-    }
-  });
-
-  clickHandlerAdded = true;
-};
-
-// Clear all markers from the map
-const clearMarkers = (): void => {
-  markers.forEach((marker) => marker.remove());
-  markers = [];
-};
-
-// Remove the map and clean up
-const removeMap = (): void => {
-  if (mapInstance) {
-    clearMarkers();
-    mapInstance.remove();
-    mapInstance = null;
-    clickHandlerAdded = false;
-  }
-};
-
-// Add initials to a marker element
 const addInitials = (
   el: HTMLElement,
   name: string,
@@ -458,32 +334,39 @@ const addInitials = (
   el.appendChild(text);
 };
 
-// Create marker element for the starting position
 const createStartMarkerElement = (
   deviceName: string,
   deviceImage: string
 ): HTMLElement => {
   const container = document.createElement("div");
   container.className = "device-start-marker-container";
-  container.style.top = "16px";
   container.style.cursor = "pointer";
 
-  // Create main marker
   const el = document.createElement("div");
-  el.style.width = "32px";
-  el.style.height = "32px";
+  el.style.width = "34px";
+  el.style.height = "34px";
   el.style.borderRadius = "50%";
-  el.style.backgroundColor = "#4267B2"; // Different color for starting point
+  el.style.backgroundColor = "#4267B2";
   el.style.border = "3px solid white";
   el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
   el.style.display = "flex";
   el.style.justifyContent = "center";
   el.style.alignItems = "center";
+  el.style.transition =
+    "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
 
-  // Add to container
+  container.onmouseenter = () => {
+    el.style.transform = "scale(1.1)";
+    el.style.boxShadow = "0 3px 10px rgba(0,0,0,0.4)";
+  };
+
+  container.onmouseleave = () => {
+    el.style.transform = "scale(1)";
+    el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+  };
+
   container.appendChild(el);
 
-  // Add indicator dot
   const dot = document.createElement("div");
   dot.style.position = "absolute";
   dot.style.top = "-2px";
@@ -496,7 +379,6 @@ const createStartMarkerElement = (
   dot.style.zIndex = "2";
   el.appendChild(dot);
 
-  // Add device image or initials
   if (deviceImage) {
     const img = document.createElement("img");
     img.src = deviceImage;
@@ -504,7 +386,7 @@ const createStartMarkerElement = (
     img.style.height = "85%";
     img.style.objectFit = "cover";
     img.style.borderRadius = "50%";
-    img.style.opacity = "0.85"; // Slightly faded for past position
+    img.style.opacity = "0.85";
     img.onerror = () => {
       img.remove();
       addInitials(el, deviceName, "16px");
@@ -517,20 +399,20 @@ const createStartMarkerElement = (
   return container;
 };
 
-// Create marker element for the current device position
 const createDeviceMarkerElement = (
   deviceName: string,
   deviceImage: string
 ): HTMLElement => {
   const container = document.createElement("div");
   container.className = "device-end-marker-container";
-  container.style.top = "16px";
   container.style.cursor = "pointer";
+  container.style.padding = "8px";
+  container.style.margin = "-8px";
 
   const el = document.createElement("div");
   el.className = "device-marker";
-  el.style.width = "32px";
-  el.style.height = "32px";
+  el.style.width = "36px";
+  el.style.height = "36px";
   el.style.borderRadius = "50%";
   el.style.backgroundColor = "#FF5722";
   el.style.border = "3px solid white";
@@ -539,11 +421,21 @@ const createDeviceMarkerElement = (
   el.style.justifyContent = "center";
   el.style.alignItems = "center";
   el.style.position = "relative";
+  el.style.transition =
+    "transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out";
 
-  // Add to container
+  container.onmouseenter = () => {
+    el.style.transform = "scale(1.1)";
+    el.style.boxShadow = "0 3px 12px rgba(0,0,0,0.5)";
+  };
+
+  container.onmouseleave = () => {
+    el.style.transform = "scale(1)";
+    el.style.boxShadow = "0 2px 10px rgba(0,0,0,0.4)";
+  };
+
   container.appendChild(el);
 
-  // Add pulse ring
   const pulseRing = document.createElement("div");
   pulseRing.className = "pulse-ring";
   pulseRing.style.position = "absolute";
@@ -556,7 +448,6 @@ const createDeviceMarkerElement = (
   pulseRing.style.zIndex = "-1";
   el.appendChild(pulseRing);
 
-  // Add live indicator dot
   const liveDot = document.createElement("div");
   liveDot.style.position = "absolute";
   liveDot.style.top = "-5px";
@@ -569,7 +460,6 @@ const createDeviceMarkerElement = (
   liveDot.style.zIndex = "3";
   el.appendChild(liveDot);
 
-  // Add device image or initials
   if (deviceImage) {
     const img = document.createElement("img");
     img.src = deviceImage;
@@ -589,26 +479,25 @@ const createDeviceMarkerElement = (
   return container;
 };
 
-// Create popup for start marker
 const createStartPopup = (
   position: Position,
   deviceName: string,
   deviceImage: string
 ): mapboxgl.Popup => {
   return new mapboxgl.Popup({
-    offset: [0, -15],
-    closeButton: false,
+    offset: [0, -10],
+    closeButton: true,
     closeOnClick: false,
     className: "custom-popup",
-    maxWidth: "280px",
+    maxWidth: "300px",
   }).setHTML(
-    `<div style="padding: 8px;">
-       <div style="display:flex;align-items:center;margin-bottom:6px;">
+    `<div style="padding: 10px;">
+       <div style="display:flex;align-items:center;margin-bottom:8px;">
          ${
            deviceImage
-             ? `<img src="${deviceImage}" style="width:20px;height:20px;border-radius:50%;margin-right:6px;object-fit:cover;opacity:0.9;" 
+             ? `<img src="${deviceImage}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;object-fit:cover;opacity:0.9;" 
              onerror="this.style.display='none'">`
-             : `<div style="width:20px;height:20px;border-radius:50%;background-color:#4267B2;color:white;display:flex;justify-content:center;align-items:center;margin-right:6px;font-weight:bold;font-size:10px;">${
+             : `<div style="width:24px;height:24px;border-radius:50%;background-color:#4267B2;color:white;display:flex;justify-content:center;align-items:center;margin-right:8px;font-weight:bold;font-size:12px;">${
                  deviceName ? deviceName.charAt(0).toUpperCase() : "D"
                }</div>`
          }
@@ -628,15 +517,14 @@ const createStartPopup = (
   );
 };
 
-// Create popup for current marker
 const createCurrentPopup = (
   position: Position,
   deviceName: string,
   deviceImage: string
 ): mapboxgl.Popup => {
   return new mapboxgl.Popup({
-    offset: [0, -20],
-    closeButton: false,
+    offset: [0, -10],
+    closeButton: true,
     closeOnClick: false,
     maxWidth: "300px",
     className: "custom-popup",
@@ -684,35 +572,6 @@ const createCurrentPopup = (
   );
 };
 
-// Create a route point marker
-const createRouteMarker = (position: Position): mapboxgl.Marker | null => {
-  if (!mapInstance || !isValidPosition(position)) return null;
-
-  const markerElement = createEventMarkerElement();
-
-  try {
-    // Create marker with correct settings
-    const marker = new mapboxgl.Marker({
-      element: markerElement,
-      anchor: "center",
-      draggable: false,
-    });
-
-    // Set position
-    marker.setLngLat([position.longitude, position.latitude]);
-
-    // Add to map
-    marker.addTo(mapInstance);
-    markers.push(marker);
-
-    return marker;
-  } catch (error) {
-    console.error("Error creating route marker:", error);
-    return null;
-  }
-};
-
-// Create event marker element
 const createEventMarkerElement = (): HTMLElement => {
   const el = document.createElement("div");
   el.className = "event-marker";
@@ -725,151 +584,6 @@ const createEventMarkerElement = (): HTMLElement => {
   return el;
 };
 
-// Create a marker for the starting position
-const createStartMarker = (
-  position: Position,
-  deviceName: string,
-  deviceImage: string
-): mapboxgl.Marker | null => {
-  if (!mapInstance || !isValidPosition(position)) return null;
-
-  const markerElement = createStartMarkerElement(deviceName, deviceImage);
-  const popup = createStartPopup(position, deviceName, deviceImage);
-
-  try {
-    // Create marker with correct settings
-    const marker = new mapboxgl.Marker({
-      element: markerElement,
-      anchor: "bottom",
-      draggable: false,
-      pitchAlignment: "viewport",
-      rotationAlignment: "viewport",
-    });
-
-    // Set position
-    marker.setLngLat([position.longitude, position.latitude]);
-
-    // Add popup
-    marker.setPopup(popup);
-
-    // Add clickable behavior to the marker element
-    markerElement.onclick = (e: MouseEvent) => {
-      e.stopPropagation(); // Prevent map click from triggering
-
-      // First, show the entire trip
-      if (markers.length > 0) {
-        const positions: Position[] = markers.map((m) => {
-          const lngLat = m.getLngLat();
-          return {
-            latitude: lngLat.lat,
-            longitude: lngLat.lng,
-          } as Position;
-        });
-        fitMapToPositions(positions);
-      }
-
-      // Then toggle this marker's popup
-      setTimeout(() => {
-        // Close other popups first
-        markers.forEach((m) => {
-          if (m !== marker && m.getPopup()?.isOpen()) {
-            m.getPopup()?.remove();
-          }
-        });
-
-        // Toggle this popup
-        if (marker.getPopup()?.isOpen()) {
-          marker.getPopup()?.remove();
-        } else {
-          marker.togglePopup();
-        }
-      }, 1000);
-    };
-
-    // Add to map
-    marker.addTo(mapInstance);
-    markers.push(marker);
-
-    return marker;
-  } catch (error) {
-    console.error("Error creating start marker:", error);
-    return null;
-  }
-};
-
-// Create a marker for the current position
-const createCurrentMarker = (
-  position: Position,
-  deviceName: string,
-  deviceImage: string
-): mapboxgl.Marker | null => {
-  if (!mapInstance || !isValidPosition(position)) return null;
-
-  const markerElement = createDeviceMarkerElement(deviceName, deviceImage);
-  const popup = createCurrentPopup(position, deviceName, deviceImage);
-
-  try {
-    // Create marker with correct settings
-    const marker = new mapboxgl.Marker({
-      element: markerElement,
-      anchor: "bottom",
-      draggable: false,
-      pitchAlignment: "viewport",
-      rotationAlignment: "viewport",
-    });
-
-    // Set position
-    marker.setLngLat([position.longitude, position.latitude]);
-
-    // Add popup
-    marker.setPopup(popup);
-
-    // Add clickable behavior to the marker element
-    markerElement.onclick = (e: MouseEvent) => {
-      e.stopPropagation(); // Prevent map click from triggering
-
-      // First, show the entire trip
-      if (markers.length > 0) {
-        const positions: Position[] = markers.map((m) => {
-          const lngLat = m.getLngLat();
-          return {
-            latitude: lngLat.lat,
-            longitude: lngLat.lng,
-          } as Position;
-        });
-        fitMapToPositions(positions);
-      }
-
-      // Then toggle this marker's popup
-      setTimeout(() => {
-        // Close other popups first
-        markers.forEach((m) => {
-          if (m !== marker && m.getPopup()?.isOpen()) {
-            m.getPopup()?.remove();
-          }
-        });
-
-        // Toggle this popup
-        if (marker.getPopup()?.isOpen()) {
-          marker.getPopup()?.remove();
-        } else {
-          marker.togglePopup();
-        }
-      }, 1000);
-    };
-
-    // Add to map
-    marker.addTo(mapInstance);
-    markers.push(marker);
-
-    return marker;
-  } catch (error) {
-    console.error("Error creating current marker:", error);
-    return null;
-  }
-};
-
-// Move a marker to a new position with animation
 const moveMarker = (
   marker: mapboxgl.Marker,
   newPosition: [number, number],
@@ -885,23 +599,19 @@ const moveMarker = (
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
-    // Ease function - ease in and out
     const easeInOut = (t: number) => {
       return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
     };
 
     const easedProgress = easeInOut(progress);
 
-    // Interpolate between positions
     const lng =
       oldPosition[0] + (newPosition[0] - oldPosition[0]) * easedProgress;
     const lat =
       oldPosition[1] + (newPosition[1] - oldPosition[1]) * easedProgress;
 
-    // Update marker position
     marker.setLngLat([lng, lat]);
 
-    // Continue animation if not complete
     if (progress < 1) {
       requestAnimationFrame(animate);
     }
@@ -911,7 +621,6 @@ const moveMarker = (
   requestAnimationFrame(animate);
 };
 
-// Process positions and update markers and lines
 const processPositions = (
   positions: Position[],
   deviceName: string,
@@ -929,7 +638,7 @@ const processPositions = (
     }
 
     // Set up click handler if not done yet
-    setupClickHandler();
+    mapService.setupClickHandler();
 
     // Check if we already have markers
     if (markers.length > 0) {
@@ -938,21 +647,21 @@ const processPositions = (
 
       // Fit to all positions
       setTimeout(() => {
-        fitMapToPositions(validPositions);
+        mapService.fitMapToPositions(validPositions);
       }, 500);
     } else {
       // First time - clear any existing markers
-      clearMarkers();
+      mapService.clearMarkers();
 
       // Add markers
       addAllMarkers(validPositions, deviceName, deviceImage);
 
       // Add route line
-      addRouteLine(validPositions);
+      mapService.addRouteLine(validPositions);
 
       // Always fit map to show all points on initial load
       setTimeout(() => {
-        fitMapToPositions(validPositions);
+        mapService.fitMapToPositions(validPositions);
       }, 500);
     }
 
@@ -962,7 +671,6 @@ const processPositions = (
   }
 };
 
-// Update existing markers with new positions
 const updateMarkerPositions = (positions: Position[]): void => {
   if (!mapInstance || !positions.length || markers.length === 0) return;
 
@@ -1028,11 +736,10 @@ const updateMarkerPositions = (positions: Position[]): void => {
 
   // Update route line if available
   if (mapInstance.getSource("route-arrow")) {
-    addRouteLine(positions);
+    mapService.addRouteLine(positions);
   }
 };
 
-// Add all markers for the given positions
 const addAllMarkers = (
   positions: Position[],
   deviceName: string,
@@ -1053,15 +760,15 @@ const addAllMarkers = (
 
     // Create appropriate marker
     if (isFirst) {
-      createStartMarker(pos, deviceName, deviceImage);
+      mapService.createStartMarker(pos, deviceName, deviceImage);
     } else if (isLast) {
-      createCurrentMarker(pos, deviceName, deviceImage);
+      mapService.createCurrentMarker(pos, deviceName, deviceImage);
     } else if (
       positions.length <= 10 ||
       index % Math.ceil(positions.length / 10) === 0
     ) {
       // For route markers, track them separately
-      const marker = createRouteMarker(pos);
+      const marker = mapService.createRouteMarker(pos);
       if (marker) {
         routeMarkers.push(marker);
 
@@ -1085,136 +792,8 @@ const addAllMarkers = (
       });
     });
   }
-
-  // Auto-open last marker popup with delay
-  if (markers.length > 0) {
-    setTimeout(() => {
-      const lastMarker = markers[markers.length - 1];
-      if (lastMarker && lastMarker.getPopup()) {
-        lastMarker.togglePopup();
-      }
-    }, 1500);
-  }
 };
 
-// Add route line to the map
-const addRouteLine = (positions: Position[]): void => {
-  if (!mapInstance || positions.length < 2) return;
-
-  try {
-    // Filter valid positions
-    const validPositions = positions.filter((pos) => isValidPosition(pos));
-
-    if (validPositions.length < 2) {
-      console.warn("Not enough valid positions for route line");
-      return;
-    }
-
-    const coordinates = validPositions.map((pos) => [
-      pos.longitude,
-      pos.latitude,
-    ]);
-
-    // Create a custom arrow image if it doesn't exist
-    if (!mapInstance.hasImage("arrow")) {
-      createArrowImage();
-    }
-
-    // Add arrow layer if it doesn't exist
-    if (!mapInstance.getSource("route-arrow")) {
-      // Add source for the arrow line
-      mapInstance.addSource("route-arrow", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates,
-          },
-        },
-      });
-
-      // Add a green line layer
-      mapInstance.addLayer({
-        id: "route-arrow-line",
-        type: "line",
-        source: "route-arrow",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#23C16B",
-          "line-width": 4,
-          "line-opacity": 0.9,
-        },
-      });
-
-      // Add arrow symbols along the line
-      mapInstance.addLayer({
-        id: "route-arrow-symbol",
-        type: "symbol",
-        source: "route-arrow",
-        layout: {
-          "symbol-placement": "line",
-          "symbol-spacing": 120, // Space between arrows
-          "icon-image": "arrow",
-          "icon-size": 0.7,
-          "icon-allow-overlap": true,
-          "icon-ignore-placement": true,
-          "icon-rotation-alignment": "map",
-        },
-      });
-    } else {
-      // Update existing source
-      const source = mapInstance.getSource(
-        "route-arrow"
-      ) as mapboxgl.GeoJSONSource;
-      source.setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates,
-        },
-      });
-    }
-
-    // Add route background if it doesn't exist
-    if (!mapInstance.getSource("route")) {
-      mapInstance.addSource("route", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates,
-          },
-        },
-      });
-    } else {
-      // Update existing source
-      const source = mapInstance.getSource("route") as mapboxgl.GeoJSONSource;
-      source.setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates,
-        },
-      });
-    }
-
-    // Add a larger arrow at the end
-    addEndArrow(coordinates);
-  } catch (error) {
-    console.error("Error adding route line:", error);
-  }
-};
-
-// Create a canvas to draw the arrow
 const createArrowImage = (): void => {
   if (!mapInstance) return;
 
@@ -1254,7 +833,6 @@ const createArrowImage = (): void => {
   }
 };
 
-// Add a larger arrow at the end of the route
 const addEndArrow = (coordinates: number[][]): void => {
   if (!mapInstance || coordinates.length < 2) return;
 
@@ -1311,7 +889,6 @@ const addEndArrow = (coordinates: number[][]): void => {
   }
 };
 
-// Calculate bearing between two points
 const getBearing = (
   lat1: number,
   lng1: number,
@@ -1334,132 +911,6 @@ const getBearing = (
   return bearing;
 };
 
-// Handle focus point event
-const handleFocusPoint = (
-  index: number,
-  type: string,
-  positions: Position[]
-): void => {
-  if (
-    !mapInstance ||
-    positions.length === 0 ||
-    index < 0 ||
-    index >= positions.length
-  )
-    return;
-
-  const position = positions[index];
-  const zoom = type === "current" ? 16 : 15;
-
-  // Center on position
-  centerMapOnPosition(position, zoom);
-
-  // Show popup
-  setTimeout(() => {
-    if (index < markers.length) {
-      const marker = markers[index];
-      if (marker && marker.getPopup()) {
-        // Close other popups
-        markers.forEach((m) => {
-          const popup = m.getPopup();
-          if (popup?.isOpen()) {
-            popup.remove();
-          }
-        });
-
-        // Open this popup
-        marker.togglePopup();
-      }
-    }
-  }, 1200);
-};
-
-// Update positions on the map
-const updatePositions = (
-  positions: Position[],
-  deviceName: string,
-  deviceImage: string
-): void => {
-  if (!mapInstance) return;
-
-  // Process positions
-  if (!mapInstance.loaded()) {
-    console.log("Map not loaded yet, waiting...");
-    mapInstance.once("load", () => {
-      setTimeout(
-        () => processPositions(positions, deviceName, deviceImage),
-        100
-      );
-    });
-  } else {
-    setTimeout(() => processPositions(positions, deviceName, deviceImage), 100);
-  }
-};
-
-// Update just the current position marker with new live data
-const updateCurrentPosition = (
-  position: Position,
-  deviceName: string,
-  deviceImage: string
-): void => {
-  if (!mapInstance || !isValidPosition(position) || markers.length === 0)
-    return;
-
-  // Get the current (last) marker
-  const currentMarker = markers[markers.length - 1];
-  if (!currentMarker) return;
-
-  // Smoothly move the marker to the new position
-  moveMarker(
-    currentMarker,
-    [position.longitude, position.latitude],
-    750 // Faster transition for live updates
-  );
-
-  // Update popup content
-  const popup = currentMarker.getPopup();
-  if (popup) {
-    // Create a new popup with updated content
-    const newPopup = createCurrentPopup(position, deviceName, deviceImage);
-
-    // Apply new popup to marker
-    currentMarker.setPopup(newPopup);
-
-    // If popup is open, update it
-    if (popup.isOpen()) {
-      // Temporarily remove and re-add popup to update content
-      popup.remove();
-      setTimeout(() => {
-        currentMarker.togglePopup();
-      }, 100);
-    }
-  }
-
-  // Update route line if available - just the last segment
-  if (mapInstance.getSource("route-arrow") && markers.length > 1) {
-    // Get positions from all markers to update route
-    const positions: Position[] = markers.map((marker) => {
-      const lngLat = marker.getLngLat();
-      // For the last marker, use the new position
-      if (marker === currentMarker) {
-        return position;
-      }
-      // For other markers, use their current positions
-      return {
-        latitude: lngLat.lat,
-        longitude: lngLat.lng,
-      } as Position;
-    });
-
-    // Update route with all positions
-    addRouteLine(positions);
-  }
-
-  // Update end arrow position and rotation
-  updateEndArrow(position);
-};
-
-// Update just the end arrow position and rotation
 const updateEndArrow = (position: Position): void => {
   if (!mapInstance || !isValidPosition(position) || markers.length < 2) return;
 
@@ -1499,21 +950,541 @@ const updateEndArrow = (position: Position): void => {
   }
 };
 
-// Export all functions
 const mapService = {
-  initializeMap,
-  removeMap,
-  fitMapToPositions,
-  centerMapOnPosition,
-  setupClickHandler,
-  clearMarkers,
-  createStartMarker,
-  createCurrentMarker,
-  createRouteMarker,
-  handleFocusPoint,
-  updatePositions,
-  updateCurrentPosition,
-  addRouteLine,
+  initializeMap: (container: HTMLElement): mapboxgl.Map => {
+    addStyles();
+
+    mapInstance = new mapboxgl.Map({
+      container,
+      style: "mapbox://styles/mapbox/streets-v11",
+      center: [0, 0],
+      zoom: 2,
+      minZoom: 1,
+      attributionControl: false,
+      renderWorldCopies: true,
+      failIfMajorPerformanceCaveat: false,
+      preserveDrawingBuffer: true,
+      scrollZoom: false,
+    });
+
+    container.setAttribute("data-testid", "map-container");
+
+    // Add controls
+    addControls();
+
+    // Add listeners
+    addMapListeners();
+
+    return mapInstance;
+  },
+  removeMap: (): void => {
+    if (mapInstance) {
+      mapService.clearMarkers();
+      mapInstance.remove();
+      mapInstance = null;
+      clickHandlerAdded = false;
+    }
+  },
+  fitMapToPositions: (positions: Position[]): void => {
+    if (!mapInstance || positions.length === 0) return;
+
+    try {
+      const bounds = new mapboxgl.LngLatBounds();
+      let validPointsAdded = 0;
+
+      // Extend bounds with valid positions
+      positions.forEach((pos) => {
+        if (isValidPosition(pos)) {
+          bounds.extend([pos.longitude, pos.latitude]);
+          validPointsAdded++;
+        }
+      });
+
+      if (validPointsAdded === 0) {
+        console.warn("No valid coordinates to fit bounds");
+        return;
+      }
+
+      // Fit map to bounds with padding
+      mapInstance.fitBounds(bounds, {
+        padding: { top: 120, bottom: 120, left: 120, right: 120 },
+        maxZoom: 15,
+        duration: 1000,
+      });
+    } catch (error) {
+      console.error("Error fitting bounds:", error);
+
+      // Fallback to last position
+      if (positions.length > 0) {
+        mapService.centerMapOnPosition(positions[positions.length - 1]);
+      }
+    }
+  },
+  centerMapOnPosition: (position: Position, zoom: number = 14): void => {
+    if (!mapInstance || !isValidPosition(position)) return;
+
+    try {
+      mapInstance.flyTo({
+        center: [position.longitude, position.latitude],
+        zoom,
+        essential: true,
+        duration: 1000,
+      });
+
+      // Show popup for the position
+      setTimeout(() => {
+        const marker = markers.find((m) => {
+          const lngLat = m.getLngLat();
+          return (
+            lngLat.lat === position.latitude &&
+            lngLat.lng === position.longitude
+          );
+        });
+
+        if (marker && marker.getPopup()) {
+          marker.togglePopup();
+        }
+      }, 1200);
+    } catch (error) {
+      console.error("Error centering on position:", error);
+    }
+  },
+  setupClickHandler: (): void => {
+    if (!mapInstance || clickHandlerAdded) return;
+
+    // For closing popups when clicking outside markers
+    mapInstance.on("click", (e) => {
+      // Check if the click target is a marker or popup
+      const element = e.originalEvent.target as HTMLElement;
+      const isMarkerClick = element.closest(".mapboxgl-marker") !== null;
+      const isPopupClick = element.closest(".mapboxgl-popup") !== null;
+
+      // Only close popups if clicking outside markers and popups
+      if (!isMarkerClick && !isPopupClick) {
+        // Close all popups
+        markers.forEach((marker) => {
+          const popup = marker.getPopup();
+          if (popup?.isOpen()) {
+            popup.remove();
+          }
+        });
+      }
+    });
+
+    clickHandlerAdded = true;
+  },
+  clearMarkers: (): void => {
+    markers.forEach((marker) => marker.remove());
+    markers = [];
+  },
+  createStartMarker: (
+    position: Position,
+    deviceName: string,
+    deviceImage: string
+  ): mapboxgl.Marker | null => {
+    if (!mapInstance || !isValidPosition(position)) return null;
+
+    const markerElement = createStartMarkerElement(deviceName, deviceImage);
+    const popup = createStartPopup(position, deviceName, deviceImage);
+
+    try {
+      // Create marker with correct settings
+      const marker = new mapboxgl.Marker({
+        element: markerElement,
+        anchor: "center",
+        draggable: false,
+        pitchAlignment: "viewport",
+        rotationAlignment: "viewport",
+      });
+
+      // Set position
+      marker.setLngLat([position.longitude, position.latitude]);
+
+      // Add popup but don't open by default
+      marker.setPopup(popup);
+
+      // Add clickable behavior to the marker element
+      markerElement.onclick = (e: MouseEvent) => {
+        e.stopPropagation(); // Prevent map click from triggering
+
+        // Close other popups first
+        markers.forEach((m) => {
+          if (m !== marker && m.getPopup()?.isOpen()) {
+            m.getPopup()?.remove();
+          }
+        });
+
+        // Toggle this popup immediately
+        if (marker.getPopup()?.isOpen()) {
+          marker.getPopup()?.remove();
+        } else {
+          marker.togglePopup();
+        }
+
+        // Then center on this marker
+        setTimeout(() => {
+          if (markers.length > 0) {
+            // Center on this marker after showing popup
+            mapInstance?.flyTo({
+              center: [position.longitude, position.latitude],
+              zoom: 15,
+              duration: 1000,
+            });
+          }
+        }, 200);
+      };
+
+      // Add to map
+      marker.addTo(mapInstance);
+      markers.push(marker);
+
+      return marker;
+    } catch (error) {
+      console.error("Error creating start marker:", error);
+      return null;
+    }
+  },
+  createCurrentMarker: (
+    position: Position,
+    deviceName: string,
+    deviceImage: string
+  ): mapboxgl.Marker | null => {
+    if (!mapInstance || !isValidPosition(position)) return null;
+
+    const markerElement = createDeviceMarkerElement(deviceName, deviceImage);
+    const popup = createCurrentPopup(position, deviceName, deviceImage);
+
+    try {
+      // Create marker with correct settings
+      const marker = new mapboxgl.Marker({
+        element: markerElement,
+        anchor: "center",
+        draggable: false,
+        pitchAlignment: "viewport",
+        rotationAlignment: "viewport",
+      });
+
+      // Set position
+      marker.setLngLat([position.longitude, position.latitude]);
+
+      // Add popup
+      marker.setPopup(popup);
+
+      // Add clickable behavior to the marker element
+      markerElement.onclick = (e: MouseEvent) => {
+        e.stopPropagation(); // Prevent map click from triggering
+
+        // Close other popups first
+        markers.forEach((m) => {
+          if (m !== marker && m.getPopup()?.isOpen()) {
+            m.getPopup()?.remove();
+          }
+        });
+
+        // Toggle this popup immediately
+        if (marker.getPopup()?.isOpen()) {
+          marker.getPopup()?.remove();
+        } else {
+          marker.togglePopup();
+        }
+
+        // Then center on this marker
+        setTimeout(() => {
+          if (markers.length > 0) {
+            // Center on this marker
+            mapInstance?.flyTo({
+              center: [position.longitude, position.latitude],
+              zoom: 15,
+              duration: 1000,
+            });
+          }
+        }, 200);
+      };
+
+      // Add to map
+      marker.addTo(mapInstance);
+      markers.push(marker);
+
+      return marker;
+    } catch (error) {
+      console.error("Error creating current marker:", error);
+      return null;
+    }
+  },
+  createRouteMarker: (position: Position): mapboxgl.Marker | null => {
+    if (!mapInstance || !isValidPosition(position)) return null;
+
+    const markerElement = createEventMarkerElement();
+
+    try {
+      // Create marker with correct settings
+      const marker = new mapboxgl.Marker({
+        element: markerElement,
+        anchor: "center",
+        draggable: false,
+      });
+
+      // Set position
+      marker.setLngLat([position.longitude, position.latitude]);
+
+      // Add to map
+      marker.addTo(mapInstance);
+      markers.push(marker);
+
+      return marker;
+    } catch (error) {
+      console.error("Error creating route marker:", error);
+      return null;
+    }
+  },
+  handleFocusPoint: (
+    index: number,
+    type: string,
+    positions: Position[]
+  ): void => {
+    if (!mapInstance || positions.length === 0) {
+      console.warn("Map not initialized or no positions available");
+      return;
+    }
+
+    if (index < 0 || index >= positions.length) {
+      console.warn(
+        `Invalid index: ${index}. Valid range: 0-${positions.length - 1}`
+      );
+      return;
+    }
+
+    const position = positions[index];
+
+    const zoom = type === "current" ? 16 : 15;
+
+    let marker = null;
+    if (index < markers.length) {
+      marker = markers[index];
+    }
+
+    // First close any open popups
+    markers.forEach((m) => {
+      if (m.getPopup()?.isOpen()) {
+        m.getPopup()?.remove();
+      }
+    });
+
+    // Center on position and ensure the marker is visible
+    mapInstance.flyTo({
+      center: [position.longitude, position.latitude],
+      zoom: zoom,
+      duration: 1000,
+      essential: true,
+    });
+
+    if (marker && marker.getPopup()) {
+      setTimeout(() => {
+        if (!marker.getPopup()?.isOpen()) {
+          marker.togglePopup();
+        }
+      }, 1000);
+    }
+  },
+  updatePositions: (
+    positions: Position[],
+    deviceName: string,
+    deviceImage: string
+  ): void => {
+    if (!mapInstance) return;
+
+    // Process positions
+    if (!mapInstance.loaded()) {
+      console.log("Map not loaded yet, waiting...");
+      mapInstance.once("load", () => {
+        setTimeout(
+          () => processPositions(positions, deviceName, deviceImage),
+          100
+        );
+      });
+    } else {
+      setTimeout(
+        () => processPositions(positions, deviceName, deviceImage),
+        100
+      );
+    }
+  },
+  updateCurrentPosition: (
+    position: Position,
+    deviceName: string,
+    deviceImage: string
+  ): void => {
+    if (!mapInstance || !isValidPosition(position) || markers.length === 0)
+      return;
+
+    // Get the current (last) marker
+    const currentMarker = markers[markers.length - 1];
+    if (!currentMarker) return;
+
+    // Smoothly move the marker to the new position
+    moveMarker(
+      currentMarker,
+      [position.longitude, position.latitude],
+      750 // Faster transition for live updates
+    );
+
+    // Update popup content
+    const popup = currentMarker.getPopup();
+    if (popup) {
+      // Create a new popup with updated content
+      const newPopup = createCurrentPopup(position, deviceName, deviceImage);
+
+      // Apply new popup to marker
+      currentMarker.setPopup(newPopup);
+
+      // If popup is open, update it
+      if (popup.isOpen()) {
+        // Temporarily remove and re-add popup to update content
+        popup.remove();
+        setTimeout(() => {
+          currentMarker.togglePopup();
+        }, 100);
+      }
+    }
+
+    // Update route line if available - just the last segment
+    if (mapInstance.getSource("route-arrow") && markers.length > 1) {
+      // Get positions from all markers to update route
+      const positions: Position[] = markers.map((marker) => {
+        const lngLat = marker.getLngLat();
+        // For the last marker, use the new position
+        if (marker === currentMarker) {
+          return position;
+        }
+        // For other markers, use their current positions
+        return {
+          latitude: lngLat.lat,
+          longitude: lngLat.lng,
+        } as Position;
+      });
+
+      // Update route with all positions
+      mapService.addRouteLine(positions);
+    }
+
+    // Update end arrow position and rotation
+    updateEndArrow(position);
+  },
+  addRouteLine: (positions: Position[]): void => {
+    if (!mapInstance || positions.length < 2) return;
+
+    try {
+      // Filter valid positions
+      const validPositions = positions.filter((pos) => isValidPosition(pos));
+
+      if (validPositions.length < 2) {
+        console.warn("Not enough valid positions for route line");
+        return;
+      }
+
+      const coordinates = validPositions.map((pos) => [
+        pos.longitude,
+        pos.latitude,
+      ]);
+
+      // Create a custom arrow image if it doesn't exist
+      if (!mapInstance.hasImage("arrow")) {
+        createArrowImage();
+      }
+
+      // Add arrow layer if it doesn't exist
+      if (!mapInstance.getSource("route-arrow")) {
+        // Add source for the arrow line
+        mapInstance.addSource("route-arrow", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
+          },
+        });
+
+        // Add a green line layer
+        mapInstance.addLayer({
+          id: "route-arrow-line",
+          type: "line",
+          source: "route-arrow",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#23C16B",
+            "line-width": 4,
+            "line-opacity": 0.9,
+          },
+        });
+
+        // Add arrow symbols along the line
+        mapInstance.addLayer({
+          id: "route-arrow-symbol",
+          type: "symbol",
+          source: "route-arrow",
+          layout: {
+            "symbol-placement": "line",
+            "symbol-spacing": 120, // Space between arrows
+            "icon-image": "arrow",
+            "icon-size": 0.7,
+            "icon-allow-overlap": true,
+            "icon-ignore-placement": true,
+            "icon-rotation-alignment": "map",
+          },
+        });
+      } else {
+        // Update existing source
+        const source = mapInstance.getSource(
+          "route-arrow"
+        ) as mapboxgl.GeoJSONSource;
+        source.setData({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates,
+          },
+        });
+      }
+
+      // Add route background if it doesn't exist
+      if (!mapInstance.getSource("route")) {
+        mapInstance.addSource("route", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates,
+            },
+          },
+        });
+      } else {
+        // Update existing source
+        const source = mapInstance.getSource("route") as mapboxgl.GeoJSONSource;
+        source.setData({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates,
+          },
+        });
+      }
+
+      // Add a larger arrow at the end
+      addEndArrow(coordinates);
+    } catch (error) {
+      console.error("Error adding route line:", error);
+    }
+  },
 };
 
 export default mapService;
