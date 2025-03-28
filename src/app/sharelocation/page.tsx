@@ -6,6 +6,14 @@ import dynamic from "next/dynamic";
 import axiosInstance from "@/utils/axios";
 import { Position, LocationPoints } from "@/types/location";
 import { io, Socket } from "socket.io-client";
+import { 
+  FaChevronUp, 
+  FaChevronDown, 
+  FaMapMarkerAlt,
+  FaLocationArrow,
+  FaCloud
+} from "react-icons/fa";
+import { BiLoaderAlt } from "react-icons/bi";
 
 const MapComponent = dynamic(() => import("./MapComponent"), {
   ssr: false,
@@ -365,26 +373,11 @@ export default function ShareLocation() {
               onClick={() => setShowPanel(!showPanel)}
               className="bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-full"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                {showPanel ? (
-                  <path
-                    fillRule="evenodd"
-                    d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z"
-                    clipRule="evenodd"
-                  />
-                ) : (
-                  <path
-                    fillRule="evenodd"
-                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                    clipRule="evenodd"
-                  />
-                )}
-              </svg>
+              {showPanel ? (
+                <FaChevronUp className="h-5 w-5" />
+              ) : (
+                <FaChevronDown className="h-5 w-5" />
+              )}
             </button>
           </div>
 
@@ -406,26 +399,7 @@ export default function ShareLocation() {
               >
                 {loading ? (
                   <span className="flex items-center gap-2">
-                    <svg
-                      className="animate-spin h-4 w-4 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
+                    <BiLoaderAlt className="animate-spin h-4 w-4 text-white" />
                     Loading...
                   </span>
                 ) : (
@@ -476,18 +450,7 @@ export default function ShareLocation() {
                   }}
                   className="flex items-center justify-center px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium hover:bg-blue-200 transition-colors"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3.5 w-3.5 mr-1"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
+                  <FaMapMarkerAlt className="h-3.5 w-3.5 mr-1" />
                   View Start
                 </button>
 
@@ -510,26 +473,7 @@ export default function ShareLocation() {
                   }}
                   className="flex items-center justify-center px-3 py-1.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium hover:bg-orange-200 transition-colors"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3.5 w-3.5 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
+                  <FaLocationArrow className="h-3.5 w-3.5 mr-1" />
                   View Current
                 </button>
 
@@ -547,20 +491,7 @@ export default function ShareLocation() {
                   }}
                   className="flex items-center justify-center px-3 py-1.5 bg-gray-200 text-gray-700 rounded-full text-xs font-medium hover:bg-gray-300 transition-colors"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-3.5 w-3.5 mr-1"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"
-                    />
-                  </svg>
+                  <FaCloud className="h-3.5 w-3.5 mr-1" />
                   View All
                 </button>
                 {deviceInfo && latestPosition && (
@@ -592,18 +523,7 @@ export default function ShareLocation() {
           onClick={() => setShowPanel(true)}
           className="absolute top-4 right-4 z-10 bg-white shadow-lg rounded-full p-3 text-gray-700 hover:bg-gray-50 transition-all duration-200"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <FaChevronDown className="h-5 w-5" />
         </button>
       )}
     </div>

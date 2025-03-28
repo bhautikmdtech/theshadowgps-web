@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Modal,
@@ -10,29 +10,26 @@ import {
   Badge,
   Accordion,
 } from "react-bootstrap";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faChevronLeft,
-  faExclamationCircle,
-  faCube,
-  faPencilAlt,
-  faExternalLinkAlt,
-  faExclamationTriangle,
-  faCreditCard,
-  faPlus,
-  faEllipsisV,
-  faCheck,
-  faTrash,
-  faInfoCircle,
-} from "@fortawesome/free-solid-svg-icons";
-import {
-  faCcVisa,
-  faCcMastercard,
-  faCcAmex,
-  faCcDiscover,
-  faCcDinersClub,
-  faCcJcb,
-} from "@fortawesome/free-brands-svg-icons";
+  FaChevronLeft,
+  FaExclamationCircle,
+  FaCube,
+  FaEdit,
+  FaExternalLinkAlt,
+  FaExclamationTriangle,
+  FaCreditCard,
+  FaPlus,
+  FaEllipsisV,
+  FaCheck,
+  FaTrash,
+  FaInfoCircle,
+  FaCcVisa,
+  FaCcMastercard,
+  FaCcAmex,
+  FaCcDiscover,
+  FaCcDinersClub,
+  FaCcJcb
+} from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
@@ -241,7 +238,7 @@ const CheckoutForm = ({
 
         {error && (
           <div className="alert alert-danger mt-3 mb-0">
-            <FontAwesomeIcon icon={faExclamationCircle} className="me-2" />
+            <FaExclamationCircle className="me-2" />
             {error}
           </div>
         )}
@@ -473,15 +470,15 @@ export default function SubscriptionViewer() {
 
   const getCardIcon = (brand: string) => {
     const brands: Record<string, any> = {
-      visa: faCcVisa,
-      mastercard: faCcMastercard,
-      amex: faCcAmex,
-      discover: faCcDiscover,
-      diners: faCcDinersClub,
-      jcb: faCcJcb,
+      visa: FaCcVisa,
+      mastercard: FaCcMastercard,
+      amex: FaCcAmex,
+      discover: FaCcDiscover,
+      diners: FaCcDinersClub,
+      jcb: FaCcJcb,
     };
 
-    return brands[brand.toLowerCase()] || faCreditCard;
+    return brands[brand.toLowerCase()] || FaCreditCard;
   };
 
   // Helper function to get card label from the brand
@@ -989,7 +986,7 @@ export default function SubscriptionViewer() {
         <div className="container py-5">
           <div className="alert alert-danger">
             <div className="d-flex align-items-center">
-              <FontAwesomeIcon icon={faExclamationCircle} className="me-2" />
+              <FaExclamationCircle className="me-2" />
               <div>
                 An error occurred while rendering the page. Please try
                 refreshing the browser.
@@ -1025,7 +1022,7 @@ export default function SubscriptionViewer() {
         <div className="container py-5">
           <div className="alert alert-danger">
             <div className="d-flex align-items-center">
-              <FontAwesomeIcon icon={faExclamationCircle} className="me-2" />
+              <FaExclamationCircle className="me-2" />
               <div>{errorMessage}</div>
             </div>
           </div>
@@ -1038,7 +1035,7 @@ export default function SubscriptionViewer() {
         <div className="container py-5">
           <div className="alert alert-warning">
             <div className="d-flex align-items-center">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
+              <FaExclamationTriangle className="me-2" />
               <div>No subscription data available.</div>
             </div>
           </div>
@@ -1068,7 +1065,7 @@ export default function SubscriptionViewer() {
           <div className="container py-2">
             <div className="d-flex align-items-center">
               <a className="text-dark d-flex align-items-center text-decoration-none">
-                <FontAwesomeIcon icon={faChevronLeft} className="me-2" />
+                <FaChevronLeft className="me-2" />
               </a>
               <h5 className="mb-0 mx-auto">Subscriptions</h5>
             </div>
@@ -1121,10 +1118,7 @@ export default function SubscriptionViewer() {
                               />
                             ) : (
                               <div className="bg-primary rounded-circle d-flex justify-content-center align-items-center w-100 h-100">
-                                <FontAwesomeIcon
-                                  icon={faCube}
-                                  className="text-white"
-                                />
+                                <FaCube className="text-white" />
                               </div>
                             )}
                           </div>
@@ -1169,20 +1163,17 @@ export default function SubscriptionViewer() {
                             
                             {subscription.isInGracePeriod && subscription.gracePeriodMessage && (
                               <div className="alert alert-warning mt-2 mb-0 py-2 px-3 small">
-                                <FontAwesomeIcon icon={faExclamationTriangle} className="me-2" />
+                                <FaExclamationTriangle className="me-2" />
                                 {subscription.gracePeriodMessage}
                               </div>
                             )}
                             
                             {subscription.paymentMethod && (
                               <div className="text-muted mt-1 d-flex align-items-center">
-                                <FontAwesomeIcon
-                                  icon={getCardIcon(
-                                    subscription.paymentMethod.brand
-                                  )}
-                                  className="me-1"
-                                  size="sm"
-                                />
+                                {(() => {
+                                  const IconComponent = getCardIcon(subscription.paymentMethod.brand);
+                                  return <IconComponent className="me-1" size={12} />;
+                                })()}
                                 <span className="me-2">
                                   ****{subscription.paymentMethod.last4}
                                 </span>
@@ -1194,10 +1185,7 @@ export default function SubscriptionViewer() {
                                   }}
                                   style={{ color: "#6c757d" }}
                                 >
-                                  <FontAwesomeIcon
-                                    icon={faPencilAlt}
-                                    size="xs"
-                                  />
+                                  <FaEdit size={12} />
                                 </a>
                               </div>
                             )}
@@ -1303,10 +1291,7 @@ export default function SubscriptionViewer() {
                                 className="w-100 h-100 rounded-circle"
                               />
                             ) : (
-                              <FontAwesomeIcon
-                                icon={faCube}
-                                className="text-white"
-                              />
+                              <FaCube className="text-white" />
                             )}
                           </div>
                           <div>
@@ -1384,11 +1369,10 @@ export default function SubscriptionViewer() {
                         >
                           <div className="payment-info d-flex align-items-center">
                             <div className="card-icon me-3">
-                              <FontAwesomeIcon
-                                icon={getCardIcon(method.brand)}
-                                size="lg"
-                                className="text-dark"
-                              />
+                              {(() => {
+                                const IconComponent = getCardIcon(method.brand);
+                                return <IconComponent size={20} className="text-dark" />;
+                              })()}
                             </div>
                             <div className="card-details">
                               <div className="card-number">
@@ -1417,7 +1401,7 @@ export default function SubscriptionViewer() {
                                 aria-expanded="false"
                                 id={`dropdown-${method.id}`}
                               >
-                                <FontAwesomeIcon icon={faEllipsisV} />
+                                <FaEllipsisV />
                               </button>
                               <ul
                                 className="dropdown-menu dropdown-menu-end"
@@ -1434,10 +1418,7 @@ export default function SubscriptionViewer() {
                                         )
                                       }
                                     >
-                                      <FontAwesomeIcon
-                                        icon={faCheck}
-                                        className="me-2"
-                                      />
+                                      <FaCheck className="me-2" />
                                       Make Default
                                     </button>
                                   </li>
@@ -1450,10 +1431,7 @@ export default function SubscriptionViewer() {
                                       handleDeletePaymentMethod(method.id)
                                     }
                                   >
-                                    <FontAwesomeIcon
-                                      icon={faTrash}
-                                      className="me-2"
-                                    />
+                                    <FaTrash className="me-2" />
                                     Delete
                                   </button>
                                 </li>
@@ -1468,7 +1446,7 @@ export default function SubscriptionViewer() {
                       onClick={() => handleAddPaymentMethod()}
                       style={{ cursor: "pointer" }}
                     >
-                      <FontAwesomeIcon icon={faPlus} className="me-2" />
+                      <FaPlus className="me-2" />
                       <span>Add payment method</span>
                     </div>
                   </div>
@@ -1478,7 +1456,7 @@ export default function SubscriptionViewer() {
                     onClick={() => handleAddPaymentMethod()}
                     style={{ cursor: "pointer" }}
                   >
-                    <FontAwesomeIcon icon={faPlus} className="me-2" />
+                    <FaPlus className="me-2" />
                     <span>Add payment method</span>
                   </div>
                 )}
@@ -1511,7 +1489,7 @@ export default function SubscriptionViewer() {
                     className="text-decoration-none text-primary p-0"
                     onClick={handleShowUpdateBilling}
                   >
-                    <FontAwesomeIcon icon={faPencilAlt} className="me-2" />
+                    <FaEdit className="me-2" />
                     Update information
                   </Button>
                 </div>
@@ -1567,7 +1545,7 @@ export default function SubscriptionViewer() {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              <FontAwesomeIcon icon={faExternalLinkAlt} />
+                              <FaExternalLinkAlt />
                             </a>
                           )}
                         </div>
@@ -1719,15 +1697,16 @@ export default function SubscriptionViewer() {
                       >
                         <div className="d-flex align-items-center flex-grow-1">
                           <div className="me-3">
-                            <FontAwesomeIcon
-                              icon={getCardIcon(method.brand)}
-                              size="lg"
-                              className={`${
-                                selectedPaymentMethodId === method.id
+                            {(() => {
+                              const IconComponent = getCardIcon(method.brand);
+                              return <IconComponent 
+                                size={20} 
+                                className={selectedPaymentMethodId === method.id
                                   ? "text-primary"
                                   : "text-secondary"
-                              }`}
-                            />
+                                } 
+                              />;
+                            })()}
                           </div>
                           <div>
                             <div
@@ -1775,7 +1754,7 @@ export default function SubscriptionViewer() {
                   }}
                   style={{ cursor: "pointer", minHeight: "60px" }}
                 >
-                  <FontAwesomeIcon icon={faPlus} className="me-2" />
+                  <FaPlus className="me-2" />
                   <span>Add new payment method</span>
                 </div>
               </>
@@ -1793,7 +1772,7 @@ export default function SubscriptionViewer() {
                   }}
                   style={{ cursor: "pointer", minHeight: "60px" }}
                 >
-                  <FontAwesomeIcon icon={faPlus} className="me-2" />
+                  <FaPlus className="me-2" />
                   <span>Add payment method</span>
                 </div>
               </>
@@ -1840,10 +1819,9 @@ export default function SubscriptionViewer() {
           </Modal.Header>
           <Modal.Body>
             <div className="text-center mb-4">
-              <FontAwesomeIcon
-                icon={faExclamationTriangle}
+              <FaExclamationTriangle
                 className="text-warning"
-                size="3x"
+                size={48}
               />
             </div>
             <p className="mb-3">
@@ -1970,7 +1948,7 @@ export default function SubscriptionViewer() {
                   })}
                 </div>
                 <div className="alert alert-info mt-4">
-                  <FontAwesomeIcon icon={faInfoCircle} className="me-2" />
+                  <FaInfoCircle className="me-2" />
                   Your subscription will be updated immediately. You'll be
                   charged the prorated amount for the remainder of your billing
                   period.
