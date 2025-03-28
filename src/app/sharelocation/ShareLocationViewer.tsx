@@ -105,6 +105,11 @@ export default function ShareLocationViewer() {
   const [viewerStats, setViewerStats] = useState<ViewerStats | null>(null);
   const isMounted = useRef<boolean>(true);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [expiryTimeRemaining, setExpiryTimeRemaining] = useState<{
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
 
   const convertPointsArrayToObjects = (
     pointsArray: LocationPoints
@@ -350,24 +355,63 @@ export default function ShareLocationViewer() {
     }
   };
 
-  const calculateExpiryMinutes = () => {
-    if (!deviceInfo?.expiresAt) return null;
+  // Calculate initial expiry time
+  useEffect(() => {
+    if (!deviceInfo?.expiresAt) {
+      setExpiryTimeRemaining(null);
+      return;
+    }
 
-    const expiryDate = new Date(deviceInfo.expiresAt);
-    const now = new Date();
-    const diffMs = expiryDate.getTime() - now.getTime();
-    const diffMins = Math.round(diffMs / 60000);
+    const updateExpiryTime = () => {
+      // Make sure expiresAt is not undefined before creating date object
+      if (!deviceInfo.expiresAt) {
+        setExpiryTimeRemaining(null);
+        return;
+      }
 
-    return diffMins > 0 ? diffMins : 0;
+      const expiryDate = new Date(deviceInfo.expiresAt);
+      const now = new Date();
+      const diffMs = expiryDate.getTime() - now.getTime();
+
+      if (diffMs <= 0) {
+        setExpiryTimeRemaining({ hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      // Convert to hours, minutes and seconds format
+      const totalSeconds = Math.floor(diffMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      setExpiryTimeRemaining({ hours, minutes, seconds });
+    };
+
+    // Update immediately
+    updateExpiryTime();
+
+    // Set up interval to update every second
+    const intervalId = setInterval(updateExpiryTime, 1000);
+
+    // Clean up interval on unmount or when expiresAt changes
+    return () => clearInterval(intervalId);
+  }, [deviceInfo?.expiresAt, deviceInfo]);
+
+  const formatExpiryDisplay = () => {
+    if (!expiryTimeRemaining) return null;
+
+    const { hours, minutes, seconds } = expiryTimeRemaining;
+
+    if (hours > 0) {
+      return `${hours}hr${hours !== 1 ? "s" : ""} ${minutes}min ${seconds}sec`;
+    } else if (minutes > 0) {
+      return `${minutes}min ${seconds}sec`;
+    } else {
+      return `${seconds}sec`;
+    }
   };
 
-  const expiresInMinutes = calculateExpiryMinutes();
-
-  const formatDate = (timestamp: number) => {
-    if (!timestamp) return "";
-    const date = new Date(timestamp * 1000);
-    return date.toLocaleString();
-  };
+  const expiryDisplay = formatExpiryDisplay();
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
@@ -420,9 +464,9 @@ export default function ShareLocationViewer() {
 
           {/* Right section: Expiry and action buttons */}
           <div className="flex items-center gap-1">
-            {expiresInMinutes !== null && (
+            {expiryDisplay && (
               <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-md mr-1">
-                Expires in {expiresInMinutes}m
+                Expires in {expiryDisplay}
               </span>
             )}
 

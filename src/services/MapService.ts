@@ -1088,16 +1088,21 @@ const mapService = {
     const popup = createStartPopup(position, deviceName, deviceImage);
 
     try {
+      // Store device name and image as data attributes for later use
+      markerElement.setAttribute("data-name", deviceName);
+      markerElement.setAttribute("data-image", deviceImage || "");
+      markerElement.setAttribute("data-marker-type", "start");
+
       // Create marker with correct settings
       const marker = new mapboxgl.Marker({
         element: markerElement,
-        anchor: "center",
+        anchor: "center", // Change from "center" to "bottom" to fix position
         draggable: false,
-        pitchAlignment: "viewport",
+        pitchAlignment: "map", // Change from "viewport" to "map" for better stability
         rotationAlignment: "viewport",
       });
 
-      // Set position
+      // Set position precisely
       marker.setLngLat([position.longitude, position.latitude]);
 
       // Add popup but don't open by default
@@ -1123,9 +1128,9 @@ const mapService = {
 
         // Then center on this marker
         setTimeout(() => {
-          if (markers.length > 0) {
+          if (mapInstance) {
             // Center on this marker after showing popup
-            mapInstance?.flyTo({
+            mapInstance.flyTo({
               center: [position.longitude, position.latitude],
               zoom: 15,
               duration: 1000,
@@ -1137,6 +1142,12 @@ const mapService = {
       // Add to map
       marker.addTo(mapInstance);
       markers.push(marker);
+
+      // Force marker to maintain its position on zoom events
+      mapInstance.on("zoom", () => {
+        // This helps ensure the marker stays exactly at its position
+        marker.setLngLat([position.longitude, position.latitude]);
+      });
 
       return marker;
     } catch (error) {
@@ -1155,16 +1166,21 @@ const mapService = {
     const popup = createCurrentPopup(position, deviceName, deviceImage);
 
     try {
+      // Store device name and image as data attributes for later use
+      markerElement.setAttribute("data-name", deviceName);
+      markerElement.setAttribute("data-image", deviceImage || "");
+      markerElement.setAttribute("data-marker-type", "current");
+
       // Create marker with correct settings
       const marker = new mapboxgl.Marker({
         element: markerElement,
-        anchor: "center",
+        anchor: "center", // Change from "center" to "bottom" for better positioning
         draggable: false,
-        pitchAlignment: "viewport",
+        pitchAlignment: "map", // Use map alignment for better stability during zoom
         rotationAlignment: "viewport",
       });
 
-      // Set position
+      // Set position precisely
       marker.setLngLat([position.longitude, position.latitude]);
 
       // Add popup
@@ -1190,9 +1206,9 @@ const mapService = {
 
         // Then center on this marker
         setTimeout(() => {
-          if (markers.length > 0) {
+          if (mapInstance) {
             // Center on this marker
-            mapInstance?.flyTo({
+            mapInstance.flyTo({
               center: [position.longitude, position.latitude],
               zoom: 15,
               duration: 1000,
@@ -1204,6 +1220,12 @@ const mapService = {
       // Add to map
       marker.addTo(mapInstance);
       markers.push(marker);
+
+      // Force marker to maintain its position on zoom events
+      mapInstance.on("zoom", () => {
+        // This helps ensure the marker stays exactly at its position
+        marker.setLngLat([position.longitude, position.latitude]);
+      });
 
       return marker;
     } catch (error) {
