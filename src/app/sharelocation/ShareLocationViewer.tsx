@@ -99,9 +99,6 @@ export default function ShareLocationViewer() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [livePosition, setLivePosition] = useState<ExtendedLivePosition | null>(
-    null
-  );
   const [viewerStats, setViewerStats] = useState<ViewerStats | null>(null);
   const isMounted = useRef<boolean>(true);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -151,19 +148,6 @@ export default function ShareLocationViewer() {
       setPositions(positionObjects);
       setConnected(true);
       setError(null);
-
-      if (positionObjects.length > 0) {
-        const lastPosition = positionObjects[positionObjects.length - 1];
-        setLivePosition({
-          lat: lastPosition.latitude,
-          lng: lastPosition.longitude,
-          speed: lastPosition.speed,
-          tm: lastPosition.timestamp,
-          direction: lastPosition.direction,
-          address: lastPosition.address,
-          deviceId: data.data.deviceInfo?._id || "",
-        });
-      }
 
       return data;
     } catch (err: unknown) {
@@ -241,8 +225,6 @@ export default function ShareLocationViewer() {
       "sharedPositionUpdate",
       (newPosition: ExtendedLivePosition) => {
         if (isMounted.current) {
-          setLivePosition(newPosition);
-
           if (positions.length > 0) {
             const newPositionObj: Position = {
               latitude: newPosition.lat,
@@ -355,7 +337,6 @@ export default function ShareLocationViewer() {
     }
   };
 
-  // Calculate initial expiry time
   useEffect(() => {
     if (!deviceInfo?.expiresAt) {
       setExpiryTimeRemaining(null);
@@ -387,13 +368,10 @@ export default function ShareLocationViewer() {
       setExpiryTimeRemaining({ hours, minutes, seconds });
     };
 
-    // Update immediately
     updateExpiryTime();
 
-    // Set up interval to update every second
     const intervalId = setInterval(updateExpiryTime, 1000);
 
-    // Clean up interval on unmount or when expiresAt changes
     return () => clearInterval(intervalId);
   }, [deviceInfo?.expiresAt, deviceInfo]);
 
@@ -520,7 +498,6 @@ export default function ShareLocationViewer() {
           allPositions={positions}
           deviceName={deviceInfo?.deviceName || "Device"}
           deviceImage={deviceInfo?.imageUrl}
-          livePosition={livePosition ?? undefined}
         />
       </div>
     </div>

@@ -31,26 +31,13 @@ const addStyles = (): void => {
         z-index: 5;
         transform-origin: center !important;
       }
-      .device-start-marker-container { 
-        z-index: 3;
-        transition: transform 0.2s ease-in-out;
-        transform-origin: center !important;
-      }
-      .device-start-marker-container:hover {
-        transform: scale(1.1);
-      }
       .mapboxgl-marker {
         will-change: transform;
         cursor: pointer;
       }
       .pulse-ring {
         animation: pulse 2s ease-in-out infinite;
-      }
-      .device-end-marker-container {
-        transform-origin: center !important;
-        z-index: 4;
-      }
-      
+      } 
       /* Custom popup styling */
       .mapboxgl-popup {
         z-index: 10;
@@ -367,18 +354,6 @@ const createStartMarkerElement = (
 
   container.appendChild(el);
 
-  const dot = document.createElement("div");
-  dot.style.position = "absolute";
-  dot.style.top = "-2px";
-  dot.style.right = "5px";
-  dot.style.width = "10px";
-  dot.style.height = "10px";
-  dot.style.borderRadius = "50%";
-  dot.style.backgroundColor = "#4CAF50";
-  dot.style.border = "2px solid white";
-  dot.style.zIndex = "2";
-  el.appendChild(dot);
-
   if (deviceImage) {
     const img = document.createElement("img");
     img.src = deviceImage;
@@ -399,7 +374,7 @@ const createStartMarkerElement = (
   return container;
 };
 
-const createDeviceMarkerElement = (
+const createLastMarkerElement = (
   deviceName: string,
   deviceImage: string
 ): HTMLElement => {
@@ -911,45 +886,6 @@ const getBearing = (
   return bearing;
 };
 
-const updateEndArrow = (position: Position): void => {
-  if (!mapInstance || !isValidPosition(position) || markers.length < 2) return;
-
-  try {
-    // Get the last position and the one before it to calculate bearing
-    const lastPoint = [position.longitude, position.latitude];
-
-    // Get the second to last marker position
-    const secondLastMarker = markers[markers.length - 2];
-    const secondLastLngLat = secondLastMarker.getLngLat();
-    const secondLastPoint = [secondLastLngLat.lng, secondLastLngLat.lat];
-
-    // Calculate new bearing
-    const bearing = getBearing(
-      secondLastPoint[1] as number,
-      secondLastPoint[0] as number,
-      lastPoint[1] as number,
-      lastPoint[0] as number
-    );
-
-    // Update end arrow if it exists
-    if (mapInstance.getSource("end-arrow")) {
-      const source = mapInstance.getSource(
-        "end-arrow"
-      ) as mapboxgl.GeoJSONSource;
-      source.setData({
-        type: "Feature",
-        properties: { bearing },
-        geometry: {
-          type: "Point",
-          coordinates: lastPoint,
-        },
-      });
-    }
-  } catch (error) {
-    console.error("Error updating end arrow:", error);
-  }
-};
-
 const mapService = {
   initializeMap: (container: HTMLElement): mapboxgl.Map => {
     addStyles();
@@ -1162,7 +1098,7 @@ const mapService = {
   ): mapboxgl.Marker | null => {
     if (!mapInstance || !isValidPosition(position)) return null;
 
-    const markerElement = createDeviceMarkerElement(deviceName, deviceImage);
+    const markerElement = createLastMarkerElement(deviceName, deviceImage);
     const popup = createCurrentPopup(position, deviceName, deviceImage);
 
     try {
@@ -1330,67 +1266,6 @@ const mapService = {
         100
       );
     }
-  },
-  updateCurrentPosition: (
-    position: Position,
-    deviceName: string,
-    deviceImage: string
-  ): void => {
-    if (!mapInstance || !isValidPosition(position) || markers.length === 0)
-      return;
-
-    // Get the current (last) marker
-    const currentMarker = markers[markers.length - 1];
-    if (!currentMarker) return;
-
-    // Smoothly move the marker to the new position
-    moveMarker(
-      currentMarker,
-      [position.longitude, position.latitude],
-      750 // Faster transition for live updates
-    );
-
-    // Update popup content
-    const popup = currentMarker.getPopup();
-    if (popup) {
-      // Create a new popup with updated content
-      const newPopup = createCurrentPopup(position, deviceName, deviceImage);
-
-      // Apply new popup to marker
-      currentMarker.setPopup(newPopup);
-
-      // If popup is open, update it
-      if (popup.isOpen()) {
-        // Temporarily remove and re-add popup to update content
-        popup.remove();
-        setTimeout(() => {
-          currentMarker.togglePopup();
-        }, 100);
-      }
-    }
-
-    // Update route line if available - just the last segment
-    if (mapInstance.getSource("route-arrow") && markers.length > 1) {
-      // Get positions from all markers to update route
-      const positions: Position[] = markers.map((marker) => {
-        const lngLat = marker.getLngLat();
-        // For the last marker, use the new position
-        if (marker === currentMarker) {
-          return position;
-        }
-        // For other markers, use their current positions
-        return {
-          latitude: lngLat.lat,
-          longitude: lngLat.lng,
-        } as Position;
-      });
-
-      // Update route with all positions
-      mapService.addRouteLine(positions);
-    }
-
-    // Update end arrow position and rotation
-    updateEndArrow(position);
   },
   addRouteLine: (positions: Position[]): void => {
     if (!mapInstance || positions.length < 2) return;
