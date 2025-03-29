@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Modal, Button, Spinner } from 'react-bootstrap';
 import { FaSpinner } from "react-icons/fa";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { toast } from "react-toastify";
@@ -20,52 +21,11 @@ export default function AddPaymentModal({
   baseUrl,
   getToken
 }: AddPaymentModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Initialize Bootstrap modal
-    const initModal = async () => {
-      if (typeof document !== 'undefined' && modalRef.current) {
-        try {
-          // Dynamic import to avoid server-side rendering issues
-          const bootstrap = await import('bootstrap');
-          
-          // Get the modal element and initialize it
-          const modalElement = modalRef.current;
-          const modal = new bootstrap.Modal(modalElement);
-          
-          // Show or hide based on prop
-          if (show) {
-            modal.show();
-          } else {
-            modal.hide();
-          }
-          
-          // Add event listener to call onClose when modal is hidden
-          modalElement.addEventListener('hidden.bs.modal', () => {
-            onClose();
-          });
-          
-        } catch (error) {
-          console.error('Failed to initialize Bootstrap modal:', error);
-        }
-      }
-    };
-
-    initModal();
-    
-    // Cleanup on unmount
-    return () => {
-      if (modalRef.current) {
-        modalRef.current.removeEventListener('hidden.bs.modal', onClose);
-      }
-    };
-  }, [show, onClose]);
 
   useEffect(() => {
     if (elements) {
@@ -123,15 +83,6 @@ export default function AddPaymentModal({
 
       toast.success("Payment method added successfully!");
       onSuccess();
-      
-      // Close the modal
-      if (modalRef.current) {
-        const bootstrap = await import('bootstrap');
-        const modalInstance = bootstrap.Modal.getInstance(modalRef.current);
-        if (modalInstance) {
-          modalInstance.hide();
-        }
-      }
     } catch (err: unknown) {
       console.error("Payment error:", err);
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
@@ -143,86 +94,72 @@ export default function AddPaymentModal({
   };
 
   return (
-    <div 
-      className="modal fade" 
-      id="addPaymentMethodModal" 
-      tabIndex={-1} 
-      aria-labelledby="addPaymentMethodModalLabel" 
-      aria-hidden="true"
-      ref={modalRef}
+    <Modal
+      show={show}
+      onHide={onClose}
+      backdrop="static"
+      keyboard={false}
+      aria-labelledby="addPaymentMethodModalLabel"
     >
-      <div className="modal-dialog">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title" id="addPaymentMethodModalLabel">Add Payment Method</h5>
-            <button 
-              type="button" 
-              className="btn-close" 
-              aria-label="Close"
-              onClick={onClose}
-            ></button>
-          </div>
-          <div className="modal-body">
-            <form onSubmit={handleSubmit} id="payment-form">
-              <div className="mb-4">
-                {!paymentElementReady && (
-                  <div className="text-center py-2 mb-2">
-                    <div className="spinner-border spinner-border-sm text-primary me-2" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <span>Loading payment form...</span>
-                  </div>
-                )}
-
-                <div id="card-element">
-                  <PaymentElement
-                    options={{
-                      layout: {
-                        type: "tabs",
-                        defaultCollapsed: false,
-                      },
-                    }}
-                    onReady={() => setPaymentElementReady(true)}
-                    onChange={() => setError(null)}
-                  />
-                </div>
-
-                {error && (
-                  <div className="alert alert-danger mt-3 mb-0" id="card-errors">
-                    {error}
-                  </div>
-                )}
+      <Modal.Header closeButton>
+        <Modal.Title id="addPaymentMethodModalLabel">Add Payment Method</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <form onSubmit={handleSubmit} id="payment-form">
+          <div className="mb-4">
+            {!paymentElementReady && (
+              <div className="text-center py-2 mb-2">
+                <Spinner animation="border" size="sm" className="me-2" />
+                <span>Loading payment form...</span>
               </div>
-            </form>
+            )}
+
+            <div id="card-element">
+              <PaymentElement
+                options={{
+                  layout: {
+                    type: "tabs",
+                    defaultCollapsed: false,
+                  },
+                }}
+                onReady={() => setPaymentElementReady(true)}
+                onChange={() => setError(null)}
+              />
+            </div>
+
+            {error && (
+              <div className="alert alert-danger mt-3 mb-0" id="card-errors">
+                {error}
+              </div>
+            )}
           </div>
-          <div className="modal-footer">
-            <button 
-              type="button" 
-              className="btn btn-outline-secondary" 
-              onClick={onClose}
-              disabled={processing}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              form="payment-form"
-              id="submit-payment-method"
-              disabled={!stripe || !paymentElementReady || processing}
-              className="btn btn-primary"
-            >
-              {processing ? (
-                <>
-                  <FaSpinner className="me-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Add Payment Method"
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+        </form>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button 
+          variant="outline-secondary" 
+          onClick={onClose}
+          disabled={processing}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          type="submit"
+          form="payment-form"
+          id="submit-payment-method"
+          disabled={!stripe || !paymentElementReady || processing}
+        >
+          {processing ? (
+            <>
+              <Spinner animation="border" size="sm" className="me-2" />
+              Processing...
+            </>
+          ) : (
+            "Add Payment Method"
+          )}
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 } 

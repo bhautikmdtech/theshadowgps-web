@@ -11,7 +11,6 @@ import {
   FaMapMarkerAlt,
   FaLocationArrow,
   FaCrosshairs,
-  FaInfoCircle,
   FaSync,
 } from "react-icons/fa";
 import { BiLoaderAlt } from "react-icons/bi";

@@ -40,79 +40,34 @@ import {
 import { ThreeDots } from "react-loader-spinner";
 import axiosClient from "@/lib/axiosClient";
 
+// Import types from the shared types file
+import {
+  Customer,
+  PaymentMethod,
+  Device,
+  Subscription,
+  Plan,
+  Invoice,
+  SubscriptionData,
+} from "./types";
+
+// Import modular components
+import SubscriptionsSection from "./SubscriptionsSection";
+import PaymentMethodsSection from "./PaymentMethodsSection";
+import BillingInformationSection from "./BillingInformationSection";
+import InvoiceHistorySection from "./InvoiceHistorySection";
+import AddPaymentModal from "./AddPaymentModal";
+import CancelSubscriptionModal from "./CancelSubscriptionModal";
+import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
+import UpdatePlanModal from "./UpdatePlanModal";
+import UpdateBillingModal from "./UpdateBillingModal";
+import UpdatePaymentModal from "./UpdatePaymentModal";
+
 // Declare Stripe types for TypeScript
 declare global {
   interface Window {
     Stripe?: import("@stripe/stripe-js").StripeConstructor;
   }
-}
-
-// Types
-interface Customer {
-  id: string;
-  name: string | null;
-  email: string | null;
-}
-
-interface PaymentMethod {
-  id: string;
-  brand: string;
-  last4: string;
-  expMonth: number;
-  expYear: number;
-  isDefault: boolean;
-}
-
-interface Device {
-  deviceName: string;
-  deviceImage?: string;
-}
-
-interface Subscription {
-  id: string;
-  status: string;
-  amount: string;
-  interval: string;
-  renewalDate: string;
-  cancelAt?: string;
-  cancelStatus?: boolean;
-  isInGracePeriod?: boolean;
-  graceEndDate?: string;
-  gracePeriodMessage?: string;
-  isCollectionPaused?: boolean;
-  resumeAt?: string;
-  device?: Device;
-  paymentMethod?: PaymentMethod;
-  planId: string;
-}
-
-interface Plan {
-  id: string;
-  name: string;
-  description?: string;
-  amount: string;
-}
-
-interface Invoice {
-  id: string;
-  date: string;
-  amount: string;
-  currency: string;
-  status: string;
-  url?: string;
-}
-
-interface SubscriptionData {
-  customer: Customer;
-  subscriptions: Subscription[];
-  paymentMethods: PaymentMethod[];
-  plans: Plan[];
-  stripePublishableKey: string;
-  clientSecret: string;
-  invoices?: {
-    data: Invoice[];
-    hasMore: boolean;
-  };
 }
 
 const getTokenFromUrl = (): string | null => {
@@ -289,6 +244,7 @@ export default function SubscriptionViewer() {
     useState(false);
   const [showUpdatePlanModal, setShowUpdatePlanModal] = useState(false);
   const [showUpdateBillingModal, setShowUpdateBillingModal] = useState(false);
+  const [showReactivateModal, setShowReactivateModal] = useState(false);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
     string | null
   >(null);
@@ -302,8 +258,11 @@ export default function SubscriptionViewer() {
 
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [baseUrl, setBaseUrl] = useState<string>("");
 
   useEffect(() => {
+    // Set base URL for API calls
+    setBaseUrl(window.location.origin);
     fetchSubscriptionData();
   }, []);
 
@@ -526,48 +485,10 @@ export default function SubscriptionViewer() {
     }
   };
 
-  // Handle payment method submission
-  const handleSubmitPaymentMethod = async (paymentMethodId: string) => {
-    if (isProcessing) return;
-
-    setIsProcessing(true);
-
-    try {
-      const token = getTokenFromUrl();
-      if (!token) {
-        throw new Error("No authentication token found. Please log in again.");
-      }
-
-      if (!subscriptionData?.customer?.id) {
-        throw new Error("Customer information is missing");
-      }
-
-      const response = await axiosClient.post(
-        `/api/app/subscription/payment-methods/${subscriptionData.customer.id}`,
-        {
-          paymentMethodId,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
-      );
-
-      toast.success("Payment method added successfully!");
-      await fetchSubscriptionData();
-      setShowAddPaymentModal(false);
-    } catch (error: any) {
-      console.error("Add payment method error:", error);
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to add payment method";
-      toast.error(errorMessage);
-    } finally {
-      setIsProcessing(false);
-    }
+  // Handle payment method submission via AddPaymentModal
+  const handlePaymentMethodSuccess = async () => {
+    setShowAddPaymentModal(false);
+    await fetchSubscriptionData();
   };
 
   // Update handleSubmitUpdatePayment to use API call
@@ -712,7 +633,10 @@ export default function SubscriptionViewer() {
   };
 
   // Update handleConfirmBillingUpdate to use API call
-  const handleConfirmBillingUpdate = async () => {
+  const handleConfirmBillingUpdate = async (data: {
+    name: string;
+    email: string;
+  }) => {
     try {
       setIsProcessing(true);
 
@@ -728,8 +652,8 @@ export default function SubscriptionViewer() {
       const response = await axiosClient.put(
         `/api/app/subscription/customer/${subscriptionData.customer.id}/billing`,
         {
-          name: billingFormData.name,
-          email: billingFormData.email,
+          name: data.name,
+          email: data.email,
         },
         {
           headers: {
@@ -754,6 +678,16 @@ export default function SubscriptionViewer() {
   };
 
   const handleReactivateSubscription = async (subscriptionId: string) => {
+    setCurrentSubscriptionId(subscriptionId);
+    setShowReactivateModal(true);
+  };
+
+  const confirmReactivateSubscription = async () => {
+    if (!currentSubscriptionId) {
+      toast.error("No subscription selected");
+      return;
+    }
+
     try {
       setIsProcessing(true);
 
@@ -763,7 +697,7 @@ export default function SubscriptionViewer() {
       }
 
       const response = await axiosClient.post(
-        `/api/app/subscription/${subscriptionId}/reactivate`,
+        `/api/app/subscription/${currentSubscriptionId}/reactivate`,
         {},
         {
           headers: {
@@ -774,6 +708,7 @@ export default function SubscriptionViewer() {
       );
 
       toast.success("Subscription reactivated successfully");
+      setShowReactivateModal(false);
       await fetchSubscriptionData();
     } catch (error: any) {
       const errorMessage =
@@ -865,7 +800,7 @@ export default function SubscriptionViewer() {
     }
   };
 
-  // Handler methods
+  // Clean up handleUpdatePayment function
   const handleUpdatePayment = (subscriptionId: string) => {
     const subscription = subscriptionData?.subscriptions.find(
       (s) => s.id === subscriptionId
@@ -877,9 +812,11 @@ export default function SubscriptionViewer() {
     }
 
     setCurrentSubscriptionId(subscriptionId);
+
     if (subscription.paymentMethod) {
       setSelectedPaymentMethodId(subscription.paymentMethod.id);
     }
+
     setShowUpdatePaymentModal(true);
   };
 
@@ -936,6 +873,11 @@ export default function SubscriptionViewer() {
       setBillingFormData({
         name: subscriptionData.customer.name || "",
         email: subscriptionData.customer.email || "",
+      });
+    } else {
+      setBillingFormData({
+        name: "",
+        email: "",
       });
     }
     setShowUpdateBillingModal(true);
@@ -997,7 +939,7 @@ export default function SubscriptionViewer() {
         <div className="container py-5">
           <div className="alert alert-warning">
             <div className="d-flex align-items-center">
-              <FaExclamationTriangle className="me-2" />
+              <FaExclamationCircle className="me-2" />
               <div>No subscription data available.</div>
             </div>
           </div>
@@ -1005,7 +947,6 @@ export default function SubscriptionViewer() {
       );
     }
 
-    // The existing return statement with all the UI components remains the same
     return (
       <div className="bg-light min-vh-100">
         {/* Toast Container */}
@@ -1036,1016 +977,127 @@ export default function SubscriptionViewer() {
 
         <div className="container pb-4">
           {/* Subscriptions Section */}
-          <Accordion defaultActiveKey="0" className="mb-3">
-            <Accordion.Item eventKey="0" className="border">
-              <Accordion.Header>
-                <span className="fw-medium">Subscriptions</span>
-              </Accordion.Header>
-              <Accordion.Body className="p-0">
-                <div className="border-bottom pb-2 pt-2 px-3 bg-light">
-                  <span className="fw-medium">Active Subscriptions</span>
-                </div>
-
-                {/* Active Subscriptions */}
-                {subscriptionData.subscriptions
-                  .filter(
-                    (sub) =>
-                      sub.status === "active" ||
-                      sub.status === "trialing" ||
-                      sub.status === "past_due" ||
-                      sub.isInGracePeriod ||
-                      (sub.status === "active" && sub.isCollectionPaused)
-                  )
-                  .map((subscription) => (
-                    <div key={subscription.id} className="border-bottom p-3">
-                      <div className="d-flex justify-content-between">
-                        <div className="d-flex align-items-center">
-                          <div
-                            className="me-3"
-                            style={{
-                              width: "50px",
-                              height: "50px",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {subscription.device?.deviceImage ? (
-                              <img
-                                src={subscription.device.deviceImage}
-                                alt="Device"
-                                className="w-100 h-100 rounded-circle"
-                                style={{
-                                  objectFit: "cover",
-                                  border: "1px solid #dee2e6",
-                                }}
-                              />
-                            ) : (
-                              <div className="bg-primary rounded-circle d-flex justify-content-center align-items-center w-100 h-100">
-                                <FaCube className="text-white" />
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <div className="fw-bold">
-                              {subscription.device?.deviceName ||
-                                "Unknown Device"}
-                            </div>
-                            <div className="d-flex align-items-center">
-                              <small className="text-muted me-2">
-                                Monthly Plan
-                              </small>
-                              <small className="badge bg-success rounded-pill px-2 py-1">
-                                Active
-                              </small>
-                            </div>
-                            <div className="fw-medium">
-                              ${subscription.amount} per {subscription.interval}
-                            </div>
-                            <div className="text-muted small">
-                              {subscription.cancelStatus
-                                ? `Available until ${new Date(
-                                    subscription.renewalDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "long",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })}`
-                                : `Renews on ${new Date(
-                                    subscription.renewalDate
-                                  ).toLocaleDateString("en-US", {
-                                    month: "long",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  })}`}
-                              {subscription.cancelAt &&
-                                !subscription.cancelStatus && (
-                                  <div>
-                                    Cancels on:{" "}
-                                    {new Date(
-                                      subscription.cancelAt
-                                    ).toLocaleDateString("en-US", {
-                                      month: "long",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    })}
-                                  </div>
-                                )}
-                            </div>
-
-                            {subscription.isInGracePeriod &&
-                              subscription.gracePeriodMessage && (
-                                <div className="alert alert-warning mt-2 mb-0 py-2 px-3 small">
-                                  <FaExclamationTriangle className="me-2" />
-                                  {subscription.gracePeriodMessage}
-                                </div>
-                              )}
-
-                            {subscription.paymentMethod && (
-                              <div className="text-muted mt-1 d-flex align-items-center">
-                                {(() => {
-                                  const IconComponent = getCardIcon(
-                                    subscription.paymentMethod.brand
-                                  );
-                                  return (
-                                    <IconComponent className="me-1" size={12} />
-                                  );
-                                })()}
-                                <span className="me-2">
-                                  ****{subscription.paymentMethod.last4}
-                                </span>
-                                <a
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handleUpdatePayment(subscription.id);
-                                  }}
-                                  style={{ color: "#6c757d" }}
-                                >
-                                  <FaEdit size={12} />
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="d-flex gap-2 align-items-end">
-                          {!subscription.cancelStatus ? (
-                            <>
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                className="rounded-pill px-3"
-                                onClick={() =>
-                                  handleShowCancelSubscription(subscription.id)
-                                }
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="rounded-pill px-3"
-                                onClick={() =>
-                                  handleShowUpdatePlan(subscription.id)
-                                }
-                              >
-                                Update
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                variant="outline-primary"
-                                size="sm"
-                                className="rounded-pill px-3"
-                                onClick={() =>
-                                  handleReactivateSubscription(subscription.id)
-                                }
-                              >
-                                Renew
-                              </Button>
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                className="rounded-pill px-3"
-                                onClick={() =>
-                                  handleShowUpdatePlan(subscription.id)
-                                }
-                              >
-                                Update
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                {/* No active subscriptions message */}
-                {subscriptionData.subscriptions.filter(
-                  (sub) =>
-                    sub.status === "active" ||
-                    sub.status === "trialing" ||
-                    sub.status === "past_due" ||
-                    sub.isInGracePeriod ||
-                    (sub.status === "active" && sub.isCollectionPaused)
-                ).length === 0 && (
-                  <div className="p-3 text-center text-muted">
-                    No active subscriptions found.
-                  </div>
-                )}
-
-                <div className="border-bottom pb-2 pt-3 px-3 bg-light">
-                  <span className="fw-medium">Inactive Subscriptions</span>
-                </div>
-
-                {/* Inactive Subscriptions */}
-                {subscriptionData.subscriptions
-                  .filter(
-                    (sub) =>
-                      sub.status !== "active" &&
-                      sub.status !== "trialing" &&
-                      sub.status !== "past_due" &&
-                      !sub.isInGracePeriod &&
-                      !(sub.status === "active" && sub.isCollectionPaused)
-                  )
-                  .map((subscription) => (
-                    <div key={subscription.id} className="border-bottom p-3">
-                      <div className="d-flex justify-content-between">
-                        <div className="d-flex align-items-center">
-                          <div
-                            className="bg-secondary rounded-circle d-flex justify-content-center align-items-center me-3"
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              flexShrink: 0,
-                            }}
-                          >
-                            {subscription.device?.deviceImage ? (
-                              <img
-                                src={subscription.device.deviceImage}
-                                alt="Device"
-                                className="w-100 h-100 rounded-circle"
-                              />
-                            ) : (
-                              <FaCube className="text-white" />
-                            )}
-                          </div>
-                          <div>
-                            <div className="fw-bold">
-                              {subscription.device?.deviceName ||
-                                "Unknown Device"}
-                            </div>
-                            <div className="d-flex align-items-center">
-                              <small className="text-muted me-2">
-                                Monthly Plan
-                              </small>
-                              <small className="badge bg-secondary rounded-pill">
-                                Inactive
-                              </small>
-                            </div>
-                            <div className="fw-medium">
-                              ${subscription.amount} per {subscription.interval}
-                            </div>
-                            <div className="text-muted small">
-                              Ended on{" "}
-                              {new Date(
-                                subscription.renewalDate
-                              ).toLocaleDateString()}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="d-flex align-items-end">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() =>
-                              handleReactivateSubscription(subscription.id)
-                            }
-                            disabled={isProcessing}
-                          >
-                            {isProcessing ? "Processing..." : "Renew"}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                {/* No inactive subscriptions message */}
-                {subscriptionData.subscriptions.filter(
-                  (sub) =>
-                    sub.status !== "active" &&
-                    sub.status !== "trialing" &&
-                    sub.status !== "past_due" &&
-                    !sub.isInGracePeriod &&
-                    !(sub.status === "active" && sub.isCollectionPaused)
-                ).length === 0 && (
-                  <div className="p-3 text-center text-muted">
-                    No inactive subscriptions found.
-                  </div>
-                )}
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
+          <SubscriptionsSection
+            subscriptions={subscriptionData.subscriptions}
+            onUpdatePayment={handleUpdatePayment}
+            onCancelSubscription={handleShowCancelSubscription}
+            onUpdatePlan={handleShowUpdatePlan}
+            onReactivateSubscription={handleReactivateSubscription}
+            isProcessing={isProcessing}
+            getCardIcon={getCardIcon}
+          />
 
           {/* Payment Methods Section */}
-          <Accordion defaultActiveKey="0" className="mb-3">
-            <Accordion.Item eventKey="0" className="border">
-              <Accordion.Header>
-                <span className="fw-medium">Payment Methods</span>
-              </Accordion.Header>
-              <Accordion.Body className="p-3">
-                {/* Display Payment Methods */}
-                {subscriptionData.paymentMethods.length > 0 ? (
-                  <div className="payment-methods-list">
-                    {subscriptionData.paymentMethods.map(
-                      (method: PaymentMethod) => (
-                        <div
-                          key={method.id}
-                          className="payment-method d-flex justify-content-between align-items-center py-2 border-bottom"
-                        >
-                          <div className="payment-info d-flex align-items-center">
-                            <div className="card-icon me-3">
-                              {(() => {
-                                const IconComponent = getCardIcon(method.brand);
-                                return (
-                                  <IconComponent
-                                    size={20}
-                                    className="text-dark"
-                                  />
-                                );
-                              })()}
-                            </div>
-                            <div className="card-details">
-                              <div className="card-number">
-                                {getCardLabel(method.brand)} ending in{" "}
-                                {method.last4}
-                                {method.isDefault && (
-                                  <Badge
-                                    bg="primary"
-                                    className="ms-2 rounded-pill"
-                                  >
-                                    Default
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="card-expiry text-muted small">
-                                Expires {method.expMonth}/{method.expYear}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="payment-actions">
-                            <div className="dropdown">
-                              <button
-                                className="btn btn-link text-dark p-1 dropdown-toggle"
-                                type="button"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                                id={`dropdown-${method.id}`}
-                              >
-                                <FaEllipsisV />
-                              </button>
-                              <ul
-                                className="dropdown-menu dropdown-menu-end"
-                                aria-labelledby={`dropdown-${method.id}`}
-                              >
-                                {!method.isDefault && (
-                                  <li>
-                                    <button
-                                      className="dropdown-item"
-                                      type="button"
-                                      onClick={() =>
-                                        handleMakeDefaultPaymentMethod(
-                                          method.id
-                                        )
-                                      }
-                                    >
-                                      <FaCheck className="me-2" />
-                                      Make Default
-                                    </button>
-                                  </li>
-                                )}
-                                <li>
-                                  <button
-                                    className="dropdown-item text-danger"
-                                    type="button"
-                                    onClick={() =>
-                                      handleDeletePaymentMethod(method.id)
-                                    }
-                                  >
-                                    <FaTrash className="me-2" />
-                                    Delete
-                                  </button>
-                                </li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    )}
-                    <div
-                      className="add-payment-btn mt-3 d-flex align-items-center cursor-pointer"
-                      onClick={() => handleAddPaymentMethod()}
-                      style={{ cursor: "pointer" }}
-                    >
-                      <FaPlus className="me-2" />
-                      <span>Add payment method</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div
-                    className="add-payment-btn d-flex align-items-center cursor-pointer"
-                    onClick={() => handleAddPaymentMethod()}
-                    style={{ cursor: "pointer" }}
-                  >
-                    <FaPlus className="me-2" />
-                    <span>Add payment method</span>
-                  </div>
-                )}
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
+          <PaymentMethodsSection
+            paymentMethods={subscriptionData.paymentMethods}
+            handleAddPaymentMethod={handleAddPaymentMethod}
+            handleMakeDefaultPaymentMethod={handleMakeDefaultPaymentMethod}
+            handleDeletePaymentMethod={handleDeletePaymentMethod}
+            isProcessing={isProcessing}
+          />
 
           {/* Billing Information Section */}
-          <Accordion defaultActiveKey="0" className="mb-3">
-            <Accordion.Item eventKey="0" className="border">
-              <Accordion.Header>
-                <span className="fw-medium">
-                  Billing And Shipping Information
-                </span>
-              </Accordion.Header>
-              <Accordion.Body className="p-3">
-                <div className="mb-3">
-                  <div className="text-muted small">Name</div>
-                  <div>{subscriptionData.customer.name || "Not available"}</div>
-                </div>
-                <div className="mb-3">
-                  <div className="text-muted small">Email</div>
-                  <div>
-                    {subscriptionData.customer.email || "Not available"}
-                  </div>
-                </div>
-                <div>
-                  <Button
-                    variant="link"
-                    className="text-decoration-none text-primary p-0"
-                    onClick={handleShowUpdateBilling}
-                  >
-                    <FaEdit className="me-2" />
-                    Update information
-                  </Button>
-                </div>
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
+          <BillingInformationSection
+            customer={subscriptionData.customer}
+            onUpdateBilling={handleShowUpdateBilling}
+          />
 
           {/* Invoice History Section */}
-          <Accordion defaultActiveKey="0" className="mb-3">
-            <Accordion.Item eventKey="0" className="border">
-              <Accordion.Header>
-                <span className="fw-medium">Invoice History</span>
-              </Accordion.Header>
-              <Accordion.Body className="p-0">
-                {isLoadingInvoices &&
-                (!subscriptionData.invoices ||
-                  !subscriptionData.invoices.data ||
-                  subscriptionData.invoices.data.length === 0) ? (
-                  <div className="text-center py-3" id="invoice-loading">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                  </div>
-                ) : subscriptionData.invoices &&
-                  subscriptionData.invoices.data &&
-                  subscriptionData.invoices.data.length > 0 ? (
-                  <div id="invoices-container" className="px-3">
-                    {/* Display visible invoices */}
-                    {subscriptionData.invoices.data.map(
-                      (invoice: Invoice, index: number) => (
-                        <div
-                          key={`${invoice.id}-${index}`}
-                          className="invoice d-flex justify-content-between align-items-center py-2 border-bottom"
-                        >
-                          <div className="invoice-date">
-                            {new Date(invoice.date).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "long",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )}
-                          </div>
-                          <div className="invoice-amount">
-                            ${parseFloat(invoice.amount).toFixed(2)}
-                          </div>
-                          <div className="invoice-status-container text-center">
-                            <span className="invoice-status badge rounded-pill bg-success">
-                              {invoice.status === "paid"
-                                ? "Paid"
-                                : invoice.status}
-                            </span>
-                          </div>
-                          <div className="invoice-link">
-                            {invoice.url && (
-                              <a
-                                href={invoice.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <FaExternalLinkAlt />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    )}
-
-                    {/* Show View More button if there are more invoices to show */}
-                    {subscriptionData.invoices.hasMore && (
-                      <div
-                        className="text-center py-3"
-                        id="load-more-container"
-                      >
-                        <button
-                          className="btn btn-link text-decoration-none"
-                          onClick={loadMoreInvoices}
-                        >
-                          {isLoadingInvoices ? (
-                            <>
-                              <Spinner
-                                animation="border"
-                                size="sm"
-                                className="me-2"
-                              />
-                              Loading...
-                            </>
-                          ) : (
-                            "View More"
-                          )}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div id="no-invoices-message" className="text-center py-3">
-                    <p className="text-muted mb-0">No invoices found.</p>
-                  </div>
-                )}
-              </Accordion.Body>
-            </Accordion.Item>
-          </Accordion>
+          <InvoiceHistorySection
+            invoices={subscriptionData.invoices}
+            isLoadingInvoices={isLoadingInvoices}
+            loadMoreInvoices={loadMoreInvoices}
+          />
         </div>
 
-        {/* All Modals */}
+        {/* Modals */}
         {/* Add Payment Method Modal */}
-        <Modal
-          show={showAddPaymentModal}
-          onHide={() => setShowAddPaymentModal(false)}
-          backdrop="static"
-          keyboard={false}
-          className="payment-method-modal"
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Add Payment Method</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {stripePromise && clientSecret ? (
-              <Elements
-                stripe={stripePromise}
-                options={{
-                  clientSecret,
-                  appearance: {
-                    theme: "stripe",
-                    variables: {
-                      colorPrimary: "#007bff",
-                      colorBackground: "#ffffff",
-                      colorText: "#424770",
-                      colorDanger: "#dc3545",
-                      fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                      spacingUnit: "4px",
-                      borderRadius: "4px",
-                    },
-                    rules: {
-                      ".Tab": {
-                        border: "1px solid #e6e6e6",
-                        boxShadow: "0px 1px 1px rgba(0, 0, 0, 0.03)",
-                        marginBottom: "8px",
-                      },
-                      ".Tab--selected": {
-                        color: "#007bff",
-                        border: "1px solid #007bff",
-                      },
-                      ".Label": {
-                        fontWeight: "500",
-                      },
-                      ".Input": {
-                        padding: "10px 14px",
-                      },
-                    },
-                  },
-                  fonts: [
-                    {
-                      cssSrc:
-                        "https://fonts.googleapis.com/css?family=Roboto:400,500,600",
-                    },
-                  ],
-                  locale: "auto",
-                }}
-              >
-                <CheckoutForm
-                  onSuccess={() => {
-                    setShowAddPaymentModal(false);
-                    fetchSubscriptionData();
-                  }}
-                  customerId={subscriptionData?.customer?.id || ""}
-                />
-              </Elements>
-            ) : (
-              <div className="text-center py-4">
-                <Spinner animation="border" variant="primary" />
-                <div className="mt-3">Initializing payment form...</div>
-              </div>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowAddPaymentModal(false)}
-              disabled={isProcessing}
-            >
-              Cancel
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Update Payment Method Modal */}
-        <Modal
-          show={showUpdatePaymentModal}
-          onHide={() => setShowUpdatePaymentModal(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Update Payment Method</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {subscriptionData.paymentMethods.length > 0 ? (
-              <>
-                <div className="mb-3">
-                  <h6 className="mb-3">Select payment method</h6>
-                  {subscriptionData.paymentMethods.map(
-                    (method: PaymentMethod) => (
-                      <div
-                        key={method.id}
-                        className={`p-3 border rounded mb-2 d-flex align-items-center ${
-                          selectedPaymentMethodId === method.id
-                            ? "border-primary bg-light"
-                            : ""
-                        }`}
-                        onClick={() => setSelectedPaymentMethodId(method.id)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="d-flex align-items-center flex-grow-1">
-                          <div className="me-3">
-                            {(() => {
-                              const IconComponent = getCardIcon(method.brand);
-                              return (
-                                <IconComponent
-                                  size={20}
-                                  className={
-                                    selectedPaymentMethodId === method.id
-                                      ? "text-primary"
-                                      : "text-secondary"
-                                  }
-                                />
-                              );
-                            })()}
-                          </div>
-                          <div>
-                            <div
-                              className={`fw-medium ${
-                                selectedPaymentMethodId === method.id
-                                  ? "text-primary"
-                                  : ""
-                              }`}
-                            >
-                              {method.brand.charAt(0).toUpperCase() +
-                                method.brand.slice(1)}{" "}
-                              ending in {method.last4}
-                              {method.isDefault && (
-                                <Badge
-                                  bg="primary"
-                                  className="ms-2 rounded-pill"
-                                >
-                                  Default
-                                </Badge>
-                              )}
-                            </div>
-                            <small className="text-muted">
-                              Expires {method.expMonth}/{method.expYear}
-                            </small>
-                          </div>
-                        </div>
-                        <Form.Check
-                          type="radio"
-                          name="payment-method"
-                          id={`payment-method-${method.id}`}
-                          checked={selectedPaymentMethodId === method.id}
-                          onChange={() => setSelectedPaymentMethodId(method.id)}
-                          className="ms-3"
-                        />
-                      </div>
-                    )
-                  )}
-                </div>
-                <h6 className="mb-3">Or add a new payment method</h6>
-                <div
-                  className="d-flex align-items-center justify-content-center text-primary border border-dashed p-3 rounded cursor-pointer"
-                  onClick={() => {
-                    setShowUpdatePaymentModal(false);
-                    handleAddPaymentMethod();
-                  }}
-                  style={{ cursor: "pointer", minHeight: "60px" }}
-                >
-                  <FaPlus className="me-2" />
-                  <span>Add new payment method</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="alert alert-info mb-4">
-                  No saved payment methods available. Please add a new payment
-                  method below.
-                </div>
-                <div
-                  className="d-flex align-items-center justify-content-center text-primary border border-dashed p-3 rounded cursor-pointer"
-                  onClick={() => {
-                    setShowUpdatePaymentModal(false);
-                    handleAddPaymentMethod();
-                  }}
-                  style={{ cursor: "pointer", minHeight: "60px" }}
-                >
-                  <FaPlus className="me-2" />
-                  <span>Add payment method</span>
-                </div>
-              </>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowUpdatePaymentModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmitUpdatePayment}
-              disabled={isProcessing || !selectedPaymentMethodId}
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  Processing...
-                </>
-              ) : (
-                "Update Payment Method"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        {showAddPaymentModal && stripePromise && clientSecret && (
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: "stripe",
+                variables: {
+                  colorPrimary: "#007bff",
+                  colorBackground: "#ffffff",
+                  colorText: "#424770",
+                  colorDanger: "#dc3545",
+                  fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+                  spacingUnit: "4px",
+                  borderRadius: "4px",
+                },
+              },
+            }}
+          >
+            <AddPaymentModal
+              show={showAddPaymentModal}
+              onClose={() => setShowAddPaymentModal(false)}
+              onSuccess={handlePaymentMethodSuccess}
+              customerId={subscriptionData.customer.id}
+              baseUrl={baseUrl}
+              getToken={getTokenFromUrl}
+            />
+          </Elements>
+        )}
 
         {/* Cancel Subscription Modal */}
-        <Modal
+        <CancelSubscriptionModal
           show={showCancelSubscriptionModal}
-          onHide={() => setShowCancelSubscriptionModal(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Cancel Subscription</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <div className="text-center mb-4">
-              <FaExclamationTriangle className="text-warning" size={48} />
-            </div>
-            <p className="mb-3">
-              Are you sure you want to cancel your subscription?
-            </p>
-            <div className="alert alert-info">
-              <p className="mb-0">
-                Your subscription will remain active until the end of your
-                billing period on{" "}
-                <span className="fw-bold">{billingEndDate}</span>.
-              </p>
-            </div>
-            <p className="text-muted">
-              You can renew your subscription at any time before the end of your
-              billing period.
-            </p>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowCancelSubscriptionModal(false)}
-            >
-              Keep Subscription
-            </Button>
-            <Button
-              variant="danger"
-              onClick={handleConfirmCancel}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  Processing...
-                </>
-              ) : (
-                "Cancel Subscription"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+          onClose={() => setShowCancelSubscriptionModal(false)}
+          onConfirm={handleConfirmCancel}
+          isProcessing={isProcessing}
+          billingEndDate={billingEndDate}
+        />
 
-        {/* Update Subscription Plan Modal */}
-        <Modal
+        {/* Reactivate Subscription Modal */}
+        <ReactivateSubscriptionModal
+          show={showReactivateModal}
+          onClose={() => setShowReactivateModal(false)}
+          onConfirm={confirmReactivateSubscription}
+          isProcessing={isProcessing}
+        />
+
+        {/* Update Plan Modal */}
+        <UpdatePlanModal
           show={showUpdatePlanModal}
-          onHide={() => setShowUpdatePlanModal(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Update Subscription Plan</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            {subscriptionData?.plans && subscriptionData.plans.length > 0 ? (
-              <div>
-                <h6 className="mb-3">Select a plan</h6>
-                <div id="available-plans-list">
-                  {subscriptionData.plans.map((plan: Plan) => {
-                    // Get current subscription plan to show comparisons
-                    const currentSubscription =
-                      subscriptionData?.subscriptions.find(
-                        (s) => s.id === currentSubscriptionId
-                      );
-                    const isCurrentPlan =
-                      currentSubscription?.planId === plan.id;
+          onClose={() => setShowUpdatePlanModal(false)}
+          onConfirm={handleConfirmPlanUpdate}
+          isProcessing={isProcessing}
+          plans={subscriptionData.plans}
+          currentPlanId={
+            currentSubscriptionId
+              ? subscriptionData.subscriptions.find(
+                  (s) => s.id === currentSubscriptionId
+                )?.planId || null
+              : null
+          }
+          selectedPlanId={selectedPlanId}
+          onPlanSelect={(planId: string) => setSelectedPlanId(planId)}
+        />
 
-                    return (
-                      <div
-                        key={plan.id}
-                        className={`p-3 border rounded mb-3 ${
-                          selectedPlanId === plan.id
-                            ? "border-primary bg-light"
-                            : ""
-                        }`}
-                        onClick={() => setSelectedPlanId(plan.id)}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div className="d-flex align-items-center">
-                            <Form.Check
-                              type="radio"
-                              id={`plan-${plan.id}`}
-                              name="subscription-plan"
-                              className="me-3"
-                              checked={selectedPlanId === plan.id}
-                              onChange={() => setSelectedPlanId(plan.id)}
-                            />
-                            <div>
-                              <div
-                                className={`fw-medium ${
-                                  selectedPlanId === plan.id
-                                    ? "text-primary"
-                                    : ""
-                                }`}
-                              >
-                                {plan.name}
-                                {isCurrentPlan && (
-                                  <Badge bg="success" className="ms-2">
-                                    Current Plan
-                                  </Badge>
-                                )}
-                              </div>
-                              {plan.description && (
-                                <small className="text-muted d-block">
-                                  {plan.description}
-                                </small>
-                              )}
-                            </div>
-                          </div>
-                          <div
-                            className={`fw-bold ${
-                              selectedPlanId === plan.id ? "text-primary" : ""
-                            }`}
-                          >
-                            ${parseFloat(plan.amount).toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="alert alert-info mt-4">
-                  <FaInfoCircle className="me-2" />
-                  Your subscription will be updated immediately. You'll be
-                  charged the prorated amount for the remainder of your billing
-                  period.
-                </div>
-              </div>
-            ) : (
-              <div className="alert alert-info">
-                No plans available at this time. Please try again later.
-              </div>
-            )}
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="outline-secondary"
-              onClick={() => setShowUpdatePlanModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleConfirmPlanUpdate}
-              disabled={isProcessing || !selectedPlanId}
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  Processing...
-                </>
-              ) : (
-                "Update Plan"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
-
-        {/* Update Billing Information Modal */}
-        <Modal
+        {/* Update Billing Modal */}
+        <UpdateBillingModal
           show={showUpdateBillingModal}
-          onHide={() => setShowUpdateBillingModal(false)}
-        >
-          <Modal.Header closeButton>
-            <Modal.Title>Update Customer Information</Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <Form id="billing-form">
-              <Form.Group className="mb-3">
-                <Form.Label>Name</Form.Label>
-                <Form.Control
-                  type="text"
-                  value={billingFormData.name}
-                  onChange={(e) =>
-                    setBillingFormData({
-                      ...billingFormData,
-                      name: e.target.value,
-                    })
-                  }
-                />
-              </Form.Group>
-              <Form.Group className="mb-3">
-                <Form.Label>Email</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={billingFormData.email}
-                  onChange={(e) =>
-                    setBillingFormData({
-                      ...billingFormData,
-                      email: e.target.value,
-                    })
-                  }
-                />
-              </Form.Group>
-            </Form>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              variant="secondary"
-              onClick={() => setShowUpdateBillingModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleConfirmBillingUpdate}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  Processing...
-                </>
-              ) : (
-                "Update Information"
-              )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+          onClose={() => setShowUpdateBillingModal(false)}
+          onConfirm={handleConfirmBillingUpdate}
+          isProcessing={isProcessing}
+          initialData={billingFormData}
+        />
+
+        {/* Update Payment Method Modal */}
+        <UpdatePaymentModal
+          show={showUpdatePaymentModal}
+          onClose={() => setShowUpdatePaymentModal(false)}
+          onConfirm={handleSubmitUpdatePayment}
+          isProcessing={isProcessing}
+          paymentMethods={subscriptionData.paymentMethods}
+          selectedPaymentMethodId={selectedPaymentMethodId}
+          onPaymentMethodSelect={(id: string) => setSelectedPaymentMethodId(id)}
+          onAddNewPaymentMethod={handleAddPaymentMethod}
+          getCardIcon={getCardIcon}
+        />
       </div>
     );
   } catch (error) {

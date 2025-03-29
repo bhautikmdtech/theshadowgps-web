@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { FaInfoCircle, FaSpinner } from "react-icons/fa";
+import { Modal, Button, Spinner } from 'react-bootstrap';
+import { FaInfoCircle } from "react-icons/fa";
 
 interface ReactivateSubscriptionModalProps {
   show: boolean;
@@ -14,117 +14,56 @@ export default function ReactivateSubscriptionModal({
   onConfirm,
   isProcessing
 }: ReactivateSubscriptionModalProps) {
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Initialize Bootstrap modal
-    const initModal = async () => {
-      if (typeof document !== 'undefined' && modalRef.current) {
-        try {
-          // Dynamic import to avoid server-side rendering issues
-          const bootstrap = await import('bootstrap');
-          
-          // Get the modal element and initialize it
-          const modalElement = modalRef.current;
-          const modal = new bootstrap.Modal(modalElement);
-          
-          // Show or hide based on prop
-          if (show) {
-            modal.show();
-          } else {
-            modal.hide();
-          }
-          
-          // Add event listener to call onClose when modal is hidden
-          modalElement.addEventListener('hidden.bs.modal', () => {
-            onClose();
-          });
-          
-        } catch (error) {
-          console.error('Failed to initialize Bootstrap modal:', error);
-        }
-      }
-    };
-
-    if (show) {
-      initModal();
-    }
-    
-    // Store the ref value in a variable
-    const currentModalRef = modalRef.current;
-    
-    // Cleanup on unmount
-    return () => {
-      if (currentModalRef) {
-        currentModalRef.removeEventListener('hidden.bs.modal', onClose);
-      }
-    };
-  }, [show, onClose]);
-
   return (
-    <div 
-      className="modal fade" 
-      id="reactivateSubscriptionModal" 
-      tabIndex={-1} 
-      aria-labelledby="reactivateSubscriptionModalLabel" 
-      aria-hidden="true"
-      ref={modalRef}
+    <Modal
+      show={show}
+      onHide={onClose}
+      backdrop="static"
+      keyboard={!isProcessing}
+      aria-labelledby="reactivateSubscriptionModalLabel"
     >
-      <div className="modal-dialog">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title" id="reactivateSubscriptionModalLabel">Renew Subscription</h5>
-            <button 
-              type="button" 
-              className="btn-close" 
-              aria-label="Close"
-              onClick={onClose}
-              disabled={isProcessing}
-            ></button>
-          </div>
-          <div className="modal-body">
-            <div className="text-center mb-4">
-              <FaInfoCircle
-                className="text-primary"
-                size="3em"
-              />
-            </div>
-            <p className="mb-3">
-              Are you sure you want to renew your subscription?
-            </p>
-            <div className="alert alert-info">
-              <p className="mb-0">
-                Your subscription will be reactivated immediately and you&apos;ll be billed for the next billing period.
-              </p>
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button 
-              type="button" 
-              className="btn btn-outline-secondary"
-              onClick={onClose}
-              disabled={isProcessing}
-            >
-              Cancel
-            </button>
-            <button 
-              type="button" 
-              className="btn btn-primary"
-              onClick={onConfirm}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <>
-                  <FaSpinner className="me-2 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Renew Subscription"
-              )}
-            </button>
-          </div>
+      <Modal.Header closeButton>
+        <Modal.Title id="reactivateSubscriptionModalLabel">Renew Subscription</Modal.Title>
+      </Modal.Header>
+      <Modal.Body>
+        <div className="text-center mb-4">
+          <FaInfoCircle
+            className="text-primary"
+            size="3em"
+          />
         </div>
-      </div>
-    </div>
+        <p className="mb-3">
+          Are you sure you want to renew your subscription?
+        </p>
+        <div className="alert alert-info">
+          <p className="mb-0">
+            Your subscription will be reactivated immediately and you&apos;ll be billed for the next billing period.
+          </p>
+        </div>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button 
+          variant="outline-secondary"
+          onClick={onClose}
+          disabled={isProcessing}
+        >
+          Cancel
+        </Button>
+        <Button 
+          variant="primary"
+          onClick={onConfirm}
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <>
+              <Spinner animation="border" size="sm" className="me-2" />
+              Processing...
+            </>
+          ) : (
+            "Renew Subscription"
+          )}
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 } 
