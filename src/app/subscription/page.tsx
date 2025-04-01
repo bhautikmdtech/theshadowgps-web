@@ -9,10 +9,12 @@ export const metadata: Metadata = {
   description: "Manage your subscription and payment details",
 };
 
-type PageProps = { searchParams: { token?: string } };
-
-export default async function SubscriptionPage({ searchParams }: PageProps) {
-  const token = searchParams.token;
+export default async function SubscriptionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string }>;
+}) {
+  const token = (await searchParams).token;
 
   // Security check: Redirect if no valid token
   if (!token) {

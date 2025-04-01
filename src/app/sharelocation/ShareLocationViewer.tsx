@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 
@@ -13,6 +12,7 @@ import {
   FaCrosshairs,
   FaSync,
   FaSatelliteDish,
+  FaExclamationTriangle,
 } from "react-icons/fa";
 import { BiLoaderAlt } from "react-icons/bi";
 import axiosClient from "@/lib/axiosClient";
@@ -27,17 +27,20 @@ interface DeviceInfo {
   expiresAt?: string;
 }
 
+interface Socket {
+  connected: boolean;
+  disconnect: () => void;
+  on: (event: string, callback: any) => void;
+  off: (event: string, callback: any) => void;
+  emit: (event: string, ...args: any[]) => void;
+}
+
 // Extend the LivePositionData with additional fields needed for this component
 interface ExtendedLivePosition extends LivePositionData {
   deviceId?: string;
   _meta?: {
     viewers?: number;
   };
-}
-
-interface ViewerStats {
-  count: number;
-  deviceId: string;
 }
 
 interface ShareConnectedStatus {
@@ -91,18 +94,29 @@ const MapComponent = dynamic(() => import("./MapComponent"), {
   ),
 });
 
-export default function ShareLocationViewer() {
-  const searchParams = useSearchParams();
-  const [shareToken, setShareToken] = useState<string>("");
+type ShareLocationViewerProps = {
+  shareToken: string;
+  initialData?: {
+    data: any;
+  };
+};
+
+export default function ShareLocationViewer({
+  shareToken,
+  initialData,
+}: ShareLocationViewerProps) {
   const [connected, setConnected] = useState<boolean>(false);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [viewerStats, setViewerStats] = useState<ViewerStats | null>(null);
-  const [liveMode, setLiveMode] = useState<boolean>(false);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
+
   const isMounted = useRef<boolean>(true);
+  const socketRef = useRef<Socket | null>(null);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mapContainerRef = useRef<Element | null>(null);
+
   const [expiryTimeRemaining, setExpiryTimeRemaining] = useState<{
     hours: number;
     minutes: number;
@@ -112,6 +126,8 @@ export default function ShareLocationViewer() {
   const convertPointsArrayToObjects = (
     pointsArray: LocationPoints
   ): Position[] => {
+    if (!pointsArray || !Array.isArray(pointsArray)) return [];
+
     return pointsArray.map((point) => ({
       latitude: point[0],
       longitude: point[1],
@@ -122,6 +138,30 @@ export default function ShareLocationViewer() {
       address: point[6],
     }));
   };
+
+  // Initialize data from server-side props if available
+  useEffect(() => {
+    if (initialData?.data && !deviceInfo) {
+      try {
+        const data = initialData.data;
+
+        setDeviceInfo({
+          ...data.deviceInfo,
+          shareTitle: data.shareTitle,
+          expiresAt: data.expiresAt,
+        });
+
+        const locationPoints = data.points || [];
+        const positionObjects = convertPointsArrayToObjects(locationPoints);
+        setPositions(positionObjects);
+        setConnected(true);
+      } catch (err) {
+        fetchLocationData(shareToken);
+      }
+    } else if (!deviceInfo) {
+      fetchLocationData(shareToken);
+    }
+  }, [initialData, shareToken]);
 
   const fetchLocationData = useCallback(async (token: string) => {
     if (!token) return;
@@ -134,7 +174,7 @@ export default function ShareLocationViewer() {
       const data = response.data;
 
       if (!data || !data.data) {
-        console.error("Invalid data structure:", data);
+        throw new Error("Invalid data structure received");
       }
 
       setDeviceInfo({
@@ -144,7 +184,6 @@ export default function ShareLocationViewer() {
       });
 
       const locationPoints = data.data.points || [];
-
       const positionObjects = convertPointsArrayToObjects(locationPoints);
       setPositions(positionObjects);
       setConnected(true);
@@ -168,17 +207,35 @@ export default function ShareLocationViewer() {
     }
   }, []);
 
+  // Handle component mount/unmount
   useEffect(() => {
     isMounted.current = true;
+
+    // Find and store map container reference
+    mapContainerRef.current = document.querySelector(
+      '[data-testid="map-container"]'
+    );
+
     return () => {
       isMounted.current = false;
+
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
     };
   }, []);
 
+  // Setup socket connection
   useEffect(() => {
     if (!shareToken) return;
 
-    const socketInstance = io(
+    // Clean up previous socket if it exists
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+    }
+
+    // Create new socket connection
+    socketRef.current = io(
       process.env.NEXT_PUBLIC_API_URL || window.location.origin,
       {
         auth: { shareToken },
@@ -187,129 +244,109 @@ export default function ShareLocationViewer() {
       }
     );
 
-    socketInstance.on("connect", () => {
+    const socket = socketRef.current;
+
+    // Socket event handlers
+    const handleConnect = () => {
       if (isMounted.current) {
         setConnected(true);
         setError(null);
       }
-      console.log("Socket connected");
-    });
+    };
 
-    socketInstance.on("disconnect", (reason) => {
+    const handleDisconnect = () => {
       if (isMounted.current) {
         setConnected(false);
       }
-      console.log("Socket disconnected:", reason);
-    });
+    };
 
-    socketInstance.on("connect_error", (err) => {
+    const handleConnectError = (err: Error) => {
       if (isMounted.current) {
         setConnected(false);
         setError(`Connection error: ${err.message}`);
       }
-      console.error("Socket connection error:", err);
-    });
+    };
 
-    socketInstance.on("shareConnected", (status: ShareConnectedStatus) => {
+    const handleShareConnected = (status: ShareConnectedStatus) => {
       if (isMounted.current) {
         setConnected(status.connected);
-        if (status.viewers) {
-          setViewerStats({
-            count: status.viewers,
-            deviceId: status.deviceId || "",
-          });
-        }
       }
-    });
+    };
 
-    socketInstance.on(
-      "sharedPositionUpdate",
-      (newPosition: ExtendedLivePosition) => {
-        if (isMounted.current) {
-          if (positions.length > 0) {
-            const newPositionObj: Position = {
-              latitude: newPosition.lat,
-              longitude: newPosition.lng,
-              speed: newPosition.speed,
-              timestamp: newPosition.tm ?? Math.floor(Date.now() / 1000),
-              direction: newPosition.direction,
-              address: newPosition.address,
-            };
+    const handlePositionUpdate = (newPosition: ExtendedLivePosition) => {
+      if (!isMounted.current || positions.length === 0) return;
 
-            // Get the previous position for animation
-            const prevPosition = positions[positions.length - 1];
+      const newPositionObj: Position = {
+        latitude: newPosition.lat,
+        longitude: newPosition.lng,
+        speed: newPosition.speed,
+        timestamp: newPosition.tm ?? Math.floor(Date.now() / 1000),
+        direction: newPosition.direction,
+        address: newPosition.address,
+      };
 
-            const updatedPositions = [...positions];
-            updatedPositions[updatedPositions.length - 1] = newPositionObj;
-            setPositions(updatedPositions);
+      // Add the new position to the positions array
+      setPositions((prevPositions) => [...prevPositions, newPositionObj]);
 
-            // Trigger the map update for live position
-            const mapContainer = document.querySelector(
-              '[data-testid="map-container"]'
-            );
+      // Find map container and dispatch event
+      const mapContainer =
+        mapContainerRef.current ||
+        document.querySelector('[data-testid="map-container"]');
 
-            if (mapContainer) {
-              // Use custom event to trigger the map service
-              const liveUpdateEvent = new CustomEvent("live-position-update", {
-                detail: {
-                  prevPosition,
-                  newPosition: newPositionObj,
-                  deviceName: deviceInfo?.deviceName || "Device",
-                  deviceImage: deviceInfo?.imageUrl || "",
-                  isLiveModeEnabled: true,
-                },
-              });
-              mapContainer.dispatchEvent(liveUpdateEvent);
-            }
-          }
-
-          if (newPosition._meta?.viewers) {
-            setViewerStats({
-              count: newPosition._meta.viewers,
-              deviceId: newPosition.deviceId || "",
-            });
-          }
-        }
-      }
-    );
-
-    socketInstance.on("viewerStats", (stats: ViewerStats) => {
-      if (isMounted.current) {
-        setViewerStats(stats);
-      }
-    });
-
-    socketInstance.on("pong", (data: { viewers: number }) => {
-      if (isMounted.current && viewerStats) {
-        setViewerStats({
-          ...viewerStats,
-          count: data.viewers,
+      if (mapContainer) {
+        // Use custom event to trigger the map service
+        const liveUpdateEvent = new CustomEvent("live-position-update", {
+          detail: {
+            prevPosition: positions[positions.length - 1],
+            newPosition: newPositionObj,
+          },
         });
-      }
-    });
 
+        mapContainer.dispatchEvent(liveUpdateEvent);
+      }
+    };
+
+    // Register event handlers
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+    socket.on("shareConnected", handleShareConnected);
+    socket.on("sharedPositionUpdate", handlePositionUpdate);
+
+    // Set up ping interval
     pingIntervalRef.current = setInterval(() => {
-      if (socketInstance.connected) {
-        socketInstance.emit("ping");
+      if (socket.connected) {
+        socket.emit("ping");
       }
     }, 30000);
 
+    // Cleanup function
     return () => {
-      clearInterval(pingIntervalRef.current as NodeJS.Timeout);
-      socketInstance.disconnect();
-    };
-  }, [shareToken, positions, deviceInfo]);
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+      socket.off("shareConnected", handleShareConnected);
+      socket.off("sharedPositionUpdate", handlePositionUpdate);
 
-  // Get the URL parameter for the share token
-  useEffect(() => {
-    const token = searchParams.get("token") || "";
-    if (token) {
-      setShareToken(token);
-      fetchLocationData(token);
-    } else {
-      setError("Missing share token. Please check the URL and try again.");
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+      }
+
+      socket.disconnect();
+    };
+  }, [shareToken, positions.length, deviceInfo]);
+
+  // Helper function to dispatch map events
+  const dispatchMapEvent = useCallback((eventName: string, detail?: any) => {
+    const mapContainer =
+      mapContainerRef.current ||
+      document.querySelector('[data-testid="map-container"]');
+
+    if (mapContainer) {
+      const event = new CustomEvent(eventName, { detail });
+      mapContainer.dispatchEvent(event);
     }
-  }, [searchParams, fetchLocationData]);
+  }, []);
 
   const handleRefreshData = () => {
     if (!shareToken) {
@@ -320,123 +357,23 @@ export default function ShareLocationViewer() {
   };
 
   const handleViewStart = () => {
-    // Disable live mode when viewing start position
-    if (liveMode) {
-      setLiveMode(false);
-      
-      // Notify map about live mode change
-      const mapContainer = document.querySelector(
-        '[data-testid="map-container"]'
-      );
-      
-      if (mapContainer) {
-        const liveModeEvent = new CustomEvent("toggle-live-mode", {
-          detail: { enabled: false },
-        });
-        mapContainer.dispatchEvent(liveModeEvent);
-      }
-    }
-    
-    const mapContainer = document.querySelector(
-      '[data-testid="map-container"]'
-    );
-    if (mapContainer) {
-      const event = new CustomEvent("focus-point", {
-        detail: { index: 0, type: "start" },
-      });
-      mapContainer.dispatchEvent(event);
-    }
+    dispatchMapEvent("focus-point", { index: 0, type: "start" });
   };
 
   const handleViewCurrent = () => {
-    // Disable live mode when viewing current position manually
-    if (liveMode) {
-      setLiveMode(false);
-      
-      // Notify map about live mode change
-      const mapContainer = document.querySelector(
-        '[data-testid="map-container"]'
-      );
-      
-      if (mapContainer) {
-        const liveModeEvent = new CustomEvent("toggle-live-mode", {
-          detail: { enabled: false },
-        });
-        mapContainer.dispatchEvent(liveModeEvent);
-      }
-    }
-    
-    const mapContainer = document.querySelector(
-      '[data-testid="map-container"]'
-    );
+    // Close any open popups
+    const popups = document.querySelectorAll(".mapboxgl-popup");
+    popups.forEach((popup) => popup.remove());
 
-    if (mapContainer) {
-      const popups = document.querySelectorAll(".mapboxgl-popup");
-      popups.forEach((popup) => {
-        popup.remove();
-      });
-
-      const event = new CustomEvent("focus-point", {
-        detail: { index: positions.length - 1, type: "current" },
-      });
-      mapContainer.dispatchEvent(event);
-    }
+    // Focus on the current point
+    dispatchMapEvent("focus-point", {
+      index: positions.length - 1,
+      type: "current",
+    });
   };
 
   const handleViewAll = () => {
-    // Disable live mode when viewing all positions
-    if (liveMode) {
-      setLiveMode(false);
-      
-      // Notify map about live mode change
-      const mapContainer = document.querySelector(
-        '[data-testid="map-container"]'
-      );
-      
-      if (mapContainer) {
-        const liveModeEvent = new CustomEvent("toggle-live-mode", {
-          detail: { enabled: false },
-        });
-        mapContainer.dispatchEvent(liveModeEvent);
-      }
-    }
-    
-    const mapContainer = document.querySelector(
-      '[data-testid="map-container"]'
-    );
-    if (mapContainer) {
-      const event = new CustomEvent("fit-all-points");
-      mapContainer.dispatchEvent(event);
-    }
-  };
-  
-  const handleToggleLiveMode = () => {
-    const newLiveMode = !liveMode;
-    setLiveMode(newLiveMode);
-
-    // Get the map container to notify about live mode change
-    const mapContainer = document.querySelector(
-      '[data-testid="map-container"]'
-    );
-
-    if (mapContainer) {
-      // Dispatch event to notify map component about live mode change
-      const liveModeEvent = new CustomEvent("toggle-live-mode", {
-        detail: { enabled: newLiveMode },
-      });
-      mapContainer.dispatchEvent(liveModeEvent);
-
-      // If turning on live mode and we have positions, focus on the latest position
-      if (newLiveMode && positions.length > 0) {
-        const focusEvent = new CustomEvent("focus-point", {
-          detail: { 
-            index: positions.length - 1, 
-            type: "current" 
-          },
-        });
-        mapContainer.dispatchEvent(focusEvent);
-      }
-    }
+    dispatchMapEvent("fit-all-points");
   };
 
   useEffect(() => {
@@ -446,7 +383,6 @@ export default function ShareLocationViewer() {
     }
 
     const updateExpiryTime = () => {
-      // Make sure expiresAt is not undefined before creating date object
       if (!deviceInfo.expiresAt) {
         setExpiryTimeRemaining(null);
         return;
@@ -458,6 +394,7 @@ export default function ShareLocationViewer() {
 
       if (diffMs <= 0) {
         setExpiryTimeRemaining({ hours: 0, minutes: 0, seconds: 0 });
+        setIsExpired(true);
         return;
       }
 
@@ -471,7 +408,6 @@ export default function ShareLocationViewer() {
     };
 
     updateExpiryTime();
-
     const intervalId = setInterval(updateExpiryTime, 1000);
 
     return () => clearInterval(intervalId);
@@ -493,11 +429,57 @@ export default function ShareLocationViewer() {
 
   const expiryDisplay = formatExpiryDisplay();
 
+  // If share link is expired, show expired message
+  if (isExpired) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+          <div className="text-amber-500 mb-4 text-5xl flex justify-center">
+            <FaExclamationTriangle className="w-16 h-16" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Link Expired</h2>
+          <p className="text-gray-600 mb-6">
+            This shared location link has expired and is no longer available.
+          </p>
+          <a
+            href="/"
+            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors"
+          >
+            Go to Home
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  // If there's an error, show error message
+  if (error && !loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-100">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full text-center">
+          <div className="text-red-500 mb-4 text-5xl flex justify-center">
+            <FaExclamationTriangle className="w-16 h-16" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">
+            Error Loading Location
+          </h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={handleRefreshData}
+            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Fixed header - always visible at top */}
       <div className="bg-white shadow-sm z-10 py-2">
-        <div className="container mx-auto px-2 flex flex-col md:flex-row gap-2 items-start md:items-center  justify-between">
+        <div className="container mx-auto px-2 flex flex-col md:flex-row gap-2 items-start md:items-center justify-between">
           {/* Left section: Device info */}
           <div className="flex items-center gap-2">
             {/* Device image/avatar */}
@@ -537,7 +519,10 @@ export default function ShareLocationViewer() {
                     connected ? "bg-green-500" : "bg-red-500"
                   }`}
                 ></span>{" "}
-                <span>Connected • {positions.length} points</span>
+                <span>
+                  {connected ? "Connected" : "Disconnected"} •{" "}
+                  {positions.length} points
+                </span>
               </div>
             </div>
           </div>
@@ -554,7 +539,7 @@ export default function ShareLocationViewer() {
               onClick={handleRefreshData}
               disabled={loading}
               title="Refresh"
-              className="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-md"
+              className="bg-blue-500 hover:bg-blue-600 text-white p-1.5 rounded-md disabled:bg-blue-300"
             >
               {loading ? (
                 <BiLoaderAlt className="animate-spin h-4 w-4" />
@@ -588,20 +573,6 @@ export default function ShareLocationViewer() {
                 >
                   <FaCrosshairs className="h-4 w-4" />
                 </button>
-                
-                <button
-                  onClick={handleToggleLiveMode}
-                  title={
-                    liveMode ? "Disable live tracking" : "Enable live tracking"
-                  }
-                  className={`${
-                    liveMode
-                      ? "bg-red-500 hover:bg-red-600"
-                      : "bg-gray-500 hover:bg-gray-600"
-                  } text-white p-1.5 rounded-md`}
-                >
-                  <FaSatelliteDish className="h-4 w-4" />
-                </button>
               </>
             )}
           </div>
@@ -610,12 +581,20 @@ export default function ShareLocationViewer() {
 
       {/* Map component */}
       <div className="flex-1 relative overflow-hidden">
-        <MapComponent
-          allPositions={positions}
-          deviceName={deviceInfo?.deviceName || "Device"}
-          deviceImage={deviceInfo?.imageUrl}
-          liveMode={liveMode}
-        />
+        {positions.length === 0 && loading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <div className="flex flex-col items-center">
+              <BiLoaderAlt className="animate-spin h-10 w-10 text-blue-500 mb-4" />
+              <p className="text-gray-700">Loading location data...</p>
+            </div>
+          </div>
+        ) : (
+          <MapComponent
+            allPositions={positions}
+            deviceName={deviceInfo?.deviceName || "Device"}
+            deviceImage={deviceInfo?.imageUrl}
+          />
+        )}
       </div>
     </div>
   );
