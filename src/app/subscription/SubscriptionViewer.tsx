@@ -1,55 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  Button,
-  Form,
-  Spinner,
-  Badge,
-  Accordion,
-} from "react-bootstrap";
-import {
-  FaChevronLeft,
-  FaExclamationCircle,
-  FaCube,
-  FaEdit,
-  FaExternalLinkAlt,
-  FaExclamationTriangle,
-  FaCreditCard,
-  FaPlus,
-  FaEllipsisV,
-  FaCheck,
-  FaTrash,
-  FaInfoCircle,
-  FaCcVisa,
-  FaCcMastercard,
-  FaCcAmex,
-  FaCcDiscover,
-  FaCcDinersClub,
-  FaCcJcb,
-} from "react-icons/fa";
+import { FaChevronLeft, FaExclamationCircle } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import {
-  PaymentElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
-import { ThreeDots } from "react-loader-spinner";
 import axiosClient from "@/lib/axiosClient";
+import { AiOutlineReload } from "react-icons/ai";
 
 // Import types from the shared types file
-import {
-  Customer,
-  PaymentMethod,
-  Device,
-  Subscription,
-  Plan,
-  Invoice,
-  SubscriptionData,
-} from "./types";
+import { Invoice, SubscriptionData } from "./types";
 
 // Import modular components
 import SubscriptionsSection from "./SubscriptionsSection";
@@ -62,6 +22,7 @@ import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
 import UpdatePlanModal from "./UpdatePlanModal";
 import UpdateBillingModal from "./UpdateBillingModal";
 import UpdatePaymentModal from "./UpdatePaymentModal";
+import Link from "next/link";
 
 // Declare Stripe types for TypeScript
 declare global {
@@ -69,165 +30,20 @@ declare global {
     Stripe?: import("@stripe/stripe-js").StripeConstructor;
   }
 }
-
-const getTokenFromUrl = (): string | null => {
-  if (typeof window !== "undefined") {
-    const url = new URL(window.location.href);
-    const token = url.searchParams.get("token");
-
-    if (
-      token &&
-      /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/.test(token)
-    ) {
-      return token;
-    }
-  }
-  return null;
-};
-
-// CheckoutForm component for Stripe Elements
-const CheckoutForm = ({
-  onSuccess,
-  customerId,
-}: {
-  onSuccess: () => void;
-  customerId: string;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [error, setError] = useState<string | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [succeeded, setSucceeded] = useState(false);
-  const [paymentElementReady, setPaymentElementReady] = useState(false);
-
-  useEffect(() => {
-    if (elements) {
-      setPaymentElementReady(true);
-    }
-  }, [elements]);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements || !customerId) {
-      setError("Payment system is not fully loaded. Please try again.");
-      return;
-    }
-
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const token = getTokenFromUrl();
-      if (!token) {
-        throw new Error("No authentication token found");
-      }
-
-      // Use PaymentElement instead of CardElement
-      const { error: stripeError, paymentMethod } =
-        await stripe.createPaymentMethod({
-          elements,
-          params: {},
-        });
-
-      if (stripeError) {
-        throw new Error(stripeError.message);
-      }
-
-      if (!paymentMethod) {
-        throw new Error("Failed to create payment method");
-      }
-
-      // Send payment method to backend
-      const response = await fetch("/api/add-payment-method", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          paymentMethodId: paymentMethod.id,
-          customerId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add payment method");
-      }
-
-      setSucceeded(true);
-      toast.success("Payment method added successfully!");
-
-      // Close modal after success
-      onSuccess();
-    } catch (err: any) {
-      console.error("Payment error:", err);
-      setError(err.message || "An unknown error occurred");
-      toast.error(err.message || "Failed to add payment method");
-    } finally {
-      setProcessing(false);
-    }
+type SubscriptionViewerProps = {
+  token: string;
+  initialData?: {
+    data: SubscriptionData;
   };
-
-  return (
-    <form onSubmit={handleSubmit} className="stripe-form">
-      <div className="mb-4">
-        {!paymentElementReady && (
-          <div className="text-center py-2 mb-2">
-            <Spinner animation="border" size="sm" />
-            <span className="ms-2">Loading payment form...</span>
-          </div>
-        )}
-
-        <PaymentElement
-          options={{
-            layout: {
-              type: "tabs",
-              defaultCollapsed: false,
-            },
-          }}
-          onReady={() => setPaymentElementReady(true)}
-          onChange={() => setError(null)}
-        />
-
-        {error && (
-          <div className="alert alert-danger mt-3 mb-0">
-            <FaExclamationCircle className="me-2" />
-            {error}
-          </div>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        disabled={!stripe || !paymentElementReady || processing || succeeded}
-        className="btn btn-primary w-100"
-      >
-        {processing ? (
-          <>
-            <Spinner
-              as="span"
-              animation="border"
-              size="sm"
-              role="status"
-              aria-hidden="true"
-              className="me-2"
-            />
-            Processing...
-          </>
-        ) : (
-          "Add Payment Method"
-        )}
-      </button>
-    </form>
-  );
 };
 
-export default function SubscriptionViewer() {
-  const [isLoading, setIsLoading] = useState(true);
+export default function SubscriptionViewer({
+  token,
+  initialData,
+}: SubscriptionViewerProps) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [subscriptionData, setSubscriptionData] =
-    useState<SubscriptionData | null>(null);
+    useState<SubscriptionData | null>(initialData?.data || null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [renderError, setRenderError] = useState<string | null>(null);
 
@@ -258,67 +74,20 @@ export default function SubscriptionViewer() {
 
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [baseUrl, setBaseUrl] = useState<string>("");
 
   useEffect(() => {
-    // Set base URL for API calls
-    setBaseUrl(window.location.origin);
-    fetchSubscriptionData();
-  }, []);
-
-  const fetchSubscriptionData = async () => {
-    try {
-      setIsLoading(true);
-
-      const token = getTokenFromUrl();
-      if (!token) {
-        throw new Error("No authentication token found. Please log in again.");
-      }
-
-      const response = await axiosClient.get(
-        "/api/app/subscription/getStripeData",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-            Pragma: "no-cache",
-            Expires: "0",
-          },
-        }
+    if (!initialData) {
+      refreshSubscriptionData();
+    } else if (
+      initialData.data.paymentMethods?.length > 0 ||
+      (initialData.data.stripePublishableKey && initialData.data.clientSecret)
+    ) {
+      initializeStripe(
+        initialData.data.stripePublishableKey,
+        initialData.data.clientSecret
       );
-
-      const data = response.data;
-      setSubscriptionData(data.data);
-
-      if (
-        data.data.paymentMethods?.length > 0 ||
-        (data.data.stripePublishableKey && data.data.clientSecret)
-      ) {
-        await initializeStripe(
-          data.data.stripePublishableKey,
-          data.data.clientSecret
-        );
-      }
-    } catch (error: any) {
-      const errorMessage =
-        error.response?.data ||
-        error.message ||
-        "Failed to load subscription data";
-      setErrorMessage(
-        typeof errorMessage === "string"
-          ? errorMessage
-          : "Failed to load subscription data"
-      );
-      toast.error(
-        typeof errorMessage === "string"
-          ? errorMessage
-          : "Failed to load subscription data"
-      );
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, []);
 
   const initializeStripe = async (
     publishableKey: string,
@@ -362,7 +131,6 @@ export default function SubscriptionViewer() {
     try {
       setIsLoadingInvoices(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -427,25 +195,6 @@ export default function SubscriptionViewer() {
     }
   };
 
-  const getCardIcon = (brand: string) => {
-    const brands: Record<string, any> = {
-      visa: FaCcVisa,
-      mastercard: FaCcMastercard,
-      amex: FaCcAmex,
-      discover: FaCcDiscover,
-      diners: FaCcDinersClub,
-      jcb: FaCcJcb,
-    };
-
-    return brands[brand.toLowerCase()] || FaCreditCard;
-  };
-
-  // Helper function to get card label from the brand
-  const getCardLabel = (brand: string): string => {
-    if (!brand) return "Card";
-    return brand.charAt(0).toUpperCase() + brand.slice(1);
-  };
-
   // Updated handleAddPaymentMethod with better null checks
   const handleAddPaymentMethod = async () => {
     try {
@@ -488,7 +237,7 @@ export default function SubscriptionViewer() {
   // Handle payment method submission via AddPaymentModal
   const handlePaymentMethodSuccess = async () => {
     setShowAddPaymentModal(false);
-    await fetchSubscriptionData();
+    await refreshSubscriptionData();
   };
 
   // Update handleSubmitUpdatePayment to use API call
@@ -501,7 +250,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -521,7 +269,7 @@ export default function SubscriptionViewer() {
 
       toast.success("Payment method updated successfully");
       setShowUpdatePaymentModal(false);
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -543,7 +291,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -561,7 +308,7 @@ export default function SubscriptionViewer() {
 
       toast.success("Subscription canceled successfully");
       setShowCancelSubscriptionModal(false);
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -583,7 +330,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -620,7 +366,7 @@ export default function SubscriptionViewer() {
 
       toast.success("Subscription plan updated successfully");
       setShowUpdatePlanModal(false);
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -640,7 +386,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -665,7 +410,7 @@ export default function SubscriptionViewer() {
 
       toast.success("Customer information updated successfully!");
       setShowUpdateBillingModal(false);
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -691,7 +436,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -709,7 +453,7 @@ export default function SubscriptionViewer() {
 
       toast.success("Subscription reactivated successfully");
       setShowReactivateModal(false);
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -726,7 +470,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -749,7 +492,7 @@ export default function SubscriptionViewer() {
       );
 
       toast.success("Default payment method updated successfully");
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -772,7 +515,6 @@ export default function SubscriptionViewer() {
     try {
       setIsProcessing(true);
 
-      const token = getTokenFromUrl();
       if (!token) {
         throw new Error("No authentication token found. Please log in again.");
       }
@@ -788,7 +530,7 @@ export default function SubscriptionViewer() {
       );
 
       toast.success("Payment method deleted successfully");
-      await fetchSubscriptionData();
+      await refreshSubscriptionData();
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
@@ -883,7 +625,61 @@ export default function SubscriptionViewer() {
     setShowUpdateBillingModal(true);
   };
 
-  // Handle rendering with error boundary
+  const refreshSubscriptionData = async () => {
+    setIsRefreshing(true);
+    try {
+      if (!token) {
+        throw new Error("No authentication token found. Please log in again.");
+      }
+
+      const response = await axiosClient.get(
+        "/api/app/subscription/getStripeData",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            Pragma: "no-cache",
+            Expires: "0",
+          },
+        }
+      );
+
+      const data = response.data;
+      setSubscriptionData(data.data);
+
+      if (
+        data.data.paymentMethods?.length > 0 ||
+        (data.data.stripePublishableKey && data.data.clientSecret)
+      ) {
+        await initializeStripe(
+          data.data.stripePublishableKey,
+          data.data.clientSecret
+        );
+      }
+
+      return data.data;
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data ||
+        error.message ||
+        "Failed to load subscription data";
+      setErrorMessage(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load subscription data"
+      );
+      toast.error(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load subscription data"
+      );
+      return null;
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   try {
     if (renderError) {
       return (
@@ -902,21 +698,6 @@ export default function SubscriptionViewer() {
               </div>
             )}
           </div>
-        </div>
-      );
-    }
-
-    if (isLoading) {
-      return (
-        <div className="d-flex justify-content-center align-items-center h-100vh py-5 my-5">
-          <ThreeDots
-            height="80"
-            width="80"
-            radius="9"
-            color="#4fa94d"
-            ariaLabel="three-dots-loading"
-            visible={true}
-          />
         </div>
       );
     }
@@ -966,16 +747,33 @@ export default function SubscriptionViewer() {
         {/* Simplified Navigation Bar */}
         <nav className="bg-white border-bottom mb-3">
           <div className="container py-2">
-            <div className="d-flex align-items-center">
-              <a className="text-dark d-flex align-items-center text-decoration-none">
-                <FaChevronLeft className="me-2" />
-              </a>
-              <h5 className="mb-0 mx-auto">Subscriptions</h5>
+            <div className="d-flex align-items-center justify-content-between">
+              <div className="d-flex align-items-center">
+                <Link href="/" className="text-decoration-none">
+                  <FaChevronLeft className="me-2" />
+                </Link>
+                <h5 className="mb-0">Subscription Management</h5>
+              </div>
+              <button
+                className="btn btn-outline-primary btn-sm"
+                onClick={refreshSubscriptionData}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? (
+                  <>
+                    <AiOutlineReload className="animate-spin" />
+                  </>
+                ) : (
+                  <>
+                    <AiOutlineReload />
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </nav>
 
-        <div className="container pb-4">
+        <div className="container mb-5">
           {/* Subscriptions Section */}
           <SubscriptionsSection
             subscriptions={subscriptionData.subscriptions}
@@ -984,7 +782,6 @@ export default function SubscriptionViewer() {
             onUpdatePlan={handleShowUpdatePlan}
             onReactivateSubscription={handleReactivateSubscription}
             isProcessing={isProcessing}
-            getCardIcon={getCardIcon}
           />
 
           {/* Payment Methods Section */}
@@ -1036,8 +833,6 @@ export default function SubscriptionViewer() {
               onClose={() => setShowAddPaymentModal(false)}
               onSuccess={handlePaymentMethodSuccess}
               customerId={subscriptionData.customer.id}
-              baseUrl={baseUrl}
-              getToken={getTokenFromUrl}
             />
           </Elements>
         )}
@@ -1096,7 +891,6 @@ export default function SubscriptionViewer() {
           selectedPaymentMethodId={selectedPaymentMethodId}
           onPaymentMethodSelect={(id: string) => setSelectedPaymentMethodId(id)}
           onAddNewPaymentMethod={handleAddPaymentMethod}
-          getCardIcon={getCardIcon}
         />
       </div>
     );

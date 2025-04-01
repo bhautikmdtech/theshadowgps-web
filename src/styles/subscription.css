@@ -2,7 +2,7 @@
 
 /* Ensure accordion content is visible */
 .accordion-collapse.show {
-  background-color: transparent !important;
+  /* background-color: transparent !important; */
   visibility: visible !important;
   display: block !important;
   opacity: 1 !important;
@@ -10,7 +10,6 @@
 
 /* Fix accordion body */
 .accordion-body {
-  background-color: transparent !important;
   visibility: visible !important;
   display: block !important;
   opacity: 1 !important;
@@ -97,8 +96,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
-  border-bottom: 1px solid #dee2e6;
+  padding: 10px 10px;
+  border: 1px solid #dee2e6;
+  border-radius: 16px;
+  margin-bottom: 10px;
+  background-color: white;
 }
 
 .payment-method:last-child {
@@ -193,7 +195,6 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #dee2e6;
 }
 
 .invoice:last-child {
@@ -202,16 +203,16 @@
 
 .invoice-date {
   min-width: 150px;
-  color: #212529;
+  color: #3D4B65;
   flex: 0 0 auto;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 .invoice-amount {
   flex: 1;
   text-align: right;
-  font-weight: 400;
-  color: #212529;
+  font-weight: 500;
+  color: #3D4B65;
   padding-right: 70px;
 }
 
@@ -224,10 +225,9 @@
 .invoice-status {
   padding: 5px 10px;
   border-radius: 50px;
-  font-size: 0.75rem;
-  font-weight: 400;
-  background-color: #cee2ff !important;
-  color: #0d6efd !important;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3D4B65!important;
 }
 
 .invoice-link {
@@ -262,7 +262,7 @@
 
 /* Accordion styling improvements */
 .accordion-item {
-  border-radius: 0.25rem;
+  /* border-radius: 0.25rem; */
   overflow: hidden;
 }
 

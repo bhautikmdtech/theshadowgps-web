@@ -1,44 +1,52 @@
-"use client";
+import { Suspense } from "react";
+import SubscriptionViewer from "./SubscriptionViewer";
+import { Metadata } from "next";
+import { redirect } from "next/navigation";
+import axiosClient from "@/lib/axiosClient";
 
-import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
-import { ThreeDots } from 'react-loader-spinner';
+export const metadata: Metadata = {
+  title: "Subscription Management",
+  description: "Manage your subscription and payment details",
+};
 
-// Use dynamic import for client components
-const SubscriptionViewer = dynamic(
-  () => import('./SubscriptionViewer'),
-  {
-    loading: () => (
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <ThreeDots
-          height="80"
-          width="80"
-          radius="9"
-          color="#4fa94d"
-          ariaLabel="three-dots-loading"
-          visible={true}
-        />
-      </div>
-    ),
-    ssr: false
+type PageProps = { searchParams: { token?: string } };
+
+export default async function SubscriptionPage({ searchParams }: PageProps) {
+  const token = searchParams.token;
+
+  // Security check: Redirect if no valid token
+  if (!token) {
+    redirect("/login?returnUrl=/subscription");
   }
-);
 
-export default function SubscriptionPage() {
-  return (
-    <Suspense fallback={
-      <div className="d-flex justify-content-center align-items-center min-vh-100">
-        <ThreeDots
-          height="80"
-          width="80"
-          radius="9"
-          color="#4fa94d"
-          ariaLabel="three-dots-loading"
-          visible={true}
-        />
-      </div>
-    }>
-      <SubscriptionViewer />
-    </Suspense>
-  );
+  try {
+    // Fetch subscription data with secure headers
+    const response = await axiosClient.get(
+      "/api/app/subscription/getStripeData",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Cache-Control": "no-store",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
+
+    return (
+      <Suspense
+        fallback={
+          <div className="flex justify-center items-center min-h-screen">
+            Loading...
+          </div>
+        }
+      >
+        <SubscriptionViewer token={token} initialData={response.data} />
+      </Suspense>
+    );
+  } catch (error) {
+    // Security: Redirect on any error to prevent data exposure
+    redirect("/login?returnUrl=/subscription");
+  }
 }

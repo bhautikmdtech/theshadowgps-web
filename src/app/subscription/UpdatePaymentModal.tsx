@@ -1,7 +1,15 @@
-import { useState } from 'react';
-import { Modal, Button, Form, Badge, Spinner } from 'react-bootstrap';
-import { FaPlus } from 'react-icons/fa';
-import { PaymentMethod } from './types';
+import { Modal, Button, Form, Badge, Spinner } from "react-bootstrap";
+import { FaPlus } from "react-icons/fa";
+import { PaymentMethod } from "./types";
+import {
+  FaCreditCard,
+  FaCcVisa,
+  FaCcMastercard,
+  FaCcAmex,
+  FaCcDiscover,
+  FaCcDinersClub,
+  FaCcJcb,
+} from "react-icons/fa";
 
 interface UpdatePaymentModalProps {
   show: boolean;
@@ -12,8 +20,20 @@ interface UpdatePaymentModalProps {
   selectedPaymentMethodId: string | null;
   onPaymentMethodSelect: (id: string) => void;
   onAddNewPaymentMethod: () => void;
-  getCardIcon: (brand: string) => any;
 }
+
+const getCardIcon = (brand: string) => {
+  const brands: Record<string, any> = {
+    visa: FaCcVisa,
+    mastercard: FaCcMastercard,
+    amex: FaCcAmex,
+    discover: FaCcDiscover,
+    diners: FaCcDinersClub,
+    jcb: FaCcJcb,
+  };
+
+  return brands[brand.toLowerCase()] || FaCreditCard;
+};
 
 export default function UpdatePaymentModal({
   show,
@@ -24,9 +44,7 @@ export default function UpdatePaymentModal({
   selectedPaymentMethodId,
   onPaymentMethodSelect,
   onAddNewPaymentMethod,
-  getCardIcon
 }: UpdatePaymentModalProps) {
-  
   // Helper function to get card label from the brand
   const getCardLabel = (brand: string): string => {
     if (!brand) return "Card";
@@ -42,7 +60,7 @@ export default function UpdatePaymentModal({
       style={{ zIndex: 9999 }}
       className="update-payment-modal"
     >
-      <Modal.Header closeButton style={{ backgroundColor: '#f8f9fa' }}>
+      <Modal.Header closeButton style={{ backgroundColor: "#f8f9fa" }}>
         <Modal.Title>Update Payment Method</Modal.Title>
       </Modal.Header>
       <Modal.Body>
@@ -85,13 +103,9 @@ export default function UpdatePaymentModal({
                             : ""
                         }`}
                       >
-                        {getCardLabel(method.brand)}{" "}
-                        ending in {method.last4}
+                        {getCardLabel(method.brand)} ending in {method.last4}
                         {method.isDefault && (
-                          <Badge
-                            bg="primary"
-                            className="ms-2 rounded-pill"
-                          >
+                          <Badge bg="primary" className="ms-2 rounded-pill">
                             Default
                           </Badge>
                         )}
@@ -177,4 +191,4 @@ export default function UpdatePaymentModal({
       </Modal.Footer>
     </Modal>
   );
-} 
+}

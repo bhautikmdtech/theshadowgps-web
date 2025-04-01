@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Accordion, Badge, Button } from 'react-bootstrap';
+import { Accordion,} from 'react-bootstrap';
 import { 
   FaCreditCard, FaPlus, FaCheck, FaTrash, FaEllipsisV,
   FaCcVisa, FaCcMastercard, FaCcAmex, FaCcDiscover, FaCcDinersClub, FaCcJcb 
 } from 'react-icons/fa';
-
+import { FaCirclePlus } from "react-icons/fa6";
 interface PaymentMethod {
   id: string;
   brand: string;
@@ -82,11 +82,11 @@ export default function PaymentMethodsSection({
 
   return (
     <Accordion defaultActiveKey="0" className="mb-3">
-      <Accordion.Item eventKey="0" className="border">
+      <Accordion.Item eventKey="0" >
         <Accordion.Header>
-          <span className="fw-medium">Payment Methods</span>
+          <span style={{color: "#0C1F3F",fontSize: "20px",fontWeight: "700"}}>Payment Methods</span>
         </Accordion.Header>
-        <Accordion.Body className="p-3">
+        <Accordion.Body className="p-3" style={{backgroundColor: "#F8F9FA"}}>
           {/* Display Payment Methods */}
           {paymentMethods.length > 0 ? (
             <div className="payment-methods-list">
@@ -101,23 +101,23 @@ export default function PaymentMethodsSection({
                         const IconComponent = getCardIcon(method.brand);
                         return (
                           <IconComponent
-                            size={20}
+                            size={26}
                             className="text-gray-800"
                           />
                         );
                       })()}
                     </div>
                     <div className="card-details">
-                      <div className="card-number">
-                        {getCardLabel(method.brand)} ending in{" "}
+                      <div className="card-number" style={{color: "#0C1F3F" , fontSize: "16px", fontWeight: "600"}}>
+                        {getCardLabel(method.brand)} ****{" "}
                         {method.last4}
                         {method.isDefault && (
-                          <span className="ml-2 bg-blue-500 text-white text-xs px-2.5 py-0.5 rounded-full">
+                          <span className="ml-2 bg-blue-500 text-white text-xs px-2.5 py-0.5 rounded-full" style={{color: "#0C1F3F"}}>
                             Default
                           </span>
                         )}
                       </div>
-                      <div className="card-expiry text-gray-500 text-sm">
+                      <div className="card-expiry text-gray-500 text-sm" style={{color: "#0C1F3F" , fontSize: "14px" }}>
                         Expires {method.expMonth}/{method.expYear}
                       </div>
                     </div>
@@ -129,7 +129,7 @@ export default function PaymentMethodsSection({
                       className="text-gray-600 hover:text-gray-800 p-1 focus:outline-none"
                       aria-expanded={openDropdownId === method.id}
                     >
-                      <FaEllipsisV />
+                      <FaEllipsisV /> 
                     </button>
                     
                     {openDropdownId === method.id && (
@@ -171,19 +171,19 @@ export default function PaymentMethodsSection({
                 </div>
               ))}
               <div
-                className="add-payment-btn mt-3 flex items-center cursor-pointer text-blue-600 hover:text-blue-800"
+                className="add-payment-btn mt-3 flex items-center cursor-pointer text-blue-600 "
                 onClick={handleAddPaymentMethod}
               >
-                <FaPlus className="mr-2" />
+                <FaCirclePlus className="mr-2 " size={24} />
                 <span>Add payment method</span>
               </div>
             </div>
           ) : (
             <div
-              className="add-payment-btn flex items-center cursor-pointer text-blue-600 hover:text-blue-800"
+              className="add-payment-btn flex items-center cursor-pointer text-blue-600 "
               onClick={handleAddPaymentMethod}
             >
-              <FaPlus className="mr-2" />
+              <FaCirclePlus className="mr-2" size={24} />
               <span>Add payment method</span>
             </div>
           )}

@@ -11,6 +11,8 @@ mapboxgl.accessToken = MAPBOX_TOKEN;
 let mapInstance: mapboxgl.Map | null = null;
 let markers: mapboxgl.Marker[] = [];
 let clickHandlerAdded = false;
+let liveModeEnabled = false;
+let isHandlingLiveUpdate = false;
 
 const addStyles = (): void => {
   if (!document.getElementById("marker-animations")) {
@@ -113,31 +115,6 @@ const addStyles = (): void => {
     `;
     document.head.appendChild(style);
   }
-};
-
-const isValidPosition = (position: Position): boolean => {
-  if (
-    !position ||
-    typeof position.latitude !== "number" ||
-    typeof position.longitude !== "number"
-  ) {
-    return false;
-  }
-
-  if (
-    !isFinite(position.latitude) ||
-    !isFinite(position.longitude) ||
-    (Math.abs(position.latitude) < 0.000001 &&
-      Math.abs(position.longitude) < 0.000001)
-  ) {
-    return false;
-  }
-
-  if (Math.abs(position.latitude) > 90 || Math.abs(position.longitude) > 180) {
-    return false;
-  }
-
-  return true;
 };
 
 const addMapListeners = (): void => {
@@ -492,61 +469,6 @@ const createStartPopup = (
   );
 };
 
-const createCurrentPopup = (
-  position: Position,
-  deviceName: string,
-  deviceImage: string
-): mapboxgl.Popup => {
-  return new mapboxgl.Popup({
-    offset: [0, -10],
-    closeButton: true,
-    closeOnClick: false,
-    maxWidth: "300px",
-    className: "custom-popup",
-  }).setHTML(
-    `<div style="padding: 10px;">
-       <div style="display:flex;align-items:center;margin-bottom:8px;">
-         ${
-           deviceImage
-             ? `<img src="${deviceImage}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;object-fit:cover;" 
-             onerror="this.style.display='none'">`
-             : `<div style="width:24px;height:24px;border-radius:50%;background-color:#FF5722;color:white;display:flex;justify-content:center;align-items:center;margin-right:8px;font-weight:bold;">${
-                 deviceName ? deviceName.charAt(0).toUpperCase() : "D"
-               }</div>`
-         }
-         <div>
-           <p style="margin:0;font-weight:bold;color:#333;font-size:14px;">${
-             deviceName || "Current Location"
-           }</p>
-           <span style="display:flex;align-items:center;font-size:10px;color:#4CAF50;margin-top:2px;">
-             <span style="display:inline-block;width:6px;height:6px;background-color:#4CAF50;border-radius:50%;margin-right:4px;"></span>
-             Live Location
-           </span>
-         </div>
-       </div>
-       <p style="margin:0;font-size:12px;color:#444;border-bottom:1px solid #eee;padding-bottom:6px;">${
-         position.address || "Unknown location"
-       }</p>
-       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;font-size:11px;color:#666;">
-         ${
-           position.timestamp
-             ? `<div>Time: ${new Date(
-                 position.timestamp * 1000
-               ).toLocaleString()}</div>`
-             : ""
-         }
-         ${
-           position.speed
-             ? `<div>Speed: ${Math.round(position.speed)} km/h</div>`
-             : ""
-         }
-         <div>Lat: ${position.latitude.toFixed(6)}</div>
-         <div>Lng: ${position.longitude.toFixed(6)}</div>
-       </div>
-     </div>`
-  );
-};
-
 const createEventMarkerElement = (): HTMLElement => {
   const el = document.createElement("div");
   el.className = "event-marker";
@@ -559,43 +481,6 @@ const createEventMarkerElement = (): HTMLElement => {
   return el;
 };
 
-const moveMarker = (
-  marker: mapboxgl.Marker,
-  newPosition: [number, number],
-  duration: number = 1500
-): void => {
-  if (!marker) return;
-
-  const oldLngLat = marker.getLngLat();
-  const oldPosition: [number, number] = [oldLngLat.lng, oldLngLat.lat];
-  const startTime = performance.now();
-
-  const animate = (currentTime: number) => {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-
-    const easeInOut = (t: number) => {
-      return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-    };
-
-    const easedProgress = easeInOut(progress);
-
-    const lng =
-      oldPosition[0] + (newPosition[0] - oldPosition[0]) * easedProgress;
-    const lat =
-      oldPosition[1] + (newPosition[1] - oldPosition[1]) * easedProgress;
-
-    marker.setLngLat([lng, lat]);
-
-    if (progress < 1) {
-      requestAnimationFrame(animate);
-    }
-  };
-
-  // Start animation
-  requestAnimationFrame(animate);
-};
-
 const processPositions = (
   positions: Position[],
   deviceName: string,
@@ -605,7 +490,9 @@ const processPositions = (
 
   try {
     // Filter valid positions
-    const validPositions = positions.filter((pos) => isValidPosition(pos));
+    const validPositions = positions.filter((pos) =>
+      mapService.isValidPosition(pos)
+    );
 
     if (validPositions.length === 0) {
       console.warn("No valid positions to process");
@@ -658,9 +545,12 @@ const updateMarkerPositions = (positions: Position[]): void => {
   const lastPosition = positions[positions.length - 1];
 
   // Update start marker position if we have it
-  if (hasStartMarker && isValidPosition(firstPosition)) {
+  if (hasStartMarker && mapService.isValidPosition(firstPosition)) {
     const startMarker = markers[0];
-    moveMarker(startMarker, [firstPosition.longitude, firstPosition.latitude]);
+    mapService.moveMarker(startMarker, [
+      firstPosition.longitude,
+      firstPosition.latitude,
+    ]);
 
     // Update popup content
     const popup = startMarker.getPopup();
@@ -684,9 +574,12 @@ const updateMarkerPositions = (positions: Position[]): void => {
   }
 
   // Update current marker position if we have it
-  if (hasCurrentMarker && isValidPosition(lastPosition)) {
+  if (hasCurrentMarker && mapService.isValidPosition(lastPosition)) {
     const currentMarker = markers[markers.length - 1];
-    moveMarker(currentMarker, [lastPosition.longitude, lastPosition.latitude]);
+    mapService.moveMarker(currentMarker, [
+      lastPosition.longitude,
+      lastPosition.latitude,
+    ]);
 
     // Update popup content
     const popup = currentMarker.getPopup();
@@ -698,7 +591,7 @@ const updateMarkerPositions = (positions: Position[]): void => {
       }
 
       // Create a new popup with updated content and settings
-      const newPopup = createCurrentPopup(
+      const newPopup = mapService.createCurrentPopup(
         lastPosition,
         currentMarker.getElement().getAttribute("data-name") || "",
         currentMarker.getElement().getAttribute("data-image") || ""
@@ -816,7 +709,7 @@ const addEndArrow = (coordinates: number[][]): void => {
   const secondLastPoint = coordinates[coordinates.length - 2];
 
   // Calculate bearing
-  const bearing = getBearing(
+  const bearing = mapService.getBearing(
     secondLastPoint[1],
     secondLastPoint[0],
     lastPoint[1],
@@ -864,26 +757,227 @@ const addEndArrow = (coordinates: number[][]): void => {
   }
 };
 
-const getBearing = (
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number
-): number => {
-  // Convert to radians
-  const rlat1 = (lat1 * Math.PI) / 180;
-  const rlng1 = (lng1 * Math.PI) / 180;
-  const rlat2 = (lat2 * Math.PI) / 180;
-  const rlng2 = (lng2 * Math.PI) / 180;
+// Create a simple location icon marker for live tracking with 30% larger size
+const createLocationIconMarker = (
+  position: Position
+): HTMLElement => {
+  const container = document.createElement("div");
+  container.className = "location-marker";
+  container.style.position = "relative";
+  container.style.cursor = "pointer";
+  container.style.padding = "10px"; // Increased padding
+  container.style.margin = "-10px"; // Adjusted margin
 
-  // Calculate bearing
-  const y = Math.sin(rlng2 - rlng1) * Math.cos(rlat2);
-  const x =
-    Math.cos(rlat1) * Math.sin(rlat2) -
-    Math.sin(rlat1) * Math.cos(rlat2) * Math.cos(rlng2 - rlng1);
-  const bearing = (Math.atan2(y, x) * 180) / Math.PI;
+  // Create the marker circle with 30% larger size
+  const markerCircle = document.createElement("div");
+  markerCircle.style.width = "26px"; // Increased from 20px (30% larger)
+  markerCircle.style.height = "26px"; // Increased from 20px (30% larger)
+  markerCircle.style.backgroundColor = "#4285F4";
+  markerCircle.style.border = "4px solid white"; // Increased border
+  markerCircle.style.borderRadius = "50%";
+  markerCircle.style.boxShadow = "0 3px 8px rgba(0,0,0,0.4)"; // Enhanced shadow
+  container.appendChild(markerCircle);
 
-  return bearing;
+  // Add pulse effect with larger size
+  const pulseRing = document.createElement("div");
+  pulseRing.className = "pulse-ring";
+  pulseRing.style.position = "absolute";
+  pulseRing.style.top = "-2px";
+  pulseRing.style.left = "-2px";
+  pulseRing.style.right = "-2px";
+  pulseRing.style.bottom = "-2px";
+  pulseRing.style.borderRadius = "50%";
+  pulseRing.style.backgroundColor = "rgba(66, 133, 244, 0.4)"; // More visible pulse
+  pulseRing.style.zIndex = "-1";
+  container.appendChild(pulseRing);
+
+  // Add hover effect
+  container.onmouseenter = () => {
+    markerCircle.style.transform = "scale(1.2)";
+    markerCircle.style.transition = "transform 0.2s ease-in-out";
+  };
+
+  container.onmouseleave = () => {
+    markerCircle.style.transform = "scale(1)";
+  };
+
+  return container;
+};
+
+// Add a new function to handle live position updates with smooth animation
+const handleLivePositionUpdate = (
+  prevPosition: Position,
+  newPosition: Position,
+  deviceName: string,
+  deviceImage: string,
+  isLiveModeEnabled: boolean = false
+): void => {
+  if (!mapInstance || !mapService.isValidPosition(prevPosition) || !mapService.isValidPosition(newPosition)) return;
+
+  isHandlingLiveUpdate = true;
+
+  try {
+    // Calculate bearing for direction reference 
+    const bearing = mapService.getBearing(
+      prevPosition.latitude,
+      prevPosition.longitude,
+      newPosition.latitude,
+      newPosition.longitude
+    );
+    
+    // Get the last marker (current location marker)
+    const currentMarker = markers.length > 1 ? markers[markers.length - 1] : null;
+    
+    if (!currentMarker) {
+      isHandlingLiveUpdate = false;
+      return;
+    }
+    
+    // If in live mode, hide all intermediate markers and use a simple location icon
+    if (isLiveModeEnabled || liveModeEnabled) {
+      // Hide all markers except the first one (start) and the last one (current)
+      for (let i = 1; i < markers.length - 1; i++) {
+        markers[i].getElement().style.display = 'none';
+      }
+
+      // Make sure the first marker (start position) remains visible
+      if (markers.length > 0) {
+        markers[0].getElement().style.display = 'block';
+      }
+      
+      // Get or create marker element for the current position
+      const markerElement = currentMarker.getElement();
+      const markerType = markerElement.getAttribute("data-marker-type");
+      
+      // If not already a location marker, replace it with one
+      if (markerType !== "location") {
+        // Create new location marker element
+        const newMarkerElement = createLocationIconMarker(newPosition);
+        
+        // Store metadata
+        newMarkerElement.setAttribute("data-marker-type", "location");
+        newMarkerElement.setAttribute("data-name", deviceName || "");
+        newMarkerElement.setAttribute("data-image", deviceImage || "");
+        
+        // Replace existing marker element
+        currentMarker.getElement().replaceWith(newMarkerElement);
+        
+        // Recreate popup with new position info
+        const newPopup = mapService.createCurrentPopup(
+          newPosition,
+          deviceName,
+          deviceImage
+        );
+        currentMarker.setPopup(newPopup);
+        
+        // Reassign click handler
+        newMarkerElement.onclick = (e: MouseEvent) => {
+          e.stopPropagation(); // Prevent map click from triggering
+          
+          // Close other popups first
+          markers.forEach((m) => {
+            if (m !== currentMarker && m.getPopup()?.isOpen()) {
+              m.getPopup()?.remove();
+            }
+          });
+          
+          // Toggle this popup
+          if (currentMarker.getPopup()?.isOpen()) {
+            currentMarker.getPopup()?.remove();
+          } else {
+            currentMarker.togglePopup();
+          }
+        };
+      }
+    } else {
+      // If not in live mode, show all markers
+      markers.forEach(marker => {
+        marker.getElement().style.display = 'block';
+      });
+    }
+
+    // Calculate zoom level based on speed and distance moved - increased for closer view
+    let targetZoom = 18; // Increased default zoom level (was 16)
+    if (newPosition.speed) {
+      // Adjust zoom level based on speed (slower = more zoom)
+      if (newPosition.speed > 80) targetZoom = 16;
+      else if (newPosition.speed > 50) targetZoom = 17;
+      else if (newPosition.speed > 30) targetZoom = 18;
+      else targetZoom = 19; // Very close zoom for slow movement
+    }
+
+    // First start marker animation
+    mapService.moveMarker(
+      currentMarker, 
+      [newPosition.longitude, newPosition.latitude],
+      1200
+    );
+
+    // Then animate the map view (center, zoom, and rotation) if live mode is enabled
+    if (isLiveModeEnabled || liveModeEnabled) {
+      // Calculate distance moved to adjust zoom appropriately
+      const distanceMoved = mapService.calculateDistance(
+        prevPosition.latitude, 
+        prevPosition.longitude,
+        newPosition.latitude, 
+        newPosition.longitude
+      );
+      
+      // Fine-tune zoom based on distance moved - higher zoom levels overall
+      if (distanceMoved < 5) { // Very small movements
+        targetZoom = Math.min(targetZoom + 1, 19.5); // Zoom in more, capped higher
+      } else if (distanceMoved > 100) { // Larger movements
+        targetZoom = Math.max(targetZoom - 1, 16); // Zoom out a bit, but not below 16
+      }
+      
+      // Center and rotate the map to follow the movement direction
+      mapInstance.flyTo({
+        center: [newPosition.longitude, newPosition.latitude],
+        zoom: targetZoom,
+        bearing: bearing, // Rotate map to match movement direction
+        pitch: 55, // Slightly increased pitch for better visualization
+        duration: 1000,
+        essential: true,
+        easing: (t: number) => {
+          return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
+        },
+        animate: true,
+      });
+    }
+
+    // Update the popup content with new information
+    if (currentMarker.getPopup()) {
+      const newPopup = mapService.createCurrentPopup(
+        newPosition,
+        deviceName,
+        deviceImage
+      );
+      currentMarker.setPopup(newPopup);
+    }
+
+    // Add a small delay to update the route line
+    setTimeout(() => {
+      // Store all valid positions to update the route
+      const validPositions = markers.map(marker => {
+        const lngLat = marker.getLngLat();
+        return {
+          latitude: lngLat.lat,
+          longitude: lngLat.lng
+        } as Position;
+      });
+      
+      // Add the new position
+      validPositions.push(newPosition);
+      
+      // Update route line
+      mapService.addRouteLine(validPositions);
+      
+      isHandlingLiveUpdate = false;
+    }, 300);
+  } catch (error) {
+    console.error("Error handling live position update:", error);
+    isHandlingLiveUpdate = false;
+  }
 };
 
 const mapService = {
@@ -921,6 +1015,161 @@ const mapService = {
       clickHandlerAdded = false;
     }
   },
+
+  moveMarker: (
+    marker: mapboxgl.Marker,
+    newPosition: [number, number],
+    duration: number = 1500
+  ): void => {
+    if (!marker) return;
+
+    const oldLngLat = marker.getLngLat();
+    const oldPosition: [number, number] = [oldLngLat.lng, oldLngLat.lat];
+    const startTime = performance.now();
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      const easeInOut = (t: number) => {
+        return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+      };
+
+      const easedProgress = easeInOut(progress);
+
+      const lng =
+        oldPosition[0] + (newPosition[0] - oldPosition[0]) * easedProgress;
+      const lat =
+        oldPosition[1] + (newPosition[1] - oldPosition[1]) * easedProgress;
+
+      marker.setLngLat([lng, lat]);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    // Start animation
+    requestAnimationFrame(animate);
+  },
+
+  createCurrentPopup: (
+    position: Position,
+    deviceName: string,
+    deviceImage: string
+  ): mapboxgl.Popup => {
+    return new mapboxgl.Popup({
+      offset: [0, -10],
+      closeButton: true,
+      closeOnClick: false,
+      maxWidth: "300px",
+      className: "custom-popup",
+    }).setHTML(
+      `<div style="padding: 10px;">
+       <div style="display:flex;align-items:center;margin-bottom:8px;">
+         ${
+           deviceImage
+             ? `<img src="${deviceImage}" style="width:24px;height:24px;border-radius:50%;margin-right:8px;object-fit:cover;" 
+             onerror="this.style.display='none'">`
+             : `<div style="width:24px;height:24px;border-radius:50%;background-color:#FF5722;color:white;display:flex;justify-content:center;align-items:center;margin-right:8px;font-weight:bold;">${
+                 deviceName ? deviceName.charAt(0).toUpperCase() : "D"
+               }</div>`
+         }
+         <div>
+           <p style="margin:0;font-weight:bold;color:#333;font-size:14px;">${
+             deviceName || "Current Location"
+           }</p>
+           <span style="display:flex;align-items:center;font-size:10px;color:#4CAF50;margin-top:2px;">
+             <span style="display:inline-block;width:6px;height:6px;background-color:#4CAF50;border-radius:50%;margin-right:4px;"></span>
+             Live Location
+           </span>
+         </div>
+       </div>
+       <p style="margin:0;font-size:12px;color:#444;border-bottom:1px solid #eee;padding-bottom:6px;">${
+         position.address || "Unknown location"
+       }</p>
+       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:6px;font-size:11px;color:#666;">
+         ${
+           position.timestamp
+             ? `<div>Time: ${new Date(
+                 position.timestamp * 1000
+               ).toLocaleString()}</div>`
+             : ""
+         }
+         ${
+           position.speed
+             ? `<div>Speed: ${Math.round(position.speed)} km/h</div>`
+             : ""
+         }
+         <div>Lat: ${position.latitude.toFixed(6)}</div>
+         <div>Lng: ${position.longitude.toFixed(6)}</div>
+       </div>
+     </div>`
+    );
+  },
+  isValidPosition: (position: Position): boolean => {
+    if (
+      !position ||
+      typeof position.latitude !== "number" ||
+      typeof position.longitude !== "number"
+    ) {
+      return false;
+    }
+
+    if (
+      !isFinite(position.latitude) ||
+      !isFinite(position.longitude) ||
+      (Math.abs(position.latitude) < 0.000001 &&
+        Math.abs(position.longitude) < 0.000001)
+    ) {
+      return false;
+    }
+
+    if (
+      Math.abs(position.latitude) > 90 ||
+      Math.abs(position.longitude) > 180
+    ) {
+      return false;
+    }
+
+    return true;
+  },
+  getBearing: (
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number
+  ): number => {
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x =
+      Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    const θ = Math.atan2(y, x);
+
+    return ((θ * 180) / Math.PI + 360) % 360; // Normalize to 0-360
+  },
+  calculateDistance: (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ): number => {
+    const R = 6371e3; // Earth radius in meters
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c;
+  },
   fitMapToPositions: (positions: Position[]): void => {
     if (!mapInstance || positions.length === 0) return;
 
@@ -930,7 +1179,7 @@ const mapService = {
 
       // Extend bounds with valid positions
       positions.forEach((pos) => {
-        if (isValidPosition(pos)) {
+        if (mapService.isValidPosition(pos)) {
           bounds.extend([pos.longitude, pos.latitude]);
           validPointsAdded++;
         }
@@ -957,7 +1206,7 @@ const mapService = {
     }
   },
   centerMapOnPosition: (position: Position, zoom: number = 14): void => {
-    if (!mapInstance || !isValidPosition(position)) return;
+    if (!mapInstance || !mapService.isValidPosition(position)) return;
 
     try {
       mapInstance.flyTo({
@@ -1018,7 +1267,7 @@ const mapService = {
     deviceName: string,
     deviceImage: string
   ): mapboxgl.Marker | null => {
-    if (!mapInstance || !isValidPosition(position)) return null;
+    if (!mapInstance || !mapService.isValidPosition(position)) return null;
 
     const markerElement = createStartMarkerElement(deviceName, deviceImage);
     const popup = createStartPopup(position, deviceName, deviceImage);
@@ -1096,10 +1345,14 @@ const mapService = {
     deviceName: string,
     deviceImage: string
   ): mapboxgl.Marker | null => {
-    if (!mapInstance || !isValidPosition(position)) return null;
+    if (!mapInstance || !mapService.isValidPosition(position)) return null;
 
     const markerElement = createLastMarkerElement(deviceName, deviceImage);
-    const popup = createCurrentPopup(position, deviceName, deviceImage);
+    const popup = mapService.createCurrentPopup(
+      position,
+      deviceName,
+      deviceImage
+    );
 
     try {
       // Store device name and image as data attributes for later use
@@ -1170,7 +1423,7 @@ const mapService = {
     }
   },
   createRouteMarker: (position: Position): mapboxgl.Marker | null => {
-    if (!mapInstance || !isValidPosition(position)) return null;
+    if (!mapInstance || !mapService.isValidPosition(position)) return null;
 
     const markerElement = createEventMarkerElement();
 
@@ -1272,7 +1525,9 @@ const mapService = {
 
     try {
       // Filter valid positions
-      const validPositions = positions.filter((pos) => isValidPosition(pos));
+      const validPositions = positions.filter((pos) =>
+        mapService.isValidPosition(pos)
+      );
 
       if (validPositions.length < 2) {
         console.warn("Not enough valid positions for route line");
@@ -1382,6 +1637,121 @@ const mapService = {
       console.error("Error adding route line:", error);
     }
   },
+  handleLiveUpdate: (
+    prevPosition: Position,
+    newPosition: Position,
+    deviceName: string,
+    deviceImage: string,
+    isLiveModeEnabled: boolean = false
+  ): void => {
+    handleLivePositionUpdate(prevPosition, newPosition, deviceName, deviceImage, isLiveModeEnabled);
+  },
+  setLiveModeEnabled: (enabled: boolean): void => {
+    liveModeEnabled = enabled;
+    
+    // If live mode is disabled, reset the map view and show all markers
+    if (!enabled && mapInstance) {
+      mapInstance.easeTo({
+        pitch: 0,
+        bearing: 0, // Reset to north
+        duration: 1000
+      });
+      
+      // Show all markers when disabling live mode
+      markers.forEach(marker => {
+        marker.getElement().style.display = 'block';
+      });
+
+      // Restore the last marker to device icon if it was changed to location icon
+      if (markers.length > 1) {
+        const lastMarker = markers[markers.length - 1];
+        const markerType = lastMarker.getElement().getAttribute("data-marker-type");
+        
+        if (markerType === "location") {
+          // Get the last position
+          const lngLat = lastMarker.getLngLat();
+          const position: Position = {
+            latitude: lngLat.lat,
+            longitude: lngLat.lng,
+            timestamp: Math.floor(Date.now() / 1000), // Add current timestamp
+            speed: 0, // Add default speed
+            direction: 0, // Add default direction
+            address: "Current location" // Add default address
+          };
+          
+          // Get device info from marker attributes
+          const deviceName = lastMarker.getElement().getAttribute("data-name") || "";
+          const deviceImage = lastMarker.getElement().getAttribute("data-image") || "";
+          
+          // Create a new device marker element
+          const newMarkerElement = createLastMarkerElement(deviceName, deviceImage);
+          newMarkerElement.setAttribute("data-name", deviceName);
+          newMarkerElement.setAttribute("data-image", deviceImage);
+          newMarkerElement.setAttribute("data-marker-type", "current");
+          
+          // Replace the marker element
+          lastMarker.getElement().replaceWith(newMarkerElement);
+        }
+      }
+    } 
+    // If enabling live mode, hide intermediate markers and keep only first and current
+    else if (enabled && mapInstance && markers.length > 1) {
+      // Make sure first marker is visible
+      if (markers.length > 0) {
+        markers[0].getElement().style.display = 'block';
+      }
+      
+      // Make sure last marker is visible but change it to location icon
+      if (markers.length > 1) {
+        const lastMarker = markers[markers.length - 1];
+        lastMarker.getElement().style.display = 'block';
+        
+        // Get the last position
+        const lngLat = lastMarker.getLngLat();
+        const position: Position = {
+          latitude: lngLat.lat,
+          longitude: lngLat.lng,
+          timestamp: Math.floor(Date.now() / 1000), // Add current timestamp
+          speed: 0, // Add default speed
+          direction: 0, // Add default direction
+          address: "Current location" // Add default address
+        };
+        
+        // Get device info from marker attributes
+        const deviceName = lastMarker.getElement().getAttribute("data-name") || "";
+        const deviceImage = lastMarker.getElement().getAttribute("data-image") || "";
+        
+        // Create a location icon marker
+        const newMarkerElement = createLocationIconMarker(position);
+        newMarkerElement.setAttribute("data-name", deviceName);
+        newMarkerElement.setAttribute("data-image", deviceImage);
+        newMarkerElement.setAttribute("data-marker-type", "location");
+        
+        // Replace the marker element
+        lastMarker.getElement().replaceWith(newMarkerElement);
+      }
+      
+      // Hide all intermediate markers
+      for (let i = 1; i < markers.length - 1; i++) {
+        markers[i].getElement().style.display = 'none';
+      }
+      
+      // Focus on current position immediately when enabling live mode
+      if (markers.length > 1) {
+        const lastMarker = markers[markers.length - 1];
+        const lngLat = lastMarker.getLngLat();
+        
+        // Use a more immersive view for live mode
+        mapInstance.flyTo({
+          center: [lngLat.lng, lngLat.lat],
+          zoom: 18, // Closer zoom level (was 16)
+          pitch: 55, // Add pitch for better immersion (was 50)
+          bearing: 0, // Start with north, will rotate with movement
+          duration: 1000
+        });
+      }
+    }
+  }
 };
 
 export default mapService;

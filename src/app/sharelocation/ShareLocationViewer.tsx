@@ -12,6 +12,7 @@ import {
   FaLocationArrow,
   FaCrosshairs,
   FaSync,
+  FaSatelliteDish,
 } from "react-icons/fa";
 import { BiLoaderAlt } from "react-icons/bi";
 import axiosClient from "@/lib/axiosClient";
@@ -99,6 +100,7 @@ export default function ShareLocationViewer() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [viewerStats, setViewerStats] = useState<ViewerStats | null>(null);
+  const [liveMode, setLiveMode] = useState<boolean>(false);
   const isMounted = useRef<boolean>(true);
   const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [expiryTimeRemaining, setExpiryTimeRemaining] = useState<{
@@ -234,10 +236,31 @@ export default function ShareLocationViewer() {
               address: newPosition.address,
             };
 
-            // Update positions array with new position
+            // Get the previous position for animation
+            const prevPosition = positions[positions.length - 1];
+
             const updatedPositions = [...positions];
             updatedPositions[updatedPositions.length - 1] = newPositionObj;
             setPositions(updatedPositions);
+
+            // Trigger the map update for live position
+            const mapContainer = document.querySelector(
+              '[data-testid="map-container"]'
+            );
+
+            if (mapContainer) {
+              // Use custom event to trigger the map service
+              const liveUpdateEvent = new CustomEvent("live-position-update", {
+                detail: {
+                  prevPosition,
+                  newPosition: newPositionObj,
+                  deviceName: deviceInfo?.deviceName || "Device",
+                  deviceImage: deviceInfo?.imageUrl || "",
+                  isLiveModeEnabled: true,
+                },
+              });
+              mapContainer.dispatchEvent(liveUpdateEvent);
+            }
           }
 
           if (newPosition._meta?.viewers) {
@@ -275,7 +298,7 @@ export default function ShareLocationViewer() {
       clearInterval(pingIntervalRef.current as NodeJS.Timeout);
       socketInstance.disconnect();
     };
-  }, [shareToken, positions]);
+  }, [shareToken, positions, deviceInfo]);
 
   // Get the URL parameter for the share token
   useEffect(() => {
@@ -297,6 +320,23 @@ export default function ShareLocationViewer() {
   };
 
   const handleViewStart = () => {
+    // Disable live mode when viewing start position
+    if (liveMode) {
+      setLiveMode(false);
+      
+      // Notify map about live mode change
+      const mapContainer = document.querySelector(
+        '[data-testid="map-container"]'
+      );
+      
+      if (mapContainer) {
+        const liveModeEvent = new CustomEvent("toggle-live-mode", {
+          detail: { enabled: false },
+        });
+        mapContainer.dispatchEvent(liveModeEvent);
+      }
+    }
+    
     const mapContainer = document.querySelector(
       '[data-testid="map-container"]'
     );
@@ -309,6 +349,23 @@ export default function ShareLocationViewer() {
   };
 
   const handleViewCurrent = () => {
+    // Disable live mode when viewing current position manually
+    if (liveMode) {
+      setLiveMode(false);
+      
+      // Notify map about live mode change
+      const mapContainer = document.querySelector(
+        '[data-testid="map-container"]'
+      );
+      
+      if (mapContainer) {
+        const liveModeEvent = new CustomEvent("toggle-live-mode", {
+          detail: { enabled: false },
+        });
+        mapContainer.dispatchEvent(liveModeEvent);
+      }
+    }
+    
     const mapContainer = document.querySelector(
       '[data-testid="map-container"]'
     );
@@ -327,12 +384,58 @@ export default function ShareLocationViewer() {
   };
 
   const handleViewAll = () => {
+    // Disable live mode when viewing all positions
+    if (liveMode) {
+      setLiveMode(false);
+      
+      // Notify map about live mode change
+      const mapContainer = document.querySelector(
+        '[data-testid="map-container"]'
+      );
+      
+      if (mapContainer) {
+        const liveModeEvent = new CustomEvent("toggle-live-mode", {
+          detail: { enabled: false },
+        });
+        mapContainer.dispatchEvent(liveModeEvent);
+      }
+    }
+    
     const mapContainer = document.querySelector(
       '[data-testid="map-container"]'
     );
     if (mapContainer) {
       const event = new CustomEvent("fit-all-points");
       mapContainer.dispatchEvent(event);
+    }
+  };
+  
+  const handleToggleLiveMode = () => {
+    const newLiveMode = !liveMode;
+    setLiveMode(newLiveMode);
+
+    // Get the map container to notify about live mode change
+    const mapContainer = document.querySelector(
+      '[data-testid="map-container"]'
+    );
+
+    if (mapContainer) {
+      // Dispatch event to notify map component about live mode change
+      const liveModeEvent = new CustomEvent("toggle-live-mode", {
+        detail: { enabled: newLiveMode },
+      });
+      mapContainer.dispatchEvent(liveModeEvent);
+
+      // If turning on live mode and we have positions, focus on the latest position
+      if (newLiveMode && positions.length > 0) {
+        const focusEvent = new CustomEvent("focus-point", {
+          detail: { 
+            index: positions.length - 1, 
+            type: "current" 
+          },
+        });
+        mapContainer.dispatchEvent(focusEvent);
+      }
     }
   };
 
@@ -485,6 +588,20 @@ export default function ShareLocationViewer() {
                 >
                   <FaCrosshairs className="h-4 w-4" />
                 </button>
+                
+                <button
+                  onClick={handleToggleLiveMode}
+                  title={
+                    liveMode ? "Disable live tracking" : "Enable live tracking"
+                  }
+                  className={`${
+                    liveMode
+                      ? "bg-red-500 hover:bg-red-600"
+                      : "bg-gray-500 hover:bg-gray-600"
+                  } text-white p-1.5 rounded-md`}
+                >
+                  <FaSatelliteDish className="h-4 w-4" />
+                </button>
               </>
             )}
           </div>
@@ -497,6 +614,7 @@ export default function ShareLocationViewer() {
           allPositions={positions}
           deviceName={deviceInfo?.deviceName || "Device"}
           deviceImage={deviceInfo?.imageUrl}
+          liveMode={liveMode}
         />
       </div>
     </div>

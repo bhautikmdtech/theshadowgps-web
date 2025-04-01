@@ -1,31 +1,46 @@
-import { useState, useEffect } from 'react';
-import { Modal, Button, Spinner } from 'react-bootstrap';
-import { FaSpinner } from "react-icons/fa";
-import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useState, useEffect } from "react";
+import { Modal, Button } from "react-bootstrap";
+import {
+  PaymentElement,
+  useStripe,
+  useElements,
+} from "@stripe/react-stripe-js";
 import { toast } from "react-toastify";
+import { PageLoader } from "@/components";
+import { useSearchParams } from "next/navigation";
+import axiosClient from "@/lib/axiosClient";
 
 interface AddPaymentModalProps {
   show: boolean;
   onClose: () => void;
   onSuccess: () => void;
   customerId: string;
-  baseUrl: string;
-  getToken: () => string | null;
 }
 
-export default function AddPaymentModal({ 
-  show, 
-  onClose, 
+export default function AddPaymentModal({
+  show,
+  onClose,
   onSuccess,
   customerId,
-  baseUrl,
-  getToken
 }: AddPaymentModalProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
   const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+
+  // Get token from URL using Next.js functionality
+  const getToken = (): string | null => {
+    const token = searchParams.get("token");
+    if (
+      token &&
+      /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_.+/=]*$/.test(token)
+    ) {
+      return token;
+    }
+    return null;
+  };
 
   useEffect(() => {
     if (elements) {
@@ -50,11 +65,18 @@ export default function AddPaymentModal({
         throw new Error("No authentication token found");
       }
 
+      // Submit the form first as required by Stripe's latest API
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        throw new Error(submitError.message);
+      }
+
       // Use the Stripe Elements to create a payment method
-      const { error: stripeError, paymentMethod } = await stripe.createPaymentMethod({
-        elements,
-        params: {},
-      });
+      const { error: stripeError, paymentMethod } =
+        await stripe.createPaymentMethod({
+          elements,
+          params: {},
+        });
 
       if (stripeError) {
         throw new Error(stripeError.message);
@@ -64,28 +86,25 @@ export default function AddPaymentModal({
         throw new Error("Failed to create payment method");
       }
 
-      // Send payment method to backend
-      const response = await fetch(`${baseUrl}/api/app/subscription/payment-methods/${customerId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      const response = await axiosClient.post(
+        `/api/app/subscription/payment-methods/${customerId}`,
+        {
           paymentMethodId: paymentMethod.id,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to add payment method");
-      }
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        }
+      );
 
       toast.success("Payment method added successfully!");
       onSuccess();
     } catch (err: unknown) {
       console.error("Payment error:", err);
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred";
+      const errorMessage =
+        err instanceof Error ? err.message : "An unknown error occurred";
       setError(errorMessage);
       toast.error(errorMessage || "Failed to add payment method");
     } finally {
@@ -102,15 +121,20 @@ export default function AddPaymentModal({
       aria-labelledby="addPaymentMethodModalLabel"
     >
       <Modal.Header closeButton>
-        <Modal.Title id="addPaymentMethodModalLabel">Add Payment Method</Modal.Title>
+        <Modal.Title id="addPaymentMethodModalLabel">
+          Add Payment Method
+        </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         <form onSubmit={handleSubmit} id="payment-form">
           <div className="mb-4">
             {!paymentElementReady && (
               <div className="text-center py-2 mb-2">
-                <Spinner animation="border" size="sm" className="me-2" />
-                <span>Loading payment form...</span>
+                <PageLoader
+                  type="spinner"
+                  size="sm"
+                  text="Loading payment form..."
+                />
               </div>
             )}
 
@@ -136,8 +160,8 @@ export default function AddPaymentModal({
         </form>
       </Modal.Body>
       <Modal.Footer>
-        <Button 
-          variant="outline-secondary" 
+        <Button
+          variant="outline-secondary"
           onClick={onClose}
           disabled={processing}
         >
@@ -152,7 +176,7 @@ export default function AddPaymentModal({
         >
           {processing ? (
             <>
-              <Spinner animation="border" size="sm" className="me-2" />
+              <PageLoader type="spinner" size="sm" className="me-2" />
               Processing...
             </>
           ) : (
@@ -162,4 +186,4 @@ export default function AddPaymentModal({
       </Modal.Footer>
     </Modal>
   );
-} 
+}
