@@ -23,6 +23,7 @@ interface Subscription {
   status: string;
   amount: string;
   interval: string;
+  intervalCount?: number;
   renewalDate: string;
   cancelAt?: string;
   cancelStatus?: boolean;
@@ -34,6 +35,8 @@ interface Subscription {
   device?: Device;
   paymentMethod?: PaymentMethod;
   planId: string;
+  paymentStatus?: string;
+  gracePeriodRemainingDays?: number;
 }
 
 interface SubscriptionsSectionProps {
@@ -53,8 +56,117 @@ export default function SubscriptionsSection({
   onReactivateSubscription,
   isProcessing,
 }: SubscriptionsSectionProps) {
+  // Process subscriptions data to ensure proper format
+  const processedSubscriptions = subscriptions.map((subscription: any) => {
+    // If subscription is already processed, return it as is
+    if (subscription.gracePeriodMessage !== undefined) {
+      return subscription;
+    }
+
+    // Create a transformed subscription object with the expected structure for flattened data
+    const transformedSubscription = {
+      id: subscription.id,
+      status: subscription.status,
+
+      // Handle plan data
+      amount: subscription.amount || "0.00",
+      interval: subscription.interval || "day", // Use interval if available, fall back to interval
+      intervalCount: subscription.interval_count || 1, // Add intervalCount with support for snake_case
+      planId: subscription.planId || "",
+
+      // Handle device data
+      device: subscription.device
+        ? {
+            deviceName: subscription.device.deviceName || "My Device",
+            deviceImage: subscription.device.deviceImage || null,
+          }
+        : undefined,
+
+      // Handle renewal date
+      renewalDate:
+        subscription.currentPeriodEnd ||
+        subscription.renewalDate ||
+        new Date().toISOString(),
+
+      // Handle cancellation data
+      cancelAt: subscription.cancelAt || undefined,
+      cancelStatus:
+        subscription.isCancelled || subscription.cancelStatus || false,
+
+      // Handle payment method
+      paymentMethod: subscription.paymentMethod
+        ? {
+            id: subscription.paymentMethod.id,
+            brand: subscription.paymentMethod.brand,
+            last4: subscription.paymentMethod.last4,
+            expMonth: subscription.paymentMethod.expMonth,
+            expYear: subscription.paymentMethod.expYear,
+            isDefault: true, // Assuming the attached method is the default
+          }
+        : undefined,
+
+      // Default values for other fields using flattened fields
+      isInGracePeriod: subscription.isInGracePeriod || false,
+      isCollectionPaused: subscription.isCollectionPaused || false,
+      resumeAt:
+        subscription.pauseResumesAt || subscription.resumeAt || undefined,
+
+      // Grace period properties with their proper types
+      graceEndDate: "",
+      gracePeriodMessage: "",
+      gracePeriodRemainingDays: subscription.gracePeriodRemainingDays || 0,
+      paymentStatus: subscription.paymentStatus || "",
+    };
+
+    // Check if the subscription has grace period information
+    if (subscription.isInGracePeriod) {
+      // Format grace period message based on remaining days
+      const remainingDays = subscription.gracePeriodRemainingDays || 0;
+      const formattedGraceEndDate = subscription.graceEndDate
+        ? new Date(subscription.graceEndDate).toLocaleDateString("en-US", {
+            month: "numeric",
+            day: "numeric",
+            year: "numeric",
+          })
+        : "";
+
+      // Format next payment attempt date if available
+      let nextPaymentAttemptMessage = "";
+      if (subscription.nextPaymentAttempt) {
+        const nextAttemptDate = new Date(subscription.nextPaymentAttempt);
+        const formattedNextAttempt = nextAttemptDate.toLocaleDateString(
+          "en-US",
+          {
+            month: "numeric",
+            day: "numeric",
+            year: "numeric",
+          }
+        );
+        nextPaymentAttemptMessage = ` We'll attempt to charge your payment method again on ${formattedNextAttempt}.`;
+      }
+
+      // Different messages based on remaining days
+      let gracePeriodMessage = "";
+      if (remainingDays <= 0) {
+        gracePeriodMessage = `Your grace period has expired. Please update your payment method to restore service.`;
+      } else if (remainingDays === 1) {
+        gracePeriodMessage = `Your latest payment has failed. Your service will be interrupted in 1 day if no action is taken. Please update your payment method before ${formattedGraceEndDate} to continue your subscription.${nextPaymentAttemptMessage}`;
+      } else {
+        gracePeriodMessage = `Your latest payment has failed. Update your payment method to continue this subscription. You have ${remainingDays} days remaining until service interruption on ${formattedGraceEndDate}.${nextPaymentAttemptMessage}`;
+      }
+
+      // Update subscription object with grace period info
+      transformedSubscription.isInGracePeriod = true;
+      transformedSubscription.graceEndDate = formattedGraceEndDate;
+      transformedSubscription.gracePeriodMessage = gracePeriodMessage;
+      transformedSubscription.gracePeriodRemainingDays = remainingDays;
+    }
+
+    return transformedSubscription;
+  });
+
   // Filter active subscriptions
-  const activeSubscriptions = subscriptions.filter(
+  const activeSubscriptions = processedSubscriptions.filter(
     (sub) =>
       sub.status === "active" ||
       sub.status === "trialing" ||
@@ -64,7 +176,7 @@ export default function SubscriptionsSection({
   );
 
   // Filter inactive subscriptions
-  const inactiveSubscriptions = subscriptions.filter(
+  const inactiveSubscriptions = processedSubscriptions.filter(
     (sub) =>
       sub.status !== "active" &&
       sub.status !== "trialing" &&
@@ -84,17 +196,31 @@ export default function SubscriptionsSection({
 
     if (subscription.isInGracePeriod) {
       return (
-        <Badge bg="danger" className="ms-md-2">
-          Grace Period
-          {subscription.graceEndDate && ` (until ${subscription.graceEndDate})`}
-        </Badge>
+        <>
+          <Badge bg="danger" className="ms-md-2">
+            Payment Failed
+          </Badge>
+          <Badge bg="danger" className="ms-md-2">
+            Grace Period
+            {subscription.graceEndDate &&
+              ` (until ${subscription.graceEndDate})`}
+          </Badge>
+        </>
       );
     }
 
     if (
       subscription.status === "past_due" ||
-      (subscription.status === "active" && subscription.isCollectionPaused)
+      subscription.paymentStatus === "failed"
     ) {
+      return (
+        <Badge bg="danger" className="ms-md-2">
+          Payment Failed
+        </Badge>
+      );
+    }
+
+    if (subscription.status === "active" && subscription.isCollectionPaused) {
       return (
         <Badge bg="danger" className="ms-md-2">
           Payment Paused
@@ -113,7 +239,7 @@ export default function SubscriptionsSection({
             Active
           </Badge>{" "}
           <Badge bg="danger" className="ms-md-2">
-            Cancel on {subscription.cancelAt}
+            Cancel on {formatDate(subscription.cancelAt || "")}
           </Badge>
         </>
       );
@@ -143,12 +269,65 @@ export default function SubscriptionsSection({
     );
   };
 
+  // Add formatInterval function
+  const formatInterval = (interval: string, intervalCount: number = 1) => {
+    let formattedInterval = "Monthly";
+
+    if (interval?.toLowerCase() === "month") {
+      formattedInterval =
+        intervalCount === 1
+          ? "Monthly"
+          : intervalCount === 3
+          ? "Quarterly"
+          : `Every ${intervalCount} months`;
+    } else if (interval?.toLowerCase() === "year") {
+      formattedInterval =
+        intervalCount === 1 ? "Annual" : `Every ${intervalCount} years`;
+    } else if (interval?.toLowerCase() === "day") {
+      formattedInterval =
+        intervalCount === 1
+          ? "Daily"
+          : intervalCount === 7
+          ? "Weekly"
+          : intervalCount === 14
+          ? "Bi-weekly"
+          : `Every ${intervalCount} days`;
+    } else if (interval?.toLowerCase() === "week") {
+      formattedInterval =
+        intervalCount === 1
+          ? "Weekly"
+          : intervalCount === 2
+          ? "Bi-weekly"
+          : `Every ${intervalCount} weeks`;
+    } else {
+      formattedInterval = `Every ${intervalCount} ${interval || "period"}(s)`;
+    }
+
+    return formattedInterval;
+  };
+
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    try {
+      if (!date) return "N/A";
+
+      // Handle ISO date strings properly
+      const dateObj = new Date(date);
+
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
+        console.error("Invalid date:", date);
+        return "N/A";
+      }
+
+      return dateObj.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error, date);
+      return "N/A";
+    }
   };
 
   return (
@@ -217,8 +396,11 @@ export default function SubscriptionsSection({
                           {subscription.device?.deviceName || "My Device"}
                         </div>
                         <div style={{ color: "#0C1F3F", fontSize: "14px" }}>
-                          {subscription.interval} Plan{" "}
-                          {getStatusBadge(subscription)}
+                          {formatInterval(
+                            subscription.interval,
+                            subscription.intervalCount
+                          )}{" "}
+                          Plan {getStatusBadge(subscription)}
                         </div>
                         <div
                           className="fw-medium"
@@ -231,7 +413,11 @@ export default function SubscriptionsSection({
                           <span className="subscription-interval fw-bold">
                             ${subscription.amount}
                           </span>{" "}
-                          per {subscription.interval}
+                          per{" "}
+                          {formatInterval(
+                            subscription.interval,
+                            subscription.intervalCount
+                          )}
                         </div>
                         <div style={{ color: "#0C1F3F", fontSize: "14px" }}>
                           {subscription.cancelStatus
@@ -259,7 +445,20 @@ export default function SubscriptionsSection({
                           <div className="d-flex align-items-center  mt-1">
                             <div
                               style={{
-                                backgroundColor: "#1A62CB",
+                                backgroundColor:
+                                  subscription.paymentMethod.brand.toLowerCase() ===
+                                  "visa"
+                                    ? "#1A62CB"
+                                    : subscription.paymentMethod.brand.toLowerCase() ===
+                                      "mastercard"
+                                    ? "#EB001B"
+                                    : subscription.paymentMethod.brand.toLowerCase() ===
+                                      "amex"
+                                    ? "#006FCF"
+                                    : subscription.paymentMethod.brand.toLowerCase() ===
+                                      "discover"
+                                    ? "#FF6600"
+                                    : "#777777",
                                 color: "white",
                                 fontSize: "11px",
                                 padding: "2px 6px",
@@ -267,7 +466,7 @@ export default function SubscriptionsSection({
                                 marginRight: "8px",
                               }}
                             >
-                              VISA
+                              {subscription.paymentMethod.brand.toUpperCase()}
                             </div>
                             <span
                               style={{ color: "#0C1F3F", fontSize: "14px" }}
@@ -334,14 +533,30 @@ export default function SubscriptionsSection({
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        className="btn btn-outline-success"
-                        onClick={() =>
-                          onReactivateSubscription(subscription.id)
-                        }
-                      >
-                        Renew Subscription
-                      </Button>
+                      (subscription.status === "past_due" ||
+                        subscription.isInGracePeriod ||
+                        subscription.paymentStatus === "failed") && (
+                        <>
+                          <Button
+                            variant="outline-primary"
+                            className="flex-grow-1 "
+                            style={{ borderRadius: "10px" }}
+                            onClick={() =>
+                              onCancelSubscription(subscription.id)
+                            }
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            variant="primary"
+                            style={{ borderRadius: "10px" }}
+                            className="flex-grow-1 "
+                            onClick={() => onUpdatePayment(subscription.id)}
+                          >
+                            Update Payment Method
+                          </Button>
+                        </>
+                      )
                     )}
                   </div>
                 </div>

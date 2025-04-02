@@ -34,6 +34,7 @@ export interface Subscription {
   device?: Device;
   paymentMethod?: PaymentMethod;
   planId: string;
+  endDate: Date;
 }
 
 export interface Plan {
@@ -59,8 +60,9 @@ export interface SubscriptionData {
   plans: Plan[];
   stripePublishableKey: string;
   clientSecret: string;
+  endDate: Date;
   invoices?: {
     data: Invoice[];
     hasMore: boolean;
   };
-} 
+}

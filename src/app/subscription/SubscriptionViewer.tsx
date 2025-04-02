@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { FaChevronLeft, FaExclamationCircle } from "react-icons/fa";
-import { ToastContainer, toast } from "react-toastify";
+import { toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import axiosClient from "@/lib/axiosClient";
@@ -28,6 +28,9 @@ import Link from "next/link";
 declare global {
   interface Window {
     Stripe?: import("@stripe/stripe-js").StripeConstructor;
+    ReactNativeWebView?: {
+      postMessage: (message: string) => void;
+    };
   }
 }
 type SubscriptionViewerProps = {
@@ -35,6 +38,30 @@ type SubscriptionViewerProps = {
   initialData?: {
     data: SubscriptionData;
   };
+};
+
+// Client-side BackButton component
+const BackButton = () => {
+  const closeWindow = () => {
+    if (window.ReactNativeWebView) {
+      try {
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          action: 'close',
+          manual: true
+        }));
+      } catch (e) {
+        console.error("Error posting close action:", e);
+      }
+    } else {
+      window.close();
+    }
+  };
+
+  return (
+    <a href="#" onClick={(e) => { e.preventDefault(); closeWindow(); }} className="text-decoration-none">
+      <FaChevronLeft className="me-2" />
+    </a>
+  );
 };
 
 export default function SubscriptionViewer({
@@ -573,17 +600,43 @@ export default function SubscriptionViewer({
     }
 
     setCurrentSubscriptionId(subscriptionId);
-    const formattedDate = new Date(subscription.renewalDate).toLocaleDateString(
-      "en-US",
-      {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }
-    );
 
-    setBillingEndDate(formattedDate);
-    setShowCancelSubscriptionModal(true);
+    try {
+      // Handle date formatting safely
+      const renewalDate =
+        subscription.endDate ||
+        (subscription as any).currentPeriodEnd ||
+        subscription.cancelAt;
+      let formattedDate = "N/A";
+
+      if (renewalDate) {
+        const dateObj = new Date(renewalDate);
+
+        // Check if date is valid
+        if (!isNaN(dateObj.getTime())) {
+          formattedDate = dateObj.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        } else {
+          console.error("Invalid renewal date:", renewalDate);
+        }
+      }
+
+      console.log(
+        "Setting billing end date:",
+        formattedDate,
+        "from",
+        renewalDate
+      );
+      setBillingEndDate(formattedDate);
+      setShowCancelSubscriptionModal(true);
+    } catch (error) {
+      console.error("Error formatting billing end date:", error);
+      setBillingEndDate("end of your billing period");
+      setShowCancelSubscriptionModal(true);
+    }
   };
 
   const handleShowUpdatePlan = (subscriptionId: string) => {
@@ -730,31 +783,15 @@ export default function SubscriptionViewer({
 
     return (
       <div className="bg-light min-vh-100">
-        {/* Toast Container */}
-        <ToastContainer
-          position="top-center"
-          autoClose={5000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-        />
-
         {/* Simplified Navigation Bar */}
         <nav className="bg-white border-bottom mb-3">
           <div className="container py-2">
             <div className="d-flex align-items-center justify-content-between">
               <div className="d-flex align-items-center">
-                <Link href="/" className="text-decoration-none">
-                  <FaChevronLeft className="me-2" />
-                </Link>
+                <BackButton />
                 <h5 className="mb-0">Subscription Management</h5>
               </div>
-              <button
+              {/* <button
                 className="btn btn-outline-primary btn-sm"
                 onClick={refreshSubscriptionData}
                 disabled={isRefreshing}
@@ -768,7 +805,7 @@ export default function SubscriptionViewer({
                     <AiOutlineReload />
                   </>
                 )}
-              </button>
+              </button> */}
             </div>
           </div>
         </nav>
@@ -812,21 +849,24 @@ export default function SubscriptionViewer({
         {showAddPaymentModal && stripePromise && clientSecret && (
           <Elements
             stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#007bff",
-                  colorBackground: "#ffffff",
-                  colorText: "#424770",
-                  colorDanger: "#dc3545",
-                  fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
-                  spacingUnit: "4px",
-                  borderRadius: "4px",
+            options={
+              {
+                clientSecret,
+                appearance: {
+                  theme: "stripe",
+                  variables: {
+                    colorPrimary: "#007bff",
+                    colorBackground: "#ffffff",
+                    colorText: "#424770",
+                    colorDanger: "#dc3545",
+                    fontFamily: "Roboto, Open Sans, Segoe UI, sans-serif",
+                    spacingUnit: "4px",
+                    borderRadius: "4px",
+                  },
                 },
-              },
-            }}
+                paymentMethodCreation: "manual",
+              } as any
+            }
           >
             <AddPaymentModal
               show={showAddPaymentModal}

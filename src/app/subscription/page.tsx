@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import SubscriptionViewer from "./SubscriptionViewer";
 import { Metadata } from "next";
-import { redirect } from "next/navigation";
 import axiosClient from "@/lib/axiosClient";
 
 export const metadata: Metadata = {
@@ -18,7 +17,7 @@ export default async function SubscriptionPage({
 
   // Security check: Redirect if no valid token
   if (!token) {
-    redirect("/login?returnUrl=/subscription");
+    // redirect("/login?returnUrl=/subscription");
   }
 
   try {
@@ -49,6 +48,6 @@ export default async function SubscriptionPage({
     );
   } catch (error) {
     // Security: Redirect on any error to prevent data exposure
-    redirect("/login?returnUrl=/subscription");
+    // redirect("/login?returnUrl=/subscription");
   }
 }
