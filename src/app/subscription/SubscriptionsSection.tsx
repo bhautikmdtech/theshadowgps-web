@@ -490,7 +490,8 @@ export default function SubscriptionsSection({
                   </div>
 
                   <div className="d-flex" style={{ gap: "10px" }}>
-                    {subscription.status === "active" &&
+                    {subscription.status === "active" ||
+                    subscription.status === "trialing" &&
                     !subscription.cancelStatus ? (
                       <>
                         <Button
