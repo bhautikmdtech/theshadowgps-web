@@ -331,16 +331,16 @@ export default function SubscriptionsSection({
   };
 
   return (
-    <Accordion defaultActiveKey="0" className="mb-3">
-      <Accordion.Item eventKey="0">
-        <Accordion.Header>
+    <Accordion defaultActiveKey="0" className="mb-3 border-0">
+      <Accordion.Item eventKey="0" className="border-0">
+        <Accordion.Header className="bg-white">
           <span
             style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
           >
             Subscriptions
           </span>
         </Accordion.Header>
-        <Accordion.Body className="p-0" style={{ backgroundColor: "#f8f9fa" }}>
+        <Accordion.Body className="p-0" >
           <div className=" pb-2 pt-2 px-3">
             <span
               style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "600" }}

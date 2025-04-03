@@ -45,10 +45,12 @@ const BackButton = () => {
   const closeWindow = () => {
     if (window.ReactNativeWebView) {
       try {
-        window.ReactNativeWebView.postMessage(JSON.stringify({
-          action: 'close',
-          manual: true
-        }));
+        window.ReactNativeWebView.postMessage(
+          JSON.stringify({
+            action: "close",
+            manual: true,
+          })
+        );
       } catch (e) {
         console.error("Error posting close action:", e);
       }
@@ -58,7 +60,14 @@ const BackButton = () => {
   };
 
   return (
-    <a href="#" onClick={(e) => { e.preventDefault(); closeWindow(); }} className="text-decoration-none">
+    <a
+      href="#"
+      onClick={(e) => {
+        e.preventDefault();
+        closeWindow();
+      }}
+      className="text-decoration-none"
+    >
       <FaChevronLeft className="me-2" />
     </a>
   );
@@ -390,7 +399,7 @@ export default function SubscriptionViewer({
           },
         }
       );
-
+      setSelectedPlanId(selectedPlanId);
       toast.success("Subscription plan updated successfully");
       setShowUpdatePlanModal(false);
       await refreshSubscriptionData();
@@ -701,16 +710,6 @@ export default function SubscriptionViewer({
       const data = response.data;
       setSubscriptionData(data.data);
 
-      if (
-        data.data.paymentMethods?.length > 0 ||
-        (data.data.stripePublishableKey && data.data.clientSecret)
-      ) {
-        await initializeStripe(
-          data.data.stripePublishableKey,
-          data.data.clientSecret
-        );
-      }
-
       return data.data;
     } catch (error: any) {
       const errorMessage =
@@ -782,7 +781,7 @@ export default function SubscriptionViewer({
     }
 
     return (
-      <div className="bg-light min-vh-100">
+      <div className="bg-white min-vh-100">
         {/* Simplified Navigation Bar */}
         <nav className="bg-white border-bottom mb-3">
           <div className="container py-2">

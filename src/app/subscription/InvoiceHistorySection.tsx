@@ -1,5 +1,5 @@
 import React from "react";
-import { Accordion, Spinner } from "react-bootstrap";
+import { Accordion } from "react-bootstrap";
 import { PageLoader } from "@/components";
 
 interface Invoice {
@@ -26,15 +26,15 @@ export default function InvoiceHistorySection({
   loadMoreInvoices,
 }: InvoiceHistorySectionProps) {
   return (
-    <Accordion defaultActiveKey="0" className="mb-3">
-      <Accordion.Item eventKey="0" className="border">
-        <Accordion.Header>
+    <Accordion defaultActiveKey="0" className="mb-3 border-0">
+      <Accordion.Item eventKey="0" className="border-0">
+        <Accordion.Header className="bg-white">
           <span
             style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
           >
             Invoice History
           </span>
-        </Accordion.Header>
+        </Accordion.Header >
         <Accordion.Body className="p-0">
           {isLoadingInvoices &&
           (!invoices || !invoices.data || invoices.data.length === 0) ? (

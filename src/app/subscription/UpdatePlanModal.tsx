@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Modal, Button, Form, Badge, Spinner } from 'react-bootstrap';
-import { FaInfoCircle } from 'react-icons/fa';
+import { useState, useEffect } from "react";
+import { Modal, Button, Form, Badge, Spinner } from "react-bootstrap";
+import { FaInfoCircle } from "react-icons/fa";
 
 interface Plan {
   id: string;
@@ -28,16 +28,30 @@ export default function UpdatePlanModal({
   plans,
   currentPlanId,
   selectedPlanId,
-  onPlanSelect
+  onPlanSelect,
 }: UpdatePlanModalProps) {
+  const [localSelectedPlanId, setLocalSelectedPlanId] = useState<string | null>(
+    selectedPlanId
+  );
+
+  // Sync local state with props
+  useEffect(() => {
+    setLocalSelectedPlanId(selectedPlanId);
+  }, [selectedPlanId, currentPlanId, plans]);
+
+  const handlePlanSelect = (planId: string) => {
+    setLocalSelectedPlanId(planId);
+    onPlanSelect(planId);
+  };
+
+  const handleConfirm = async () => {
+    if (localSelectedPlanId) {
+      await onConfirm();
+    }
+  };
 
   return (
-    <Modal
-      show={show}
-      onHide={onClose}
-      backdrop="static"
-      keyboard={false}
-    >
+    <Modal show={show} onHide={onClose} backdrop="static" keyboard={false}>
       <Modal.Header closeButton>
         <Modal.Title>Update Subscription Plan</Modal.Title>
       </Modal.Header>
@@ -53,11 +67,11 @@ export default function UpdatePlanModal({
                   <div
                     key={plan.id}
                     className={`p-3 border rounded mb-3 ${
-                      selectedPlanId === plan.id
+                      localSelectedPlanId === plan.id
                         ? "border-primary bg-light"
                         : ""
                     }`}
-                    onClick={() => onPlanSelect(plan.id)}
+                    onClick={() => handlePlanSelect(plan.id)}
                     style={{ cursor: "pointer" }}
                   >
                     <div className="d-flex justify-content-between align-items-center">
@@ -67,13 +81,13 @@ export default function UpdatePlanModal({
                           id={`plan-${plan.id}`}
                           name="subscription-plan"
                           className="me-3"
-                          checked={selectedPlanId === plan.id}
-                          onChange={() => onPlanSelect(plan.id)}
+                          checked={localSelectedPlanId === plan.id}
+                          onChange={() => handlePlanSelect(plan.id)}
                         />
                         <div>
                           <div
                             className={`fw-medium ${
-                              selectedPlanId === plan.id
+                              localSelectedPlanId === plan.id
                                 ? "text-primary"
                                 : ""
                             }`}
@@ -94,7 +108,7 @@ export default function UpdatePlanModal({
                       </div>
                       <div
                         className={`fw-bold ${
-                          selectedPlanId === plan.id ? "text-primary" : ""
+                          localSelectedPlanId === plan.id ? "text-primary" : ""
                         }`}
                       >
                         ${parseFloat(plan.amount).toFixed(2)}
@@ -106,9 +120,8 @@ export default function UpdatePlanModal({
             </div>
             <div className="alert alert-info mt-4">
               <FaInfoCircle className="me-2" />
-              Your subscription will be updated immediately. You'll be
-              charged the prorated amount for the remainder of your billing
-              period.
+              Your subscription will be updated immediately. You'll be charged
+              the prorated amount for the remainder of your billing period.
             </div>
           </div>
         ) : (
@@ -127,8 +140,12 @@ export default function UpdatePlanModal({
         </Button>
         <Button
           variant="primary"
-          onClick={onConfirm}
-          disabled={isProcessing || !selectedPlanId || currentPlanId === selectedPlanId}
+          onClick={handleConfirm}
+          disabled={
+            isProcessing ||
+            !localSelectedPlanId ||
+            currentPlanId === localSelectedPlanId
+          }
         >
           {isProcessing ? (
             <>
@@ -149,4 +166,4 @@ export default function UpdatePlanModal({
       </Modal.Footer>
     </Modal>
   );
-} 
+}

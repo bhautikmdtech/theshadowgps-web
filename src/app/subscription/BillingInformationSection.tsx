@@ -18,14 +18,14 @@ export default function BillingInformationSection({
   onUpdateBilling
 }: BillingInformationSectionProps) {
   return (
-    <Accordion defaultActiveKey="0" className="mb-3">
-      <Accordion.Item eventKey="0" className="border">
+    <Accordion defaultActiveKey="0" className="mb-3 border-0">
+      <Accordion.Item eventKey="0" className="border-0">
         <Accordion.Header>
           <span style={{color: "#0C1F3F",fontSize: "20px",fontWeight: "700"}}>
             Billing And Shipping Information
           </span>
         </Accordion.Header>
-        <Accordion.Body className="p-3" style={{backgroundColor: "#F8F9FA"}}>
+        <Accordion.Body className="p-3" >
           <div style={{border: "1px solid #CFD2D9",borderRadius: "16px",padding: "16px",  backgroundColor: "#FFFFFF" ,}}>
           <div className="mb-3" style={{display: "flex", gap: "31px"}}>
             <div className="text-muted small" style={{color: "#3D4B65",fontSize: "18px",fontWeight: "700"}}>Name</div>

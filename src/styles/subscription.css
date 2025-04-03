@@ -1,12 +1,11 @@
 /* Fix for Bootstrap accordion styling issues */
 
 /* Ensure accordion content is visible */
-.accordion-collapse.show {
-  /* background-color: transparent !important; */
+/* .accordion-collapse.show {
   visibility: visible !important;
   display: block !important;
   opacity: 1 !important;
-}
+} */
 
 /* Fix accordion body */
 .accordion-body {
@@ -38,10 +37,10 @@
 }
 
 /* Make accordion content visible */
-.accordion-collapse {
+/* .accordion-collapse {
   height: auto !important;
   max-height: none !important;
-}
+} */
 
 /* Dropdown menu fixes */
 /* Fix for dropdown not showing */
@@ -203,7 +202,7 @@
 
 .invoice-date {
   min-width: 150px;
-  color: #3D4B65;
+  color: #3d4b65;
   flex: 0 0 auto;
   font-weight: 700;
 }
@@ -212,7 +211,7 @@
   flex: 1;
   text-align: right;
   font-weight: 500;
-  color: #3D4B65;
+  color: #3d4b65;
   padding-right: 70px;
 }
 
@@ -227,7 +226,7 @@
   border-radius: 50px;
   font-size: 18px;
   font-weight: 600;
-  color: #3D4B65!important;
+  color: #3d4b65 !important;
 }
 
 .invoice-link {
@@ -274,6 +273,7 @@
   font-size: 1rem;
   font-weight: 500;
   padding: 0.75rem 1.25rem;
+  background-color: transparent !important;
 }
 
 /* Stripe Card Element styling */
