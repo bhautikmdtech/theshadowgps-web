@@ -6,7 +6,9 @@ import MapComponent from "@/services/MapService";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Image from "next/image";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
-import ExpiryTimer from "./ExpiryTimer";
+import dynamic from "next/dynamic";
+
+const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
 
 interface Position {
   lat: number;
@@ -51,111 +53,107 @@ export default function LiveTracker({
 
   const handleMapLoad = (map: mapboxgl.Map) => {
     mapRef.current = map;
-    updateMap();
+    setTimeout(() => {
+      if (mapRef.current) {
+        updateMap();
+      }
+    }, 100);
   };
 
   // Update map with current positions
   const updateMap = () => {
     if (!mapRef.current || positions.length === 0) return;
 
-    // Clear existing route if it exists
-    if (
-      routeLayerIdRef.current &&
-      mapRef.current.getLayer(routeLayerIdRef.current)
-    ) {
-      mapRef.current.removeLayer(routeLayerIdRef.current);
-      mapRef.current.removeSource(routeLayerIdRef.current);
-      routeLayerIdRef.current = null;
-    }
+    const latestPosition = positions[positions.length - 1];
 
-    // Remove existing device marker if it exists
+    // Remove the previous device marker
     if (deviceMarkerRef.current) {
       deviceMarkerRef.current.remove();
       deviceMarkerRef.current = null;
     }
 
-    // Create start marker (only once)
-    if (positions.length > 0 && !startMarkerRef.current) {
+    // Ensure the start marker is placed at the first position only once
+    if (positions.length > 1 && !startMarkerRef.current) {
       startMarkerRef.current = createStartMarker({
-        position: positions[0],
+        position: positions[0], // Ensure it's the first position
         device: device || undefined,
         mapRef,
       });
     }
 
-    // Create new device marker at latest position
-    const latestPosition = positions[positions.length - 1];
+    // Create and update the device marker at the latest position
     deviceMarkerRef.current = createDeviceMarker({
       position: latestPosition,
       device: device || undefined,
       mapRef,
     });
 
-    // If we have multiple positions, create a route
-    if (positions.length > 1) {
-      createRoute(positions);
-    }
+    // Update the route line
+    setTimeout(() => updateRoute(positions), 100);
 
-    // Center map on device
+    // Fly to the new position smoothly
     mapRef.current.flyTo({
       center: [latestPosition.lng, latestPosition.lat],
       zoom: 14,
       essential: true,
     });
   };
-
-  // Create route line
-  const createRoute = (positions: Position[]) => {
-    if (!mapRef.current) return;
+  // Update route line
+  const updateRoute = (positions: Position[]) => {
+    if (!mapRef.current || positions.length < 2) return;
 
     const coordinates = positions.map(
       (p) => [p.lng, p.lat] as [number, number]
     );
     const routeId = "route-arrow";
 
-    // Wait until the style is loaded before adding sources/layers
     if (!mapRef.current.isStyleLoaded()) {
-      mapRef.current.once("style.load", () => createRoute(positions));
+      mapRef.current.once("style.load", () => updateRoute(positions));
       return;
     }
 
-    // Remove existing route if present
+    // If route already exists, update it
     if (mapRef.current.getSource(routeId)) {
-      mapRef.current.removeLayer("route-arrow-line");
-      mapRef.current.removeLayer("route-arrow-symbol");
-      mapRef.current.removeSource(routeId);
-    }
-
-    // Add source
-    mapRef.current.addSource(routeId, {
-      type: "geojson",
-      data: {
+      (mapRef.current.getSource(routeId) as mapboxgl.GeoJSONSource).setData({
         type: "Feature",
         properties: {},
         geometry: {
           type: "LineString",
           coordinates,
         },
-      },
-    });
+      });
+    } else {
+      // Create new source
+      mapRef.current.addSource(routeId, {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "LineString",
+            coordinates,
+          },
+        },
+      });
 
-    // Add a blue line layer
-    mapRef.current.addLayer({
-      id: "route-arrow-line",
-      type: "line",
-      source: routeId,
-      layout: {
-        "line-join": "round",
-        "line-cap": "round",
-      },
-      paint: {
-        "line-color": "#4d6bfe",
-        "line-width": 4,
-        "line-opacity": 0.9,
-      },
-    });
+      // Add line layer
+      mapRef.current.addLayer({
+        id: "route-arrow-line",
+        type: "line",
+        source: routeId,
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#4d6bfe",
+          "line-width": 4,
+          "line-opacity": 0.9,
+        },
+      });
 
-    routeLayerIdRef.current = routeId;
+      routeLayerIdRef.current = routeId;
+    }
   };
 
   // Socket connection
@@ -221,9 +219,10 @@ export default function LiveTracker({
   }, [shareToken]);
 
   useEffect(() => {
-    updateMap();
+    setTimeout(() => updateMap(), 100);
   }, [positions]);
 
+  // Rest of your component remains the same...
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">

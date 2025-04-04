@@ -12,7 +12,7 @@
   background-color: transparent !important;
 }
 
-.mapboxgl-ctrl-group button {
+.mapboxgl-ctrl-group .map-control-btn {
   width: 48px !important;
   height: 48px !important;
   display: flex !important;
@@ -20,7 +20,7 @@
   justify-content: center !important;
   border-radius: 8px !important;
   background: white !important;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.12);
   border: none !important;
   cursor: pointer !important;
   transition: all 0.2s ease-in-out !important;
@@ -28,7 +28,7 @@
 }
 
 /* Hover effect */
-.mapboxgl-ctrl-group button:hover {
+.mapboxgl-ctrl-group .map-control-btn:hover {
   background: #f0f0f0;
   transform: scale(1.05);
   box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);

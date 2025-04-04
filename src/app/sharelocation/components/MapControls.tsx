@@ -1,22 +1,40 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import { FaLayerGroup, FaMapMarkerAlt, FaCarSide } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 interface MapControlsProps {
-  map: mapboxgl.Map;
+  map: mapboxgl.Map | null;
   deviceLocation?: { lng: number; lat: number };
 }
 
 const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
-  const isSatellite = useRef(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [mapStyle, setMapStyle] = useState("streets-v11");
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
 
-  // Debug function to check map state
-  const logMapState = () => {
+  const mapStyles = [
+    {
+      type: "streets-v11",
+      label: "Road",
+      img: "/images/map/road.svg",
+    },
+    {
+      type: "satellite-streets-v11",
+      label: "Satellite",
+      img: "/images/map/satellite.svg",
+    },
+    {
+      type: "outdoors-v11",
+      label: "Outdoors",
+      img: "/images/map/hybrid.svg",
+    },
+  ];
+
+  const logMapState = (): boolean => {
     if (!map) {
       console.error("Map instance is null");
       return false;
@@ -28,38 +46,38 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     return true;
   };
 
-  const moveToBrowserLocation = () => {
+  const handleLayerToggle = () => {
+    setIsDropdownOpen((prev) => !prev);
+  };
+
+  const changeMapStyle = (style: string) => {
     if (!logMapState()) return;
 
-    if (!navigator.geolocation) {
-      toast.error("Geolocation not supported");
-      return;
-    }
+    setMapStyle(style);
+    setIsDropdownOpen(false);
 
-    // Clear any existing watcher
-    if (watchIdRef.current) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
+    try {
+      map!.setStyle(`mapbox://styles/mapbox/${style}`);
 
-    watchIdRef.current = navigator.geolocation.watchPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        updateDeviceMarker(longitude, latitude);
-        map.flyTo({
-          center: [longitude, latitude],
-          zoom: 15,
-          essential: true,
-        });
-      },
-      (error) => toast.error(`Location error: ${error.message}`),
-      { enableHighAccuracy: true }
-    );
+      // Re-add markers after style change
+      map!.once("style.load", () => {
+        if (markersRef.current.length > 0) {
+          const lastPos = markersRef.current[0].getLngLat();
+          updateDeviceMarker(lastPos.lng, lastPos.lat);
+        }
+      });
+    } catch (error) {
+      console.error("Failed to change map style:", error);
+      toast.error("Failed to change map style");
+    }
   };
 
   const updateDeviceMarker = (lng: number, lat: number) => {
-    // Clear previous markers
+    // Clear existing markers
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
+
+    if (!map) return;
 
     const el = document.createElement("div");
     el.className = "device-marker";
@@ -72,53 +90,71 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
     });
 
-    const marker = new mapboxgl.Marker({
-      element: el,
-      anchor: "center",
-    })
+    const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
       .setLngLat([lng, lat])
       .addTo(map);
 
     markersRef.current.push(marker);
   };
 
-  const handleLayerToggle = () => {
-    if (!logMapState()) return;
-
-    isSatellite.current = !isSatellite.current;
-    const style = isSatellite.current
-      ? "mapbox://styles/mapbox/satellite-streets-v11"
-      : "mapbox://styles/mapbox/streets-v11";
-
-    map.setStyle(style);
-
-    // Re-add markers after style change
-    map.once("style.load", () => {
-      if (markersRef.current.length > 0) {
-        const lastPos = markersRef.current[0].getLngLat();
-        updateDeviceMarker(lastPos.lng, lastPos.lat);
-      }
-    });
-  };
-
-  const moveToDeviceLocation = () => {
-    if (!logMapState()) return;
-
-    if (!deviceLocation) {
+  const handleDeviceLocationClick = () => {
+    if (!logMapState() || !deviceLocation) {
       toast.error("Device location unavailable");
       return;
     }
 
-    map.flyTo({
-      center: [deviceLocation.lng, deviceLocation.lat],
-      zoom: 14,
-      essential: true,
-    });
+    try {
+      map!.flyTo({
+        center: [deviceLocation.lng, deviceLocation.lat],
+        zoom: 14,
+        essential: true,
+      });
+    } catch (error) {
+      console.error("Failed to fly to device location:", error);
+      toast.error("Failed to navigate to device location");
+    }
   };
 
-  // Cleanup effect
+  const handleUserLocationClick = () => {
+    if (!logMapState()) return;
+
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not supported");
+      return;
+    }
+
+    // Clear any existing watch
+    if (watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        updateDeviceMarker(longitude, latitude);
+
+        try {
+          map!.flyTo({
+            center: [longitude, latitude],
+            zoom: 15,
+            essential: true,
+          });
+        } catch (error) {
+          console.error("Failed to fly to user location:", error);
+        }
+      },
+      (error) => {
+        toast.error(`Location error: ${error.message}`);
+        watchIdRef.current = null;
+      },
+      { enableHighAccuracy: true }
+    );
+  };
+
   useEffect(() => {
     return () => {
+      // Cleanup on unmount
       if (watchIdRef.current) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
@@ -127,66 +163,65 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   }, []);
 
   return (
-    <div
-      className="mapboxgl-ctrl mapboxgl-ctrl-group"
-      style={{
-        margin: "10px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-      }}
-    >
-      <button
-        onClick={handleLayerToggle}
-        className="map-control-btn"
-        title="Toggle Map Layer"
-      >
-        <FaLayerGroup size={18} />
-      </button>
+    <div className="relative mapboxgl-ctrl mapboxgl-ctrl-group flex flex-col gap-2 p-2">
+      {/* Map Type Button */}
+      <div className="relative">
+        <button
+          onClick={handleLayerToggle}
+          className="map-control-btn"
+          aria-label="Change map style"
+          aria-expanded={isDropdownOpen}
+        >
+          <FaLayerGroup size={18} />
+        </button>
 
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <div className="absolute right-0 bottom-full mb-2 bg-white border border-gray-200 rounded-lg z-50 p-2 flex gap-2 shadow-md">
+            {mapStyles.map(({ type, label, img }) => (
+              <button
+                key={type}
+                onClick={() => changeMapStyle(type)}
+                className={`flex flex-col items-center w-50 h-50 border-0 p-2 rounded-lg transition hover:shadow-lg ${
+                  mapStyle === type
+                    ? "border-4 border-blue-500 shadow-md"
+                    : "border border-gray-300"
+                }`}
+                aria-label={`Switch to ${label} map`}
+              >
+                <img
+                  src={img}
+                  alt={label}
+                  className="rounded-lg object-cover w-16 h-16"
+                />
+                <span className="text-sm mt-1">{label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Move to Device Location */}
       <button
-        onClick={moveToDeviceLocation}
+        onClick={handleDeviceLocationClick}
         className="map-control-btn"
         title="Move to Device Location"
+        aria-label="Move to device location"
       >
         <FaCarSide size={18} />
       </button>
 
+      {/* Move to User Location */}
       <button
-        onClick={moveToBrowserLocation}
+        onClick={handleUserLocationClick}
         className="map-control-btn"
         title="Move to My Location"
+        aria-label="Move to my location"
       >
         <FaMapMarkerAlt size={18} />
       </button>
     </div>
   );
 };
-
-// CSS for the controls (add to your global CSS)
-/*
-.map-control-btn {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: white;
-  border: none;
-  border-radius: 4px;
-  box-shadow: 0 0 4px rgba(0,0,0,0.2);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.map-control-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 6px rgba(0,0,0,0.3);
-}
-
-.map-control-btn:active {
-  transform: scale(0.98);
-}
-*/
 
 export default MapControls;

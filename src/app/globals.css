@@ -40,12 +40,7 @@ body {
 /* Custom marker styles */
 .device-marker-pulse {
   animation: pulse 1.5s ease-in-out infinite;
-}
-
-.start-marker {
-  transform-origin: center;
-  animation: bounce 1s ease-in-out infinite alternate;
-}
+} 
 
 @keyframes bounce {
   0% {

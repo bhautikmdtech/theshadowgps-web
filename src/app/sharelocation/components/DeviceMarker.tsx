@@ -25,11 +25,15 @@ export const createDeviceMarker = ({
   device,
   mapRef,
 }: DeviceMarkerProps): mapboxgl.Marker | null => {
-  if (!mapRef.current) return null;
+  if (!mapRef.current) {
+    console.error("Map instance is not available");
+    return null;
+  }
 
-  const container = document.createElement("div");
-  container.className = "relative device-marker";
-  container.innerHTML = `
+  try {
+    const container = document.createElement("div");
+    container.className = "relative device-marker";
+    container.innerHTML = `
       <!-- Pulse Animation -->
       <div class="absolute w-9 h-9 bg-green-500 opacity-50 rounded-full animate-ping"></div>
 
@@ -43,21 +47,21 @@ export const createDeviceMarker = ({
                 }</span>`
           }
       </div>
-  `;
+    `;
 
-  const marker = new mapboxgl.Marker({ element: container, anchor: "center" })
-    .setLngLat([position.lng, position.lat])
-    .addTo(mapRef.current);
+    const marker = new mapboxgl.Marker({ element: container, anchor: "center" })
+      .setLngLat([position.lng, position.lat])
+      .addTo(mapRef.current);
 
-  // Popup with detailed info
-  const popup = new mapboxgl.Popup({
-    offset: [0, 0],
-    closeButton: true,
-    closeOnClick: true,
-    closeOnMove: true,
-    maxWidth: "250px",
-    className: "custom-popup",
-  }).setHTML(`
+    // Popup with detailed info
+    const popup = new mapboxgl.Popup({
+      offset: [0, 0],
+      closeButton: true,
+      closeOnClick: true,
+      closeOnMove: true,
+      maxWidth: "250px",
+      className: "custom-popup",
+    }).setHTML(`
       <div class="p-3 rounded-lg shadow-lg bg-white border">
           <div class="flex items-center space-x-2 mb-2">
               ${
@@ -93,11 +97,14 @@ export const createDeviceMarker = ({
               : ""
           }</div> 
       </div>
-  `);
+    `);
 
-  marker.setPopup(popup);
-
-  return marker;
+    marker.setPopup(popup);
+    return marker;
+  } catch (error) {
+    console.error("Error creating device marker:", error);
+    return null;
+  }
 };
 
 export const createStartMarker = ({
@@ -105,57 +112,91 @@ export const createStartMarker = ({
   device,
   mapRef,
 }: DeviceMarkerProps): mapboxgl.Marker | null => {
-  if (!mapRef.current) return new mapboxgl.Marker();
-
-  const el = document.createElement("div");
-  el.className = "start-marker";
-  el.style.width = "24px";
-  el.style.height = "24px";
-  el.style.borderRadius = "50%";
-  el.style.backgroundColor = "#4267B2";
-  el.style.border = "2px solid white";
-  el.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
-  el.style.display = "flex";
-  el.style.alignItems = "center";
-  el.style.justifyContent = "center";
-
-  // Add device image or initial
-  if (device?.imageUrl) {
-    const img = document.createElement("img");
-    img.src = device.imageUrl;
-    img.style.width = "18px";
-    img.style.height = "18px";
-    img.style.borderRadius = "50%";
-    img.style.objectFit = "cover";
-    img.onerror = () => {
-      el.textContent = device?.deviceName?.charAt(0) || "S";
-      el.style.color = "white";
-      el.style.fontWeight = "bold";
-    };
-    el.appendChild(img);
-  } else {
-    el.textContent = device?.deviceName?.charAt(0) || "S";
-    el.style.color = "white";
-    el.style.fontWeight = "bold";
+  if (!mapRef.current) {
+    console.error("Map instance is not available");
+    return null;
   }
 
-  const marker = new mapboxgl.Marker({
-    element: el,
-    anchor: "center",
-  })
-    .setLngLat([position.lng, position.lat])
-    .addTo(mapRef.current);
+  if (
+    !position ||
+    typeof position.lng !== "number" ||
+    typeof position.lat !== "number"
+  ) {
+    console.error("Invalid position data:", position);
+    return null;
+  }
 
-  // Add popup
-  const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-    <div class="p-2">
-      <h3 class="font-bold">${device?.deviceName || "Device"}</h3>
-      <p>Start Position</p>
-      <p class="text-sm">Lat: ${position.lat.toFixed(4)}</p>
-      <p class="text-sm">Lng: ${position.lng.toFixed(4)}</p>
-    </div>
-  `);
+  try {
+    // Create marker element
+    const el = document.createElement("div");
+    el.className = "relative device-marker";
 
-  marker.setPopup(popup);
-  return marker;
+    el.innerHTML = `
+       <div class="w-[40px] h-[40px] rounded-full bg-[#23C16B] flex items-center justify-center shadow-lg border-0 hover:scale-110 hover:shadow-lg transition-transform">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="2" x2="12" y2="5"></line>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+            <line x1="2" y1="12" x2="5" y2="12"></line>
+            <line x1="19" y1="12" x2="22" y2="12"></line>
+          </svg>
+        </div>
+    `;
+
+    if (!mapRef.current.getSource) {
+      console.warn("Map is not fully loaded, retrying in 500ms...");
+      setTimeout(() => createStartMarker({ position, device, mapRef }), 500);
+      return null;
+    }
+
+    const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+      .setLngLat([position.lng, position.lat])
+      .addTo(mapRef.current);
+
+    // Add popup
+    const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+      <div class="p-3 rounded-lg shadow-lg bg-white border">
+          <div class="flex items-center space-x-2 mb-2">
+              ${
+                device?.imageUrl
+                  ? `<img src="${device.imageUrl}" class="w-6 h-6 rounded-full object-cover" onerror="this.style.display='none'">`
+                  : `<div class="w-6 h-6 bg-red-500 text-white flex items-center justify-center rounded-full text-xs font-bold">
+                          ${device?.deviceName?.charAt(0) || "D"}
+                      </div>`
+              }
+              <div>
+                  <p class="font-bold text-gray-800 text-sm m-0">${
+                    device?.deviceName || "Current Location"
+                  }</p>
+                  <span class="flex items-center text-xs text-green-500">
+                      <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
+                      Live Location
+                  </span>
+              </div>
+          </div>
+          <div class="text-xs text-gray-600 pb-1">${
+            position.address ? `<div>Address: ${position.address}</div>` : ""
+          }</div>
+          <div class="text-xs text-gray-600 pb-1">${
+            position.tm
+              ? `<div>Time: ${new Date(
+                  position.tm * 1000
+                ).toLocaleString()}</div>`
+              : ""
+          }</div>
+          <div class="text-xs text-gray-600 pb-1">${
+            position.speed
+              ? `<div>Speed: ${Math.round(position.speed)} km/h</div>`
+              : ""
+          }</div> 
+      </div>
+    `);
+
+    marker.setPopup(popup);
+
+    return marker;
+  } catch (error) {
+    console.error("Error creating start marker:", error);
+    return null;
+  }
 };
