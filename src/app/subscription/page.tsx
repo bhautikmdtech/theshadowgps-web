@@ -1,7 +1,8 @@
 import { Suspense } from "react";
-import SubscriptionViewer from "./SubscriptionViewer";
+import SubscriptionViewer from "./components/SubscriptionViewer";
 import { Metadata } from "next";
 import axiosClient from "@/lib/axiosClient";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Subscription Management",
@@ -15,13 +16,11 @@ export default async function SubscriptionPage({
 }) {
   const token = (await searchParams).token;
 
-  // Security check: Redirect if no valid token
   if (!token) {
-    // redirect("/login?returnUrl=/subscription");
+    redirect("/login?returnUrl=/subscription");
   }
 
   try {
-    // Fetch subscription data with secure headers
     const response = await axiosClient.get(
       "/api/app/subscription/getStripeData",
       {
@@ -47,7 +46,6 @@ export default async function SubscriptionPage({
       </Suspense>
     );
   } catch (error) {
-    // Security: Redirect on any error to prevent data exposure
-    // redirect("/login?returnUrl=/subscription");
+    redirect("/login?returnUrl=/subscription");
   }
 }

@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Accordion } from "react-bootstrap";
 import { PageLoader } from "@/components";
+import { SubscriptionService } from "./subscriptionService";
+import { toast } from "react-toastify";
 
 interface Invoice {
   id: string;
@@ -11,20 +13,70 @@ interface Invoice {
   url?: string;
 }
 
+interface Customer {
+  id: string;
+  name: string | null;
+  email: string | null;
+}
+
 interface InvoiceHistorySectionProps {
+  token: string;
+  customer: Customer;
   invoices?: {
     data: Invoice[];
     hasMore: boolean;
   };
-  isLoadingInvoices: boolean;
-  loadMoreInvoices: () => Promise<void>;
+  onRefresh: () => void;
 }
 
 export default function InvoiceHistorySection({
+  token,
+  customer,
   invoices,
-  isLoadingInvoices,
-  loadMoreInvoices,
+  onRefresh,
 }: InvoiceHistorySectionProps) {
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [invoicesData, setInvoicesData] = useState<Invoice[]>(
+    invoices?.data || []
+  );
+  const [hasMore, setHasMore] = useState(invoices?.hasMore || false);
+
+  const loadMoreInvoices = async () => {
+    try {
+      setIsLoadingInvoices(true);
+
+      if (!token)
+        throw new Error("No authentication token found. Please log in again.");
+      if (!customer?.id) throw new Error("Customer information is missing");
+
+      const limit = invoicesData.length + 10;
+
+      const response = await SubscriptionService.loadMoreInvoices(
+        token,
+        limit,
+        customer.id
+      );
+      const newInvoices: Invoice[] = response?.invoices || [];
+      const updatedHasMore: boolean = response?.hasMore || false;
+
+      const existingIds = new Set(invoicesData.map((inv) => inv.id));
+      const filteredNew = newInvoices.filter((inv) => !existingIds.has(inv.id));
+
+      setInvoicesData((prev) => [...prev, ...filteredNew]);
+      setHasMore(updatedHasMore);
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data || error.message || "Failed to load invoices";
+      toast.error(
+        typeof errorMessage === "string"
+          ? errorMessage
+          : "Failed to load invoices"
+      );
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+
   return (
     <Accordion defaultActiveKey="0" className="mb-3 border-0">
       <Accordion.Item eventKey="0" className="border-0">
@@ -34,22 +86,20 @@ export default function InvoiceHistorySection({
           >
             Invoice History
           </span>
-        </Accordion.Header >
+        </Accordion.Header>
         <Accordion.Body className="p-0">
-          {isLoadingInvoices &&
-          (!invoices || !invoices.data || invoices.data.length === 0) ? (
+          {isLoadingInvoices && invoicesData.length === 0 ? (
             <div className="text-center py-3" id="invoice-loading">
               <PageLoader type="spinner" color="#007bff" />
             </div>
-          ) : invoices && invoices.data && invoices.data.length > 0 ? (
+          ) : invoicesData.length > 0 ? (
             <div id="invoices-container" className="px-3">
-              {/* Display visible invoices */}
-              {invoices.data.map((invoice: Invoice, index: number) => (
+              {invoicesData.map((invoice, index) => (
                 <a
                   href={invoice.url}
                   target="_blank"
                   key={`${invoice.id}-${index}`}
-                  className="invoice d-flex justify-content-between align-items-center py-2 text-decoration-none "
+                  className="invoice d-flex justify-content-between align-items-center py-2 text-decoration-none"
                 >
                   <div className="invoice-date">
                     {new Date(invoice.date).toLocaleDateString("en-US", {
@@ -72,24 +122,19 @@ export default function InvoiceHistorySection({
                             ? "#e0e0e0"
                             : "#6c757d",
                         color:
-                          invoice.status === "paid"
-                            ? "#3D4B65"
-                            : invoice.status === "open"
+                          invoice.status === "paid" || invoice.status === "open"
                             ? "#3D4B65"
                             : "white",
                       }}
                     >
-                      {invoice.status === "paid"
-                        ? "Paid"
-                        : invoice.status.charAt(0).toUpperCase() +
-                          invoice.status.slice(1)}
+                      {invoice.status.charAt(0).toUpperCase() +
+                        invoice.status.slice(1)}
                     </span>
                   </div>
                 </a>
               ))}
 
-              {/* Show View More button if there are more invoices to show */}
-              {invoices.hasMore && (
+              {hasMore && (
                 <div className="text-center py-3" id="load-more-container">
                   <button
                     className="btn btn-link text-decoration-none"

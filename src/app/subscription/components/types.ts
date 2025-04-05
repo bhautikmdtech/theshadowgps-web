@@ -23,9 +23,10 @@ export interface Subscription {
   status: string;
   amount: string;
   interval: string;
+  intervalCount?: number;
   renewalDate: string;
   cancelAt?: string;
-  cancelStatus?: boolean;
+  isCancelled?: boolean;
   isInGracePeriod?: boolean;
   graceEndDate?: string;
   gracePeriodMessage?: string;
@@ -34,7 +35,10 @@ export interface Subscription {
   device?: Device;
   paymentMethod?: PaymentMethod;
   planId: string;
-  endDate: Date;
+  paymentStatus?: string;
+  gracePeriodRemainingDays?: number;
+  currentPeriodEnd: string;
+  isFreeTrial: boolean;
 }
 
 export interface Plan {
