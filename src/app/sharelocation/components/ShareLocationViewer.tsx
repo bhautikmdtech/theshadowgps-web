@@ -134,7 +134,7 @@ export default function LiveTracker({
             },
             paint: {
               "line-color": "#4d6bfe",
-              "line-width": 8,
+              "line-width": 4,
               "line-opacity": 0.9,
             },
           });
@@ -214,7 +214,7 @@ export default function LiveTracker({
           },
           paint: {
             "line-color": "#4d6bfe",
-            "line-width": 8,
+            "line-width": 4,
             "line-opacity": 0.9,
           },
         });
