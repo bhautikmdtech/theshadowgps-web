@@ -56,7 +56,7 @@ export const createDeviceMarker = ({
       closeOnClick: true,
       closeOnMove: true,
       maxWidth: "250px",
-      className: "custom-popup",
+      className: "custom-popup z-2",
     }).setHTML(`
         <div class="p-3 rounded-lg shadow-lg bg-white border">
             <div class="flex items-center space-x-2 mb-2">
@@ -145,7 +145,14 @@ export const createStartMarker = ({
       .setLngLat([position.lng, position.lat])
       .addTo(map);
 
-    const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+    const popup = new mapboxgl.Popup({
+      offset: [0, 0],
+      closeButton: true,
+      closeOnClick: true,
+      closeOnMove: true,
+      maxWidth: "250px",
+      className: "custom-popup z-2",
+    }).setHTML(`
       <div class="p-3 rounded-lg shadow-lg bg-white border">
           <div class="flex items-center space-x-2 mb-2">
               ${
