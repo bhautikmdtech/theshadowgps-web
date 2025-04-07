@@ -32,7 +32,7 @@ export const createDeviceMarker = ({
 
   try {
     const container = document.createElement("div");
-    container.className = "relative device-marker";
+    container.className = "relative device-marker z-1";
     container.innerHTML = `
       <div class="absolute w-9 h-9 bg-green-500 opacity-50 rounded-full animate-ping"></div>
       <div class="relative w-9 h-9 rounded-full bg-white border-2 border-white shadow-md flex items-center justify-center hover:scale-110 hover:shadow-lg transition-transform">

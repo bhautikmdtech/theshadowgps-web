@@ -71,13 +71,11 @@ export default function LiveTracker({
       });
 
       // Always create start marker with first position
-      if (!startMarkerRef.current && positions.length > 1) {
-        startMarkerRef.current = createStartMarker({
-          position: positions[0],
-          device: device || undefined,
-          mapRef,
-        });
-      }
+      startMarkerRef.current = createStartMarker({
+        position: positions[0],
+        device: device || undefined,
+        mapRef,
+      });
 
       // Update route if we have at least 2 positions
       if (positions.length > 1) {
@@ -150,9 +148,8 @@ export default function LiveTracker({
       const map = mapRef.current;
       if (!map || coordinates.length === 0) return;
 
-      // Clear existing markers and sources
+      // Only remove and recreate device marker, keep start marker
       if (deviceMarkerRef.current) deviceMarkerRef.current.remove();
-      if (startMarkerRef.current) startMarkerRef.current.remove();
 
       const routeSourceId = "live-route-source";
       const routeLayerId = "live-route-layer";
@@ -162,19 +159,6 @@ export default function LiveTracker({
         map.removeLayer(routeLayerId);
         map.removeSource(routeSourceId);
       }
-
-      // Convert first position to coordinate array
-      const firstCoord = [coordinates[0].lng, coordinates[0].lat] as [
-        number,
-        number
-      ];
-
-      // ALWAYS CREATE START MARKER WHEN WE HAVE AT LEAST 1 POSITION
-      startMarkerRef.current = createStartMarker({
-        position: coordinates[0],
-        device: device || undefined,
-        mapRef,
-      });
 
       // Create device marker (last position)
       if (coordinates.length > 0) {
@@ -186,7 +170,9 @@ export default function LiveTracker({
       }
 
       // Track the current route coordinates
-      const currentRouteCoordinates: [number, number][] = [firstCoord];
+      const currentRouteCoordinates: [number, number][] = coordinates.map(
+        (p) => [p.lng, p.lat] as [number, number]
+      );
 
       // Only add route source if we have at least 2 positions
       if (coordinates.length >= 2) {
@@ -198,7 +184,7 @@ export default function LiveTracker({
             properties: {},
             geometry: {
               type: "LineString",
-              coordinates: [...currentRouteCoordinates, firstCoord], // Start with first point twice
+              coordinates: currentRouteCoordinates,
             },
           } as GeoJSON.Feature<GeoJSON.LineString>,
         });
@@ -218,10 +204,8 @@ export default function LiveTracker({
             "line-opacity": 0.9,
           },
         });
-      }
 
-      // Only animate if we have at least 2 positions
-      if (coordinates.length >= 2) {
+        // Animate the device marker along the route
         const duration = 2000; // ms per segment
         let currentIndex = 1;
 
@@ -248,20 +232,6 @@ export default function LiveTracker({
             duration: duration,
           });
 
-          // Extend the route line
-          currentRouteCoordinates.push(currentCoordArray);
-          const source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
-          if (source) {
-            source.setData({
-              type: "Feature",
-              properties: {},
-              geometry: {
-                type: "LineString",
-                coordinates: currentRouteCoordinates,
-              },
-            });
-          }
-
           currentIndex++;
           if (currentIndex < coordinates.length) {
             setTimeout(animateStep, duration);
@@ -284,10 +254,7 @@ export default function LiveTracker({
         }
 
         const updated = [...prev, newPosition];
-        if (updated.length >= 1) {
-          animateLiveTrip(updated);
-        }
-
+        animateLiveTrip(updated);
         return updated;
       });
     },
@@ -315,6 +282,7 @@ export default function LiveTracker({
     };
   }, [shareToken, handlePositionUpdate]);
 
+  // Rest of the component remains the same...
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
