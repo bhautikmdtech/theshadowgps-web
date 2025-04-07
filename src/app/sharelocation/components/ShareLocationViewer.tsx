@@ -218,7 +218,7 @@ export default function LiveTracker({
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm py-2 px-3 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+        <div className="hidden md:flex items-center gap-3">
           <Image
             src="/images/logoFull.svg"
             alt="ShadowGPS Logo"
