@@ -50,7 +50,7 @@ export default function MapComponent({
       mapRef.current = null;
       setMapReady(false);
     };
-  }, [initialPosition, onMapLoad]);
+  }, []);
 
   return (
     <div className="relative w-full h-full">
