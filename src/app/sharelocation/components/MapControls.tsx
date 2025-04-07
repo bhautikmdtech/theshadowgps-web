@@ -106,7 +106,7 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     try {
       map!.flyTo({
         center: [deviceLocation.lng, deviceLocation.lat],
-        zoom: 14,
+        zoom: 16,
         essential: true,
       });
     } catch (error) {
@@ -137,7 +137,7 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
         try {
           map!.flyTo({
             center: [longitude, latitude],
-            zoom: 15,
+            zoom: 16,
             essential: true,
           });
         } catch (error) {

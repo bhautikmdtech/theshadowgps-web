@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import MapComponent from "@/services/MapService";
 import "mapbox-gl/dist/mapbox-gl.css";
 import Image from "next/image";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 import dynamic from "next/dynamic";
+import type { GeoJSON } from "geojson";
 
 const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
 
@@ -35,17 +36,21 @@ export default function LiveTracker({
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const deviceMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const startMarkerRef = useRef<mapboxgl.Marker | null>(null);
-  const routeLayerIdRef = useRef<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const routeSourceRef = useRef<string>("route-arrow");
+  const routeLayerRef = useRef<string>("route-arrow-line");
 
+  // Initialize with device info and positions
   useEffect(() => {
     if (initialData?.deviceInfo && initialData?.latestPoint) {
       setDevice(initialData.deviceInfo);
       setPositions([initialData.latestPoint]);
+      setIsReady(true);
     } else {
       setError("No initial location data available.");
     }
@@ -53,117 +58,244 @@ export default function LiveTracker({
 
   const handleMapLoad = (map: mapboxgl.Map) => {
     mapRef.current = map;
-    setTimeout(() => {
-      if (mapRef.current) {
-        updateMap();
-      }
-    }, 100);
-  };
 
-  // Update map with current positions
-  const updateMap = () => {
-    if (!mapRef.current || positions.length === 0) return;
+    // Add markers and route once the map is loaded
+    if (positions.length > 0) {
+      const latest = positions[positions.length - 1];
 
-    const latestPosition = positions[positions.length - 1];
-
-    // Remove the previous device marker
-    if (deviceMarkerRef.current) {
-      deviceMarkerRef.current.remove();
-      deviceMarkerRef.current = null;
-    }
-
-    // Ensure the start marker is placed at the first position only once
-    if (positions.length > 1 && !startMarkerRef.current) {
-      startMarkerRef.current = createStartMarker({
-        position: positions[0], // Ensure it's the first position
+      // Always create device marker
+      deviceMarkerRef.current = createDeviceMarker({
+        position: latest,
         device: device || undefined,
         mapRef,
       });
+
+      // Always create start marker with first position
+      if (!startMarkerRef.current && positions.length > 1) {
+        startMarkerRef.current = createStartMarker({
+          position: positions[0],
+          device: device || undefined,
+          mapRef,
+        });
+      }
+
+      // Update route if we have at least 2 positions
+      if (positions.length > 1) {
+        updateRoute(positions);
+      }
     }
 
-    // Create and update the device marker at the latest position
-    deviceMarkerRef.current = createDeviceMarker({
-      position: latestPosition,
-      device: device || undefined,
-      mapRef,
-    });
-
-    // Update the route line
-    setTimeout(() => updateRoute(positions), 100);
-
-    // Fly to the new position smoothly
-    mapRef.current.flyTo({
-      center: [latestPosition.lng, latestPosition.lat],
-      zoom: 14,
-      essential: true,
-    });
+    setIsReady(true);
   };
+
   // Update route line
-  const updateRoute = (positions: Position[]) => {
-    if (!mapRef.current || positions.length < 2) return;
+  const updateRoute = useCallback((positions: Position[]) => {
+    const map = mapRef.current;
+    if (!map || positions.length < 2) return;
 
     const coordinates = positions.map(
       (p) => [p.lng, p.lat] as [number, number]
     );
-    const routeId = "route-arrow";
 
-    if (!mapRef.current.isStyleLoaded()) {
-      mapRef.current.once("style.load", () => updateRoute(positions));
+    if (!map.isStyleLoaded()) {
+      map.once("style.load", () => updateRoute(positions));
       return;
     }
 
-    // If route already exists, update it
-    if (mapRef.current.getSource(routeId)) {
-      (mapRef.current.getSource(routeId) as mapboxgl.GeoJSONSource).setData({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "LineString",
-          coordinates,
-        },
-      });
-    } else {
-      // Create new source
-      mapRef.current.addSource(routeId, {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "LineString",
-            coordinates,
-          },
-        },
-      });
+    const routeGeoJSON: GeoJSON = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "LineString",
+        coordinates,
+      },
+    };
 
-      // Add line layer
-      mapRef.current.addLayer({
-        id: "route-arrow-line",
-        type: "line",
-        source: routeId,
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#4d6bfe",
-          "line-width": 4,
-          "line-opacity": 0.9,
-        },
-      });
+    try {
+      const existingSource = map.getSource(
+        routeSourceRef.current
+      ) as mapboxgl.GeoJSONSource;
+      if (existingSource) {
+        existingSource.setData(routeGeoJSON);
+      } else {
+        map.addSource(routeSourceRef.current, {
+          type: "geojson",
+          data: routeGeoJSON,
+        });
 
-      routeLayerIdRef.current = routeId;
+        if (!map.getLayer(routeLayerRef.current)) {
+          map.addLayer({
+            id: routeLayerRef.current,
+            type: "line",
+            source: routeSourceRef.current,
+            layout: {
+              "line-join": "round",
+              "line-cap": "round",
+            },
+            paint: {
+              "line-color": "#4d6bfe",
+              "line-width": 8,
+              "line-opacity": 0.9,
+            },
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating route:", error);
     }
-  };
+  }, []);
 
-  // Socket connection
+  const animateLiveTrip = useCallback(
+    (coordinates: Position[]) => {
+      const map = mapRef.current;
+      if (!map || coordinates.length === 0) return;
+
+      // Clear existing markers and sources
+      if (deviceMarkerRef.current) deviceMarkerRef.current.remove();
+      if (startMarkerRef.current) startMarkerRef.current.remove();
+
+      const routeSourceId = "live-route-source";
+      const routeLayerId = "live-route-layer";
+
+      // Remove existing route if any
+      if (map.getSource(routeSourceId)) {
+        map.removeLayer(routeLayerId);
+        map.removeSource(routeSourceId);
+      }
+
+      // Convert first position to coordinate array
+      const firstCoord = [coordinates[0].lng, coordinates[0].lat] as [
+        number,
+        number
+      ];
+
+      // ALWAYS CREATE START MARKER WHEN WE HAVE AT LEAST 1 POSITION
+      startMarkerRef.current = createStartMarker({
+        position: coordinates[0],
+        device: device || undefined,
+        mapRef,
+      });
+
+      // Create device marker (last position)
+      if (coordinates.length > 0) {
+        deviceMarkerRef.current = createDeviceMarker({
+          position: coordinates[coordinates.length - 1],
+          device: device || undefined,
+          mapRef,
+        });
+      }
+
+      // Track the current route coordinates
+      const currentRouteCoordinates: [number, number][] = [firstCoord];
+
+      // Only add route source if we have at least 2 positions
+      if (coordinates.length >= 2) {
+        // Add route source with initial data
+        map.addSource(routeSourceId, {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              type: "LineString",
+              coordinates: [...currentRouteCoordinates, firstCoord], // Start with first point twice
+            },
+          } as GeoJSON.Feature<GeoJSON.LineString>,
+        });
+
+        // Add route layer
+        map.addLayer({
+          id: routeLayerId,
+          type: "line",
+          source: routeSourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#4d6bfe",
+            "line-width": 8,
+            "line-opacity": 0.9,
+          },
+        });
+      }
+
+      // Only animate if we have at least 2 positions
+      if (coordinates.length >= 2) {
+        const duration = 2000; // ms per segment
+        let currentIndex = 1;
+
+        const animateStep = () => {
+          if (currentIndex >= coordinates.length) return;
+
+          const currentCoord = coordinates[currentIndex];
+          const currentCoordArray = [currentCoord.lng, currentCoord.lat] as [
+            number,
+            number
+          ];
+
+          // Update device marker position
+          if (deviceMarkerRef.current) {
+            deviceMarkerRef.current.setLngLat(currentCoordArray);
+          }
+
+          // Update camera to follow marker
+          map.flyTo({
+            center: currentCoordArray,
+            zoom: 16,
+            speed: 0.8,
+            curve: 1.2,
+            duration: duration,
+          });
+
+          // Extend the route line
+          currentRouteCoordinates.push(currentCoordArray);
+          const source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
+          if (source) {
+            source.setData({
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "LineString",
+                coordinates: currentRouteCoordinates,
+              },
+            });
+          }
+
+          currentIndex++;
+          if (currentIndex < coordinates.length) {
+            setTimeout(animateStep, duration);
+          }
+        };
+
+        // Start animation
+        setTimeout(animateStep, duration);
+      }
+    },
+    [device]
+  );
+
+  const handlePositionUpdate = useCallback(
+    (newPosition: Position) => {
+      setPositions((prev) => {
+        const last = prev[prev.length - 1];
+        if (last?.lat === newPosition.lat && last?.lng === newPosition.lng) {
+          return prev;
+        }
+
+        const updated = [...prev, newPosition];
+        if (updated.length >= 1) {
+          animateLiveTrip(updated);
+        }
+
+        return updated;
+      });
+    },
+    [animateLiveTrip]
+  );
+
   useEffect(() => {
     if (!shareToken) return;
-
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
 
     const socket = io(
       process.env.NEXT_PUBLIC_API_URL || window.location.origin,
@@ -175,54 +307,14 @@ export default function LiveTracker({
     );
 
     socketRef.current = socket;
-
-    // Socket event handlers
-    const onConnect = () => {
-      console.log("Socket Connected");
-    };
-
-    const onDisconnect = () => {
-      console.log("Socket Disconnected");
-    };
-
-    const onPositionUpdate = (newPosition: Position) => {
-      setPositions((prev) => {
-        // Only add new position if it's different from the last one
-        const lastPosition = prev[prev.length - 1];
-        if (
-          lastPosition &&
-          lastPosition.lat === newPosition.lat &&
-          lastPosition.lng === newPosition.lng
-        ) {
-          return prev;
-        }
-        return [...prev, newPosition];
-      });
-    };
-
-    const onError = (err: Error) => {
-      setError(`Connection error: ${err.message}`);
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    socket.on("sharedPositionUpdate", onPositionUpdate);
-    socket.on("connect_error", onError);
+    socket.on("sharedPositionUpdate", handlePositionUpdate);
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.off("sharedPositionUpdate", onPositionUpdate);
-      socket.off("connect_error", onError);
+      socket.off("sharedPositionUpdate", handlePositionUpdate);
       socket.disconnect();
     };
-  }, [shareToken]);
+  }, [shareToken, handlePositionUpdate]);
 
-  useEffect(() => {
-    setTimeout(() => updateMap(), 100);
-  }, [positions]);
-
-  // Rest of your component remains the same...
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
@@ -284,15 +376,36 @@ export default function LiveTracker({
       </div>
 
       <div className="flex-1 relative">
-        {positions.length > 0 && (
+        {isReady && positions.length > 0 ? (
           <MapComponent
             initialPosition={{
               lng: positions[positions.length - 1].lng,
               lat: positions[positions.length - 1].lat,
             }}
             onMapLoad={handleMapLoad}
-            onPositionChange={() => console.log("first")}
+            onPositionChange={() => {}}
           />
+        ) : (
+          <div className="h-full bg-gray-100 flex flex-col">
+            <div className="flex-1 relative overflow-hidden">
+              <div
+                className="absolute inset-0"
+                style={{
+                  backgroundColor: "#f8f9fa",
+                  backgroundImage:
+                    "linear-gradient(rgba(230, 230, 230, 0.7) 1px, transparent 1px), linear-gradient(90deg, rgba(230, 230, 230, 0.7) 1px, transparent 1px)",
+                  backgroundSize: "40px 40px",
+                }}
+              ></div>
+
+              <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500 loading-progress"></div>
+            </div>
+
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white py-3 px-5 rounded-lg shadow-md flex items-center">
+              <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin mr-3"></div>
+              <span className="text-gray-700">Loading map...</span>
+            </div>
+          </div>
         )}
       </div>
     </div>
