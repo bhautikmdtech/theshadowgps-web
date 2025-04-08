@@ -6,6 +6,11 @@ import { FaLayerGroup, FaMapMarkerAlt, FaCarSide } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
 
+export const MAPBOX_LIGHT =
+  "mapbox://styles/abhishekbhatia02/cm7ektl0a006601r3ednqdyxu";
+export const MAPBOX_DARK =
+  "mapbox://styles/abhishekbhatia02/cm7el93sj00i901s7gawghy7j";
+
 interface MapControlsProps {
   map: mapboxgl.Map | null;
   deviceLocation?: { lng: number; lat: number };
@@ -21,18 +26,21 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
 
   const mapStyles = [
     {
+      id: "custom-default", // Unique identifier
       type: "streets-v11",
-      label: "Road",
+      label: "Default",
       img: "/images/map/road.svg",
     },
     {
+      id: "satellite-streets", // Unique identifier
       type: "satellite-streets-v11",
       label: "Satellite",
       img: "/images/map/satellite.svg",
     },
     {
+      id: "theme-toggle", // Unique identifier
       type: currentTheme === "dark" ? "dark-v11" : "light-v11",
-      label: currentTheme === "dark" ? "Dark" : "Light",
+      label: theme === "dark" ? "Dark" : "Light",
       img: "/images/map/hybrid.svg",
     },
   ];
@@ -168,15 +176,13 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
 
   return (
     <div
-      className={`relative mapboxgl-ctrl mapboxgl-ctrl-group flex flex-col gap-2 p-2 ${
-        currentTheme === "dark" ? "bg-gray-800" : "bg-white"
-      } rounded-lg shadow-lg`}
+      className={`relative mapboxgl-ctrl mapboxgl-ctrl-group flex flex-col gap-2 rounded-lg shadow-lg`}
     >
       {/* Map Type Button */}
-      <div className="relative">
+      <>
         <button
           onClick={handleLayerToggle}
-          className={`map-control-btn ${
+          className={`map-control-btn bg-white dark:bg-gray-700 ${
             currentTheme === "dark"
               ? "bg-gray-700 hover:bg-gray-600 text-white"
               : "bg-gray-100 hover:bg-gray-200 text-gray-800"
@@ -196,38 +202,30 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
                 : "bg-white border-gray-200"
             } border rounded-lg z-50 p-2 flex gap-2 shadow-md`}
           >
-            {mapStyles.map(({ type, label, img }) => (
+            {mapStyles.map(({ id, type, label, img }) => (
               <button
-                key={type}
+                key={id}
                 onClick={() => changeMapStyle(type)}
-                className={`flex flex-col items-center ${
-                  currentTheme === "dark" ? "bg-gray-700" : "bg-white"
-                } w-50 h-50 border-0 p-2 rounded-lg transition hover:shadow-lg ${
-                  mapStyle === type
-                    ? "border-4 border-blue-500 shadow-md"
-                    : currentTheme === "dark"
-                    ? "border-gray-600"
-                    : "border-gray-300"
-                }`}
+                className={`dropdown-button`}
                 aria-label={`Switch to ${label} map`}
               >
                 <img
                   src={img}
                   alt={label}
-                  className="rounded-lg object-cover w-16 h-16"
+                  className="rounded-lg object-cover w-full"
                 />
-                <span
+                {/* <span
                   className={`text-sm mt-1 ${
                     currentTheme === "dark" ? "text-white" : "text-gray-800"
                   }`}
                 >
                   {label}
-                </span>
+                </span> */}
               </button>
             ))}
           </div>
         )}
-      </div>
+      </>
 
       {/* Move to Device Location */}
       <button

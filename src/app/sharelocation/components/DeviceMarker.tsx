@@ -34,12 +34,12 @@ export const createDeviceMarker = ({
     const container = document.createElement("div");
     container.className = "relative device-marker z-1";
     container.innerHTML = `
-      <div class="absolute w-9 h-9 bg-green-500 opacity-50 rounded-full animate-ping"></div>
-      <div class="relative w-9 h-9 rounded-full border-2 border-white shadow-md flex items-center justify-center hover:scale-110 hover:shadow-lg transition-transform">
+      <div class="absolute w-10 h-10 bg-green-500 opacity-50 rounded-full animate-ping"></div>
+      <div class="relative w-10 h-10 rounded-full border-2 border-white shadow-md flex items-center justify-center hover:scale-110 hover:shadow-lg transition-transform">
         ${
           device?.imageUrl
-            ? `<img src="${device.imageUrl}" class="w-6 h-6 rounded-full object-cover" onerror="this.style.display='none'">`
-            : `<span class="text-sm font-bold text-white uppercase">${
+            ? `<img src="${device.imageUrl}" class="w-full rounded-full object-cover">`
+            : `<span class="text-md font-bold text-white uppercase">${
                 device?.deviceName?.charAt(0) || "D"
               }</span>`
         }
@@ -58,7 +58,7 @@ export const createDeviceMarker = ({
       maxWidth: "250px",
       className: "custom-popup z-2",
     }).setHTML(`
-        <div class="p-3 rounded-lg shadow-lg border">
+        <div class="p-2 shadow-lg border-0">
             <div class="flex items-center space-x-2 mb-2">
                 ${
                   device?.imageUrl
@@ -70,11 +70,7 @@ export const createDeviceMarker = ({
                 <div>
                     <p class="font-bold text-gray-800 text-sm m-0">${
                       device?.deviceName || "Current Location"
-                    }</p>
-                    <span class="flex items-center text-xs text-green-500">
-                        <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                        Live Location
-                    </span>
+                    }</p> 
                 </div>
             </div>
             ${
@@ -118,26 +114,12 @@ export const createStartMarker = ({
     return null;
   }
 
-  // if (!map.isStyleLoaded()) {
-  //   console.warn("Map not loaded yet. Retrying in 300ms...");
-  //   setTimeout(() => {
-  //     createStartMarker({ position, device, mapRef });
-  //   }, 300);
-  //   return null;
-  // }
-
   try {
     const el = document.createElement("div");
     el.className = "relative device-marker start";
     el.innerHTML = `
-      <div class="w-[40px] h-[40px] rounded-full bg-[#23C16B] flex items-center justify-center shadow-lg border-0 hover:scale-110 hover:shadow-lg transition-transform">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="12" y1="2" x2="12" y2="5"></line>
-          <line x1="12" y1="19" x2="12" y2="22"></line>
-          <line x1="2" y1="12" x2="5" y2="12"></line>
-          <line x1="19" y1="12" x2="22" y2="12"></line>
-        </svg>
+      <div class="w-6 h-6 rounded-full flex items-center justify-center shadow-lg border-0 hover:scale-110 hover:shadow-lg transition-transform">
+        <img src="/images/map/startIcon.svg" class="w-full rounded-full border-0 object-cover">
       </div>
     `;
 
@@ -150,10 +132,10 @@ export const createStartMarker = ({
       closeButton: true,
       closeOnClick: true,
       closeOnMove: true,
-      maxWidth: "250px",
+      maxWidth: "200px",
       className: "custom-popup z-2",
     }).setHTML(`
-      <div class="p-3 rounded-lg shadow-lg border">
+      <div class="p-2 shadow-lg border-0">
           <div class="flex items-center space-x-2 mb-2">
               ${
                 device?.imageUrl
@@ -165,11 +147,7 @@ export const createStartMarker = ({
               <div>
                   <p class="font-bold text-gray-800 text-sm m-0">${
                     device?.deviceName || "Start Location"
-                  }</p>
-                  <span class="flex items-center text-xs text-green-500">
-                      <span class="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
-                      Start Point
-                  </span>
+                  }</p> 
               </div>
           </div>
           ${

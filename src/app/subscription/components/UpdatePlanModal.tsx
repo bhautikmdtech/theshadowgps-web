@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
-import { Modal, Button, Form, Badge, Spinner } from "react-bootstrap";
-import { FaInfoCircle } from "react-icons/fa";
+import { useState, useEffect } from 'react';
+import { Modal, Button, Form, Badge, Spinner } from 'react-bootstrap';
+import { FaInfoCircle } from 'react-icons/fa';
 
 interface Plan {
   id: string;
@@ -51,56 +51,53 @@ export default function UpdatePlanModal({
   };
 
   return (
-    <Modal show={show} onHide={onClose} backdrop="static" keyboard={false}>
+    <Modal show={show} onHide={onClose} backdrop='static' keyboard={false}>
       <Modal.Header closeButton>
         <Modal.Title>Update Subscription Plan</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {plans && plans.length > 0 ? (
           <div>
-            <h6 className="mb-3">Select a plan</h6>
-            <div id="available-plans-list">
+            <h6 className='mb-3'>Select a plan</h6>
+            <div id='available-plans-list'>
               {plans.map((plan: Plan) => {
                 const isCurrentPlan = currentPlanId === plan.id;
 
                 return (
                   <div
                     key={plan.id}
-                    className={`p-3 border rounded mb-3 ${
+                    className={`p-3  mb-3 ${
                       localSelectedPlanId === plan.id
-                        ? "border-primary bg-light"
-                        : ""
+                        ? 'border-primary bg-light'
+                        : ''
                     }`}
                     onClick={() => handlePlanSelect(plan.id)}
-                    style={{ cursor: "pointer" }}
+                    style={{
+                      cursor: 'pointer',
+                      border: '1px solid #CFD2D9',
+                      borderRadius: '25px',
+                    }}
                   >
-                    <div className="d-flex justify-content-between align-items-center">
-                      <div className="d-flex align-items-center">
-                        <Form.Check
-                          type="radio"
-                          id={`plan-${plan.id}`}
-                          name="subscription-plan"
-                          className="me-3"
-                          checked={localSelectedPlanId === plan.id}
-                          onChange={() => handlePlanSelect(plan.id)}
-                        />
+                    <div className='d-flex justify-content-between align-items-center'>
+                      <div className='d-flex align-items-center'>
+                     
                         <div>
                           <div
                             className={`fw-medium ${
                               localSelectedPlanId === plan.id
-                                ? "text-primary"
-                                : ""
+                                ? 'text-primary'
+                                : ''
                             }`}
                           >
                             {plan.name}
                             {isCurrentPlan && (
-                              <Badge bg="success" className="ms-2">
+                              <Badge bg='success' className='ms-2'>
                                 Current Plan
                               </Badge>
                             )}
                           </div>
                           {plan.description && (
-                            <small className="text-muted d-block">
+                            <small className='text-muted d-block'>
                               {plan.description}
                             </small>
                           )}
@@ -108,7 +105,7 @@ export default function UpdatePlanModal({
                       </div>
                       <div
                         className={`fw-bold ${
-                          localSelectedPlanId === plan.id ? "text-primary" : ""
+                          localSelectedPlanId === plan.id ? 'text-primary' : ''
                         }`}
                       >
                         ${parseFloat(plan.amount).toFixed(2)}
@@ -118,28 +115,38 @@ export default function UpdatePlanModal({
                 );
               })}
             </div>
-            <div className="alert alert-info mt-4">
-              <FaInfoCircle className="me-2" />
+            <div className='alert alert-info mt-4'>
+              <FaInfoCircle className='me-2' />
               Your subscription will be updated immediately. You'll be charged
               the prorated amount for the remainder of your billing period.
             </div>
           </div>
         ) : (
-          <div className="alert alert-info">
+          <div className='alert alert-info'>
             No plans available at this time. Please try again later.
           </div>
         )}
       </Modal.Body>
       <Modal.Footer>
         <Button
-          variant="outline-secondary"
+          style={{
+            backgroundColor: '#E1ECFF',
+            border: 0,
+            borderRadius: '10px',
+            color: '#337CFD',
+          }}
           onClick={onClose}
           disabled={isProcessing}
         >
           Cancel
         </Button>
         <Button
-          variant="primary"
+          style={{
+            backgroundColor: '#337CFD',
+            border: 0,
+            borderRadius: '10px',
+            color: '#FFFFFF',
+          }}
           onClick={handleConfirm}
           disabled={
             isProcessing ||
@@ -150,17 +157,17 @@ export default function UpdatePlanModal({
           {isProcessing ? (
             <>
               <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-                className="me-2"
+                as='span'
+                animation='border'
+                size='sm'
+                role='status'
+                aria-hidden='true'
+                className='me-2'
               />
               Processing...
             </>
           ) : (
-            "Update Plan"
+            'Update Plan'
           )}
         </Button>
       </Modal.Footer>

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import MapComponent from "@/services/MapService";
-import "mapbox-gl/dist/mapbox-gl.css";
 import Image from "next/image";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 import dynamic from "next/dynamic";
@@ -229,10 +228,10 @@ export default function LiveTracker({
           <span className="text-sm text-blue-500 font-medium cursor-pointer">
             Get your tracker now
           </span>
-          <ThemeToggle />
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {device?.imageUrl ? (
             <Image
               src={device.imageUrl}

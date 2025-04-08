@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Accordion } from "react-bootstrap";
-import { FaCheck, FaTrash, FaEllipsisV } from "react-icons/fa";
-import { FaCirclePlus } from "react-icons/fa6";
+import { FaCheck, FaTrash, FaEllipsisV, FaCreditCard } from "react-icons/fa";
 import { SubscriptionService } from "./subscriptionService";
 import { toast } from "react-toastify";
+import Image from 'next/image';
+import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
 
 interface PaymentMethod {
   id: string;
@@ -38,6 +39,18 @@ export default function PaymentMethodsSection({
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const getCardIcon = (brand: string): React.ReactNode => {
+    const brands: Record<string, React.ReactNode> = {
+      visa: <PaymentIcon type="Visa" format="flatRounded" width={30} />,
+      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" width={30} />,
+      amex: <PaymentIcon type="Amex" format="flatRounded" width={30} />,
+      discover: <PaymentIcon type="Discover" format="flatRounded" width={30} />,
+      diners: <PaymentIcon type="Diners" format="flatRounded" width={30} />,
+      jcb: <PaymentIcon type="Jcb" format="flatRounded" width={30} />,
+    };
+
+    return brands[brand.toLowerCase()] || <FaCreditCard />;
+  };
   const getCardLabel = (brand: string): string => {
     if (!brand) return "Card";
     return brand.charAt(0).toUpperCase() + brand.slice(1);
@@ -116,8 +129,8 @@ export default function PaymentMethodsSection({
 
   return (
     <Accordion defaultActiveKey="0" className="mb-3 border-0">
-      <Accordion.Item eventKey="0" className="border-0">
-        <Accordion.Header className="bg-white">
+           <Accordion.Item eventKey='0' className='border-0'>
+           <Accordion.Header className='bg-white'>
           <span
             style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
           >
@@ -134,30 +147,19 @@ export default function PaymentMethodsSection({
                   className="payment-method flex justify-between items-center py-2 border-b"
                 >
                   <div className="payment-info flex items-center">
-                    <div
-                      style={{
-                        backgroundColor:
-                          method.brand.toLowerCase() === "visa"
-                            ? "#1A62CB"
-                            : method.brand.toLowerCase() === "mastercard"
-                            ? "#EB001B"
-                            : method.brand.toLowerCase() === "amex"
-                            ? "#b76e79"
-                            : method.brand.toLowerCase() === "discover"
-                            ? "#FF6600"
-                            : method.brand.toLowerCase() === "diners"
-                            ? "#000000"
-                            : method.brand.toLowerCase() === "jcb"
-                            ? "#C0C0C0"
-                            : "#777777",
-                        color: "white",
-                        fontSize: "11px",
-                        padding: "2px 6px",
-                        borderRadius: "4px",
-                        marginRight: "8px",
-                      }}
-                    >
-                      {method.brand.toUpperCase()}
+                  <div className="card-icon mr-3">
+                      {(() => {
+                        const IconComponent = getCardIcon(method.brand);
+                        return (
+                          <>
+                            {React.isValidElement(IconComponent) ? (
+                              IconComponent
+                            ) : (
+                              <FaCreditCard size={26} className="text-gray-800" />
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <div className="card-details">
                       <div
@@ -237,19 +239,19 @@ export default function PaymentMethodsSection({
                 </div>
               ))}
               <div
-                className="add-payment-btn mt-3 flex items-center cursor-pointer text-blue-600 "
+              className='add-payment-btn mt-3 flex items-center cursor-pointer gap-2 '
                 onClick={handleAddPaymentMethod}
               >
-                <FaCirclePlus className="mr-2 " size={24} />
+                <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
                 <span>Add payment method</span>
               </div>
             </div>
           ) : (
             <div
-              className="add-payment-btn flex items-center cursor-pointer text-blue-600 "
+              className="add-payment-btn flex items-center cursor-pointer gap-2 "
               onClick={handleAddPaymentMethod}
-            >
-              <FaCirclePlus className="mr-2" size={24} />
+              style={{color:'#0C1F3F'}}
+            > <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
               <span>Add payment method</span>
             </div>
           )}

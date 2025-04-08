@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "react-toastify/dist/ReactToastify.css";
 import "../../styles/subscription.css";
 import "../../styles/mapBox.css";
+import "mapbox-gl/dist/mapbox-gl.css";
 
 export const metadata: Metadata = {
   title: "Share Location Management",

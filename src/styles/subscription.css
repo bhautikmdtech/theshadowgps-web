@@ -171,7 +171,7 @@
 .add-payment-btn {
   display: flex;
   align-items: center;
-  color: #007bff;
+  color: #0c1f3f;
   padding: 10px;
   border-radius: 8px;
   cursor: pointer;
@@ -209,15 +209,13 @@
 
 .invoice-amount {
   flex: 1;
-  text-align: right;
+  text-align: center;
   font-weight: 500;
   color: #3d4b65;
-  padding-right: 70px;
 }
 
 .invoice-status-container {
-  width: 70px;
-  text-align: center;
+  text-align: right;
   flex: 0 0 auto;
 }
 

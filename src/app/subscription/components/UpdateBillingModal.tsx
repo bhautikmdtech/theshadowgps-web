@@ -73,14 +73,24 @@ export default function UpdateBillingModal({
       </Modal.Body>
       <Modal.Footer>
         <Button
-          variant="outline-secondary"
+          style={{
+            backgroundColor: '#E1ECFF',
+            border: 0,
+            borderRadius: '10px',
+            color: '#337CFD',
+          }}
           onClick={onClose}
           disabled={isProcessing}
         >
           Cancel
         </Button>
         <Button
-          variant="primary"
+         style={{
+          backgroundColor: '#337CFD',
+          border: 0,
+          borderRadius: '10px',
+          color: '#FFFFFF',
+        }}
           type="submit"
           form="billing-form"
           disabled={isProcessing}

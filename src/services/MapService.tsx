@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
 import MapControls from "@/app/sharelocation/components/MapControls";
 import { useTheme } from "next-themes";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiYWJoaXNoZWtiaGF0aWEwMiIsImEiOiJjbTZpZXlwd2kwOGhtMmpxMmo4cXQ1YzBvIn0.6VmLnWwyzFJ8PvgY6-3jXA";
+export const MAPBOX_LIGHT =
+  "mapbox://styles/abhishekbhatia02/cm7ektl0a006601r3ednqdyxu";
+export const MAPBOX_DARK =
+  "mapbox://styles/abhishekbhatia02/cm7el93sj00i901s7gawghy7j";
 
 interface MapComponentProps {
   initialPosition: { lng: number; lat: number };

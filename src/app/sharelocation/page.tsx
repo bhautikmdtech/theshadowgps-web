@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import ShareLocationViewer from "./components/ShareLocationViewer";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
 import axiosClient from "@/lib/axiosClient";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Location Sharing",
@@ -16,12 +16,7 @@ export default async function ShareLocationPage({
 }) {
   const shareToken = (await searchParams).token;
 
-  if (!shareToken) {
-    redirect("/");
-  }
-
   try {
-    // Fetch location data with appropriate headers
     const response = await axiosClient.get(
       `/api/common/getSharedLocation/${shareToken}`,
       {
@@ -33,7 +28,6 @@ export default async function ShareLocationPage({
         },
       }
     );
-    // Check if the response contains valid data
     if (!response.data || !response.data.data) {
       throw new Error("Invalid data received");
     }
@@ -70,7 +64,6 @@ export default async function ShareLocationPage({
       </Suspense>
     );
   } catch (error) {
-    // In case of error, render error UI instead of redirecting
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <div className="p-6 rounded-lg shadow-md max-w-md w-full text-center">
@@ -80,12 +73,12 @@ export default async function ShareLocationPage({
           <p className="text-gray-600 mb-4">
             This location share link is invalid or has expired.
           </p>
-          <a
+          <Link
             href="/"
             className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors"
           >
             Go to Home
-          </a>
+          </Link>
         </div>
       </div>
     );
