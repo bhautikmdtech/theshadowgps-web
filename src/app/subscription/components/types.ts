@@ -15,7 +15,7 @@ export interface PaymentMethod {
 
 export interface Device {
   deviceName: string;
-  deviceImage?: string;
+  deviceImage?: string | null;
 }
 
 export interface Subscription {
@@ -39,6 +39,8 @@ export interface Subscription {
   gracePeriodRemainingDays?: number;
   currentPeriodEnd: string;
   isFreeTrial: boolean;
+  nextPaymentAttempt?: string;
+  pauseResumesAt?: string;
 }
 
 export interface Plan {

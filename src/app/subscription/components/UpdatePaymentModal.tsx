@@ -1,5 +1,5 @@
-import { Modal, Button, Form, Badge, Spinner } from "react-bootstrap";
-import { FaPlus } from "react-icons/fa";
+import { Modal, Button,Badge, Spinner } from "react-bootstrap";
+import Image from 'next/image';
 import { PaymentMethod } from "./types";
 import {
   FaCreditCard,
@@ -10,6 +10,8 @@ import {
   FaCcDinersClub,
   FaCcJcb,
 } from "react-icons/fa";
+import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import React from "react";
 
 interface UpdatePaymentModalProps {
   show: boolean;
@@ -51,6 +53,18 @@ export default function UpdatePaymentModal({
     return brand.charAt(0).toUpperCase() + brand.slice(1);
   };
 
+  const getCardIcon = (brand: string): React.ReactNode => {
+    const brands: Record<string, React.ReactNode> = {
+      visa: <PaymentIcon type="Visa" format="flatRounded" width={30} />,
+      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" width={30} />,
+      amex: <PaymentIcon type="Amex" format="flatRounded" width={30} />,
+      discover: <PaymentIcon type="Discover" format="flatRounded" width={30} />,
+      diners: <PaymentIcon type="Diners" format="flatRounded" width={30} />,
+      jcb: <PaymentIcon type="Jcb" format="flatRounded" width={30} />,
+    };
+
+    return brands[brand.toLowerCase()] || <FaCreditCard />;
+  };
   return (
     <Modal
       show={show}
@@ -71,29 +85,32 @@ export default function UpdatePaymentModal({
               {paymentMethods.map((method: PaymentMethod) => (
                 <div
                   key={method.id}
-                  className={`p-3 border rounded mb-2 d-flex align-items-center ${
+                  className={`p-3  mb-3 ${
                     selectedPaymentMethodId === method.id
                       ? "border-primary bg-light"
                       : ""
                   }`}
                   onClick={() => onPaymentMethodSelect(method.id)}
-                  style={{ cursor: "pointer" }}
+                  style={{
+                    cursor: 'pointer',
+                    border: '1px solid #CFD2D9',
+                    borderRadius: '25px',
+                  }}
                 >
                   <div className="d-flex align-items-center flex-grow-1">
                     <div className="me-3">
-                      {(() => {
-                        const IconComponent = getCardIcon(method.brand);
-                        return (
-                          <IconComponent
-                            size={20}
-                            className={
-                              selectedPaymentMethodId === method.id
-                                ? "text-primary"
-                                : "text-secondary"
-                            }
-                          />
-                        );
-                      })()}
+                    {(() => {
+                                const IconComponent = getCardIcon(method.brand);
+                                return (
+                                  <>
+                                    {React.isValidElement(IconComponent) ? (
+                                      IconComponent
+                                    ) : (
+                                      <FaCreditCard size={26} className="text-gray-800" />
+                                    )}
+                                  </>
+                                );
+                              })()}
                     </div>
                     <div>
                       <div
@@ -115,27 +132,26 @@ export default function UpdatePaymentModal({
                       </small>
                     </div>
                   </div>
-                  <Form.Check
-                    type="radio"
-                    name="payment-method"
-                    id={`payment-method-${method.id}`}
-                    checked={selectedPaymentMethodId === method.id}
-                    onChange={() => onPaymentMethodSelect(method.id)}
-                    className="ms-3"
-                  />
                 </div>
               ))}
             </div>
             <h6 className="mb-3">Or add a new payment method</h6>
             <div
-              className="d-flex align-items-center justify-content-center text-primary border border-dashed p-3 rounded cursor-pointer"
+              className="d-flex align-items-center justify-content-center text-primary  p-2 rounded cursor-pointer gap-2"
               onClick={() => {
                 onClose();
                 onAddNewPaymentMethod();
               }}
-              style={{ cursor: "pointer", minHeight: "60px" }}
+              style={{
+                backgroundColor: '#E1ECFF',
+                border: 0,
+                borderRadius: '10px',
+                color: '#337CFD',
+                cursor: "pointer", 
+                minHeight: "45px" 
+              }}
             >
-              <FaPlus className="me-2" />
+                <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
               <span>Add new payment method</span>
             </div>
           </>
@@ -146,14 +162,19 @@ export default function UpdatePaymentModal({
               method below.
             </div>
             <div
-              className="d-flex align-items-center justify-content-center text-primary border border-dashed p-3 rounded cursor-pointer"
+              className="d-flex align-items-center justify-content-center text-primary  p-2 rounded cursor-pointer gap-2"
               onClick={() => {
                 onClose();
                 onAddNewPaymentMethod();
               }}
-              style={{ cursor: "pointer", minHeight: "60px" }}
+              style={{  backgroundColor: '#E1ECFF',
+                border: 0,
+                borderRadius: '10px',
+                color: '#337CFD',
+                cursor: "pointer", 
+                minHeight: "45px"  }}
             >
-              <FaPlus className="me-2" />
+              <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
               <span>Add payment method</span>
             </div>
           </>
@@ -161,14 +182,24 @@ export default function UpdatePaymentModal({
       </Modal.Body>
       <Modal.Footer>
         <Button
-          variant="outline-secondary"
+           style={{
+            backgroundColor: '#E1ECFF',
+            border: 0,
+            borderRadius: '10px',
+            color: '#337CFD',
+          }}
           onClick={onClose}
           disabled={isProcessing}
         >
           Cancel
         </Button>
         <Button
-          variant="primary"
+          style={{
+            backgroundColor: '#337CFD',
+            border: 0,
+            borderRadius: '10px',
+            color: '#FFFFFF',
+          }}
           onClick={onConfirm}
           disabled={isProcessing || !selectedPaymentMethodId}
         >

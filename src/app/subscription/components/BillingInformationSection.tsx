@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Accordion, Button } from "react-bootstrap";
-import { FaPen } from "react-icons/fa";
+import Image from "next/image";
 import UpdateBillingModal from "./UpdateBillingModal";
 import { SubscriptionService } from "./subscriptionService";
 
@@ -81,7 +81,7 @@ export default function BillingInformationSection({
                 backgroundColor: "#FFFFFF",
               }}
             >
-              <div className="mb-3" style={{ display: "flex", gap: "31px" }}>
+              <div className="flex gap-5 mb-2">
                 <div
                   className="text-muted small"
                   style={{
@@ -97,7 +97,7 @@ export default function BillingInformationSection({
                   {customer.name || "Not available"}
                 </div>
               </div>
-              <div className="mb-3" style={{ display: "flex", gap: "31px" }}>
+              <div className="flex gap-5">
                 <div
                   className="text-muted small"
                   style={{
@@ -122,9 +122,10 @@ export default function BillingInformationSection({
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
+                  gap: "10px",
                 }}
               >
-                <FaPen className="me-2" style={{ color: "#3D4B65" }} />
+                <Image src="/pencil.svg" alt="Edit" width={24} height={24} />
                 <span
                   style={{
                     color: "#0C1F3F",

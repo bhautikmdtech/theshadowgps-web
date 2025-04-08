@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { Accordion, Badge, Button } from "react-bootstrap";
-import { FaCube, FaExclamationTriangle } from "react-icons/fa";
-import { MdEdit } from "react-icons/md";
-import Image from "next/image";
-import { SubscriptionService } from "./subscriptionService";
-import UpdatePaymentModal from "./UpdatePaymentModal";
-import UpdatePlanModal from "./UpdatePlanModal";
-import { PaymentMethod, Plan, Subscription } from "./types";
-import { PageLoader } from "@/components";
+import React, { useState } from 'react';
+import { Accordion, Badge, Button } from 'react-bootstrap';
+import { FaCreditCard, FaCube, FaExclamationTriangle } from 'react-icons/fa';
+import { MdEdit } from 'react-icons/md';
+import Image from 'next/image';
+import { SubscriptionService } from './subscriptionService';
+import UpdatePaymentModal from './UpdatePaymentModal';
+import UpdatePlanModal from './UpdatePlanModal';
+import { PaymentMethod, Plan, Subscription } from './types';
+import { PageLoader } from '@/components';
+import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
 
 interface SubscriptionsSectionProps {
   subscriptions: Subscription[];
@@ -38,11 +39,26 @@ export default function SubscriptionsSection({
   >(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  const getCardIcon = (brand: string): React.ReactNode => {
+    const brands: Record<string, React.ReactNode> = {
+      visa: <PaymentIcon type='Visa' format='flatRounded' width={30} />,
+      mastercard: (
+        <PaymentIcon type='Mastercard' format='flatRounded' width={30} />
+      ),
+      amex: <PaymentIcon type='Amex' format='flatRounded' width={30} />,
+      discover: <PaymentIcon type='Discover' format='flatRounded' width={30} />,
+      diners: <PaymentIcon type='Diners' format='flatRounded' width={30} />,
+      jcb: <PaymentIcon type='Jcb' format='flatRounded' width={30} />,
+    };
+
+    return brands[brand.toLowerCase()] || <FaCreditCard />;
+  };
+
   const confirmCancelSubscription = async (subscriptionId: string) => {
     if (!subscriptionId) return;
 
     const confirm = window.confirm(
-      "Are you sure you want to Cancel this subscription?"
+      'Are you sure you want to Cancel this subscription?'
     );
 
     if (!confirm) return;
@@ -52,7 +68,7 @@ export default function SubscriptionsSection({
       await SubscriptionService.cancelSubscription(token, subscriptionId);
       await onRefresh();
     } catch (error) {
-      console.error("Failed to cancel subscription:", error);
+      console.error('Failed to cancel subscription:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -62,7 +78,7 @@ export default function SubscriptionsSection({
     if (!subscriptionId) return;
 
     const confirm = window.confirm(
-      "Are you sure you want to renew this subscription?"
+      'Are you sure you want to renew this subscription?'
     );
     if (!confirm) return;
 
@@ -71,7 +87,7 @@ export default function SubscriptionsSection({
       await SubscriptionService.reactivateSubscription(token, subscriptionId);
       await onRefresh();
     } catch (error) {
-      console.error("Failed to reactivate subscription:", error);
+      console.error('Failed to reactivate subscription:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -100,7 +116,7 @@ export default function SubscriptionsSection({
       await onRefresh();
       setShowUpdatePlanModal(false);
     } catch (error) {
-      console.error("Failed to update plan:", error);
+      console.error('Failed to update plan:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -128,7 +144,7 @@ export default function SubscriptionsSection({
       await onRefresh();
       setShowUpdatePaymentModal(false);
     } catch (error) {
-      console.error("Failed to update payment method:", error);
+      console.error('Failed to update payment method:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -146,28 +162,28 @@ export default function SubscriptionsSection({
     if (subscription.isInGracePeriod) {
       const remainingDays = subscription.gracePeriodRemainingDays || 0;
       const formattedGraceEndDate = subscription.graceEndDate
-        ? new Date(subscription.graceEndDate).toLocaleDateString("en-US", {
-            month: "numeric",
-            day: "numeric",
-            year: "numeric",
+        ? new Date(subscription.graceEndDate).toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
           })
-        : "";
+        : '';
 
-      let nextPaymentAttemptMessage = "";
+      let nextPaymentAttemptMessage = '';
       if (subscription.nextPaymentAttempt) {
         const nextAttemptDate = new Date(subscription.nextPaymentAttempt);
         const formattedNextAttempt = nextAttemptDate.toLocaleDateString(
-          "en-US",
+          'en-US',
           {
-            month: "numeric",
-            day: "numeric",
-            year: "numeric",
+            month: 'numeric',
+            day: 'numeric',
+            year: 'numeric',
           }
         );
         nextPaymentAttemptMessage = ` We'll attempt to charge your payment method again on ${formattedNextAttempt}.`;
       }
 
-      let gracePeriodMessage = "";
+      let gracePeriodMessage = '';
       if (remainingDays <= 0) {
         gracePeriodMessage = `Your grace period has expired. Please update your payment method to restore service.`;
       } else if (remainingDays === 1) {
@@ -187,30 +203,30 @@ export default function SubscriptionsSection({
 
   const activeSubscriptions = processedSubscriptions.filter(
     (sub) =>
-      sub.status === "active" ||
-      sub.status === "trialing" ||
-      sub.status === "past_due" ||
+      sub.status === 'active' ||
+      sub.status === 'trialing' ||
+      sub.status === 'past_due' ||
       sub.isInGracePeriod ||
-      (sub.status === "active" && sub.isCollectionPaused)
+      (sub.status === 'active' && sub.isCollectionPaused)
   );
 
   const inactiveSubscriptions = processedSubscriptions.filter(
     (sub) =>
-      sub.status !== "active" &&
-      sub.status !== "trialing" &&
-      sub.status !== "past_due" &&
+      sub.status !== 'active' &&
+      sub.status !== 'trialing' &&
+      sub.status !== 'past_due' &&
       !sub.isInGracePeriod &&
-      !(sub.status === "active" && sub.isCollectionPaused)
+      !(sub.status === 'active' && sub.isCollectionPaused)
   );
 
   const getStatusBadge = (subscription: any) => {
-    if (subscription.status === "trialing") {
+    if (subscription.status === 'trialing') {
       return (
         <>
-          <Badge bg="success" className="ms-md-2">
+          <Badge bg='success' className='ms-md-2'>
             Active
-          </Badge>{" "}
-          <Badge bg="warning" text="dark" className="ms-md-2">
+          </Badge>{' '}
+          <Badge bg='warning' text='dark' className='ms-md-2'>
             Free Trial (ends {formatDate(subscription.trialEndDate)})
           </Badge>
         </>
@@ -220,10 +236,10 @@ export default function SubscriptionsSection({
     if (subscription.isInGracePeriod) {
       return (
         <>
-          <Badge bg="danger" className="ms-md-2">
+          <Badge bg='danger' className='ms-md-2'>
             Payment Failed
           </Badge>
-          <Badge bg="danger" className="ms-md-2">
+          <Badge bg='danger' className='ms-md-2'>
             Grace Period
             {subscription.graceEndDate &&
               ` (until ${subscription.graceEndDate})`}
@@ -233,11 +249,11 @@ export default function SubscriptionsSection({
     }
 
     if (
-      subscription.status === "past_due" ||
-      subscription.paymentStatus === "failed"
+      subscription.status === 'past_due' ||
+      subscription.paymentStatus === 'failed'
     ) {
       return (
-        <Badge bg="danger" className="ms-md-2">
+        <Badge bg='danger' className='ms-md-2'>
           Payment Failed
         </Badge>
       );
@@ -245,7 +261,7 @@ export default function SubscriptionsSection({
 
     if (subscription.isCollectionPaused) {
       return (
-        <Badge bg="danger" className="ms-md-2">
+        <Badge bg='danger' className='ms-md-2'>
           Payment Paused
           {subscription.resumeAt && ` (until ${subscription.resumeAt})`}
         </Badge>
@@ -255,34 +271,34 @@ export default function SubscriptionsSection({
     if (subscription.isCancelled) {
       return (
         <>
-          <Badge bg="success" className="ms-md-2">
+          <Badge bg='success' className='ms-md-2'>
             Active
-          </Badge>{" "}
-          <Badge bg="danger" className="ms-md-2">
-            Cancel on {formatDate(subscription.cancelAt || "")}
+          </Badge>{' '}
+          <Badge bg='danger' className='ms-md-2'>
+            Cancel on {formatDate(subscription.cancelAt || '')}
           </Badge>
         </>
       );
     }
 
-    if (subscription.status === "active") {
+    if (subscription.status === 'active') {
       return (
-        <Badge bg="success" className="ms-md-2">
+        <Badge bg='success' className='ms-md-2'>
           Active
         </Badge>
       );
     }
 
-    if (subscription.status === "canceled") {
+    if (subscription.status === 'canceled') {
       return (
-        <Badge bg="secondary" className="ms-md-2">
+        <Badge bg='secondary' className='ms-md-2'>
           Canceled
         </Badge>
       );
     }
 
     return (
-      <Badge bg="secondary" className="ms-md-2">
+      <Badge bg='secondary' className='ms-md-2'>
         {subscription.status.charAt(0).toUpperCase() +
           subscription.status.slice(1)}
       </Badge>
@@ -290,36 +306,36 @@ export default function SubscriptionsSection({
   };
 
   const formatInterval = (interval: string, intervalCount: number = 1) => {
-    let formattedInterval = "Monthly";
+    let formattedInterval = 'Monthly';
 
-    if (interval?.toLowerCase() === "month") {
+    if (interval?.toLowerCase() === 'month') {
       formattedInterval =
         intervalCount === 1
-          ? "Monthly"
+          ? 'Monthly'
           : intervalCount === 3
-          ? "Quarterly"
+          ? 'Quarterly'
           : `Every ${intervalCount} months`;
-    } else if (interval?.toLowerCase() === "year") {
+    } else if (interval?.toLowerCase() === 'year') {
       formattedInterval =
-        intervalCount === 1 ? "Annual" : `Every ${intervalCount} years`;
-    } else if (interval?.toLowerCase() === "day") {
+        intervalCount === 1 ? 'Annual' : `Every ${intervalCount} years`;
+    } else if (interval?.toLowerCase() === 'day') {
       formattedInterval =
         intervalCount === 1
-          ? "Daily"
+          ? 'Daily'
           : intervalCount === 7
-          ? "Weekly"
+          ? 'Weekly'
           : intervalCount === 14
-          ? "Bi-weekly"
+          ? 'Bi-weekly'
           : `Every ${intervalCount} days`;
-    } else if (interval?.toLowerCase() === "week") {
+    } else if (interval?.toLowerCase() === 'week') {
       formattedInterval =
         intervalCount === 1
-          ? "Weekly"
+          ? 'Weekly'
           : intervalCount === 2
-          ? "Bi-weekly"
+          ? 'Bi-weekly'
           : `Every ${intervalCount} weeks`;
     } else {
-      formattedInterval = `Every ${intervalCount} ${interval || "period"}(s)`;
+      formattedInterval = `Every ${intervalCount} ${interval || 'period'}(s)`;
     }
 
     return formattedInterval;
@@ -327,20 +343,20 @@ export default function SubscriptionsSection({
 
   const formatDate = (date: string) => {
     try {
-      if (!date) return "N/A";
+      if (!date) return 'N/A';
       const dateObj = new Date(date);
       if (isNaN(dateObj.getTime())) {
-        console.error("Invalid date:", date);
-        return "N/A";
+        console.error('Invalid date:', date);
+        return 'N/A';
       }
-      return dateObj.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
+      return dateObj.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       });
     } catch (error) {
-      console.error("Error formatting date:", error, date);
-      return "N/A";
+      console.error('Error formatting date:', error, date);
+      return 'N/A';
     }
   };
 
@@ -349,23 +365,31 @@ export default function SubscriptionsSection({
       return (
         <>
           <Button
-            variant="outline-primary"
-            className="flex-grow-1"
-            style={{ borderRadius: "10px" }}
+            className='flex-grow-1'
+            style={{
+              backgroundColor: '#E1ECFF',
+              border: 0,
+              borderRadius: '10px',
+              color: '#337CFD',
+            }}
             onClick={() => confirmReactivateSubscription(subscription.id)}
           >
             {isProcessing ? (
               <>
-                <PageLoader type="spinner" size="sm" className="me-2" />
+                <PageLoader type='spinner' size='sm' className='me-2' />
               </>
             ) : (
-              "Renew Subscription"
+              'Renew Subscription'
             )}
           </Button>
           <Button
-            variant="primary"
-            style={{ borderRadius: "10px" }}
-            className="flex-grow-1"
+            style={{
+              backgroundColor: '#337CFD',
+              border: 0,
+              borderRadius: '10px',
+              color: '#FFFFFF',
+            }}
+            className='flex-grow-1'
             onClick={() => handleUpdatePlan(subscription.id)}
           >
             Update Plan
@@ -375,30 +399,38 @@ export default function SubscriptionsSection({
     }
 
     if (
-      subscription.status === "past_due" ||
+      subscription.status === 'past_due' ||
       subscription.isInGracePeriod ||
-      subscription.paymentStatus === "failed"
+      subscription.paymentStatus === 'failed'
     ) {
       return (
         <>
           <Button
-            variant="outline-primary"
-            className="flex-grow-1"
-            style={{ borderRadius: "10px" }}
+            className='flex-grow-1'
+            style={{
+              backgroundColor: '#E1ECFF',
+              border: 0,
+              borderRadius: '10px',
+              color: '#337CFD',
+            }}
             onClick={() => confirmCancelSubscription(subscription.id)}
           >
             {isProcessing ? (
               <>
-                <PageLoader type="spinner" size="sm" className="me-2" />
+                <PageLoader type='spinner' size='sm' className='me-2' />
               </>
             ) : (
-              "Cancel"
+              'Cancel'
             )}
           </Button>
           <Button
-            variant="primary"
-            style={{ borderRadius: "10px" }}
-            className="flex-grow-1"
+            style={{
+              backgroundColor: '#337CFD',
+              border: 0,
+              borderRadius: '10px',
+              color: '#FFFFFF',
+            }}
+            className='flex-grow-1'
             onClick={() => handleUpdatePayment(subscription.id)}
           >
             Update Payment Method
@@ -408,29 +440,37 @@ export default function SubscriptionsSection({
     }
 
     if (
-      subscription.status === "active" ||
-      subscription.status === "trialing"
+      subscription.status === 'active' ||
+      subscription.status === 'trialing'
     ) {
       return (
         <>
           <Button
-            variant="outline-primary"
-            className="flex-grow-1"
-            style={{ borderRadius: "10px" }}
+            style={{
+              backgroundColor: '#E1ECFF',
+              border: 0,
+              borderRadius: '10px',
+              color: '#337CFD',
+            }}
+            className='flex-grow-1'
             onClick={() => confirmCancelSubscription(subscription.id)}
           >
             {isProcessing ? (
               <>
-                <PageLoader type="spinner" size="sm" className="me-2" />
+                <PageLoader type='spinner' size='sm' className='me-2' />
               </>
             ) : (
-              "Cancel"
+              'Cancel'
             )}
           </Button>
           <Button
-            variant="primary"
-            style={{ borderRadius: "10px" }}
-            className="flex-grow-1"
+            style={{
+              backgroundColor: '#337CFD',
+              border: 0,
+              borderRadius: '10px',
+              color: '#FFFFFF',
+            }}
+            className='flex-grow-1'
             onClick={() => handleUpdatePlan(subscription.id)}
           >
             Update Plan
@@ -445,17 +485,22 @@ export default function SubscriptionsSection({
   const renderInactiveSubscriptionButtons = (subscription: Subscription) => {
     return (
       <Button
-        variant="primary"
-        className="w-100 rounded-pill"
+        style={{
+          backgroundColor: '#337CFD',
+          border: 0,
+          borderRadius: '10px',
+          color: '#FFFFFF',
+        }}
+        className='w-100 rounded-pill'
         onClick={() => confirmReactivateSubscription(subscription.id)}
         disabled={isProcessing}
       >
         {isProcessing ? (
           <>
-            <PageLoader type="spinner" size="sm" className="me-2" />
+            <PageLoader type='spinner' size='sm' className='me-2' />
           </>
         ) : (
-          "Reactivate"
+          'Reactivate'
         )}
       </Button>
     );
@@ -465,42 +510,49 @@ export default function SubscriptionsSection({
     if (!subscription.paymentMethod) return null;
 
     return (
-      <div className="d-flex align-items-center mt-1">
-        <div
-          style={{
-            backgroundColor:
-              subscription.paymentMethod.brand.toLowerCase() === "visa"
-                ? "#1A62CB"
-                : subscription.paymentMethod.brand.toLowerCase() ===
-                  "mastercard"
-                ? "#EB001B"
-                : subscription.paymentMethod.brand.toLowerCase() === "amex"
-                ? "#006FCF"
-                : subscription.paymentMethod.brand.toLowerCase() === "discover"
-                ? "#FF6600"
-                : "#777777",
-            color: "white",
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "4px",
-            marginRight: "8px",
-          }}
-        >
-          {subscription.paymentMethod.brand.toUpperCase()}
+      <div className='payment-info d-flex items-center mt-2'>
+        <div className='card-icon mr-3'>
+          {(() => {
+            const IconComponent = getCardIcon(subscription.paymentMethod.brand);
+            return (
+              <>
+                {React.isValidElement(IconComponent) ? (
+                  IconComponent
+                ) : (
+                  <FaCreditCard size={26} className='text-gray-800' />
+                )}
+              </>
+            );
+          })()}
         </div>
-        <span style={{ color: "#0C1F3F", fontSize: "14px" }}>
-          **** {subscription.paymentMethod.last4}
-        </span>
-        <a
-          href="#"
-          onClick={(e) => {
-            e.preventDefault();
-            handleUpdatePayment(subscription.id);
-          }}
-          style={{ color: "#6c757d", marginLeft: "18px" }}
-        >
-          <MdEdit size={24} />
-        </a>
+        <div className='card-details d-flex'>
+          <div
+            className='card-number'
+            style={{
+              color: '#0C1F3F',
+              fontSize: '16px',
+              fontWeight: '600',
+            }}
+          >
+            **** {subscription.paymentMethod.last4}
+          </div>
+
+          <a
+            href='#'
+            onClick={(e) => {
+              e.preventDefault();
+              handleUpdatePayment(subscription.id);
+            }}
+            style={{
+              color: '#6c757d',
+              marginLeft: '5px',
+              display: 'flex',
+              alignItems: 'flex-start',
+            }}
+          >
+            <Image src='/pencil.svg' alt='Edit' width={20} height={20} />
+          </a>
+        </div>
       </div>
     );
   };
@@ -512,79 +564,79 @@ export default function SubscriptionsSection({
     <div
       key={subscription.id}
       style={{
-        border: `1px solid ${isActive ? "#CFD2D9" : "#dee2e6"}`,
-        padding: "16px",
-        borderRadius: "16px",
-        backgroundColor: "#FFFFFF",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+        border: `1px solid ${isActive ? '#CFD2D9' : '#dee2e6'}`,
+        padding: '16px',
+        borderRadius: '16px',
+        backgroundColor: '#FFFFFF',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
       }}
     >
-      <div className="mb-3">
-        <div className="d-flex align-items-center">
+      <div className='mb-3'>
+        <div className='d-flex align-items-start'>
           <div
-            className="me-3 rounded-circle"
+            className='me-3 rounded-circle'
             style={{
-              width: isActive ? "60px" : "50px",
-              height: isActive ? "60px" : "50px",
+              width: isActive ? '60px' : '50px',
+              height: isActive ? '60px' : '50px',
               flexShrink: 0,
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              backgroundColor: isActive ? "transparent" : "#E8E8E8",
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: isActive ? 'transparent' : '#E8E8E8',
             }}
           >
             {subscription.device?.deviceImage ? (
               <Image
                 src={subscription.device.deviceImage}
-                alt="Device"
-                width={40}
-                height={40}
-                className="rounded-circle"
+                alt='Device'
+                width={60}
+                height={60}
+                className='rounded-circle'
               />
             ) : (
-              <FaCube className="text-dark" />
+              <FaCube className='text-dark' />
             )}
           </div>
           <div>
             <div
-              className="fw-bold"
-              style={{ color: "#0C1F3F", fontSize: "16px" }}
+              className='fw-bold'
+              style={{ color: '#0C1F3F', fontSize: '16px' }}
             >
-              {subscription.device?.deviceName || "My Device"}
+              {subscription.device?.deviceName || 'My Device'}
               {!isActive && subscription.device?.deviceName && (
-                <span style={{ fontWeight: "normal", color: "#666" }}>
-                  {" "}
+                <span style={{ fontWeight: 'normal', color: '#666' }}>
+                  {' '}
                   (My Accord)
                 </span>
               )}
             </div>
             <div
-              style={{ color: isActive ? "#0C1F3F" : "#666", fontSize: "14px" }}
+              style={{ color: isActive ? '#0C1F3F' : '#666', fontSize: '14px' }}
             >
               {formatInterval(
                 subscription.interval,
                 subscription.intervalCount
-              )}{" "}
+              )}{' '}
               Plan {getStatusBadge(subscription)}
             </div>
             <div
-              className="fw-medium"
+              className='fw-medium'
               style={{
-                color: "#0C1F3F",
-                fontSize: "15px",
-                marginTop: "2px",
+                color: '#0C1F3F',
+                fontSize: '15px',
+                marginTop: '2px',
               }}
             >
-              <span className="subscription-interval fw-bold">
+              <span className='subscription-interval fw-bold'>
                 ${subscription.amount}
-              </span>{" "}
-              per{" "}
+              </span>{' '}
+              per{' '}
               {formatInterval(
                 subscription.interval,
                 subscription.intervalCount
               )}
             </div>
-            <div style={{ color: "#0C1F3F", fontSize: "14px" }}>
+            <div style={{ color: '#0C1F3F', fontSize: '14px' }}>
               {subscription.isCancelled
                 ? `Available until ${formatDate(subscription.currentPeriodEnd)}`
                 : subscription.isFreeTrial
@@ -598,8 +650,8 @@ export default function SubscriptionsSection({
               )}
               {subscription.isInGracePeriod &&
                 subscription.gracePeriodMessage && (
-                  <div className="alert alert-warning mt-2 mb-0 py-2 px-3">
-                    <FaExclamationTriangle className="me-2" />
+                  <div className='alert alert-warning mt-2 mb-0 py-2 px-3'>
+                    <FaExclamationTriangle className='me-2' />
                     {subscription.gracePeriodMessage}
                   </div>
                 )}
@@ -609,7 +661,7 @@ export default function SubscriptionsSection({
         </div>
       </div>
 
-      <div className="d-flex" style={{ gap: "10px" }}>
+      <div className='d-flex' style={{ gap: '10px' }}>
         {isActive
           ? renderActiveSubscriptionButtons(subscription)
           : renderInactiveSubscriptionButtons(subscription)}
@@ -619,22 +671,22 @@ export default function SubscriptionsSection({
 
   return (
     <>
-      <Accordion defaultActiveKey="0" className="mb-3 border-0">
-        <Accordion.Item eventKey="0" className="border-0">
-          <Accordion.Header className="bg-white">
+      <Accordion defaultActiveKey='0' className='mb-3 border-0'>
+        <Accordion.Item eventKey='0' className='border-0'>
+          <Accordion.Header className='bg-white'>
             <span
-              style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
+              style={{ color: '#0C1F3F', fontSize: '20px', fontWeight: '700' }}
             >
               Subscriptions
             </span>
           </Accordion.Header>
-          <Accordion.Body className="p-0">
-            <div className="pb-2 pt-2 px-3">
+          <Accordion.Body className='p-0'>
+            <div className='pb-2 pt-2 px-3'>
               <span
                 style={{
-                  color: "#0C1F3F",
-                  fontSize: "18px",
-                  fontWeight: "600",
+                  color: '#0C1F3F',
+                  fontSize: '18px',
+                  fontWeight: '600',
                 }}
               >
                 Active Subscriptions
@@ -643,22 +695,22 @@ export default function SubscriptionsSection({
 
             {activeSubscriptions.length > 0 ? (
               activeSubscriptions.map((subscription) => (
-                <div key={subscription.id} className="p-3">
+                <div key={subscription.id} className='p-3'>
                   {renderSubscriptionCard(subscription, true)}
                 </div>
               ))
             ) : (
-              <div className="p-3 text-center text-muted">
+              <div className='p-3 text-center text-muted'>
                 No active subscriptions found.
               </div>
             )}
 
-            <div className="pb-2 pt-2 px-3">
+            <div className='pb-2 pt-2 px-3'>
               <span
                 style={{
-                  color: "#0C1F3F",
-                  fontSize: "18px",
-                  fontWeight: "600",
+                  color: '#0C1F3F',
+                  fontSize: '18px',
+                  fontWeight: '600',
                 }}
               >
                 Inactive Subscriptions
@@ -667,12 +719,12 @@ export default function SubscriptionsSection({
 
             {inactiveSubscriptions.length > 0 ? (
               inactiveSubscriptions.map((subscription) => (
-                <div key={subscription.id} className="p-3">
+                <div key={subscription.id} className='p-3'>
                   {renderSubscriptionCard(subscription, false)}
                 </div>
               ))
             ) : (
-              <div className="p-3 text-center text-muted">
+              <div className='p-3 text-center text-muted'>
                 No inactive subscriptions found.
               </div>
             )}

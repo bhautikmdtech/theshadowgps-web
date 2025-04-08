@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import MapComponent from "@/services/MapService";
-import "mapbox-gl/dist/mapbox-gl.css";
 import Image from "next/image";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 import dynamic from "next/dynamic";
 import type { GeoJSON } from "geojson";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
 
@@ -95,10 +95,10 @@ export default function LiveTracker({
       (p) => [p.lng, p.lat] as [number, number]
     );
 
-    // if (!map.isStyleLoaded()) {
-    //   map.once("style.load", () => updateRoute(positions));
-    //   return;
-    // }
+    if (!map.isStyleLoaded()) {
+      map.once("style.load", () => updateRoute(positions));
+      return;
+    }
 
     const routeGeoJSON: GeoJSON = {
       type: "Feature",
@@ -200,7 +200,7 @@ export default function LiveTracker({
   if (error) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
-        <div className="bg-white p-6 rounded-lg shadow-md text-center">
+        <div className="p-6 rounded-lg shadow-md text-center">
           <h2 className="text-xl font-bold mb-2">Tracking Error</h2>
           <p className="mb-4">{error}</p>
           <button
@@ -215,9 +215,9 @@ export default function LiveTracker({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="bg-white shadow-sm py-2 px-3 flex justify-between items-center">
+      <div className="shadow-sm py-2 px-3 flex justify-between items-center">
         <div className="hidden md:flex items-center gap-3">
           <Image
             src="/images/logoFull.svg"
@@ -231,6 +231,7 @@ export default function LiveTracker({
         </div>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {device?.imageUrl ? (
             <Image
               src={device.imageUrl}

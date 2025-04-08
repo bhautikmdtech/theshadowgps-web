@@ -112,14 +112,14 @@ export default function AddPaymentModal({
       </Modal.Body>
       <Modal.Footer>
         <Button
-          variant="outline-secondary"
+          style={{ backgroundColor: '#E1ECFF', border: 0, borderRadius: "10px", color: '#337CFD' }}
           onClick={onClose}
           disabled={processing}
         >
           Cancel
         </Button>
         <Button
-          variant="primary"
+                 style={{ backgroundColor: '#337CFD', border: 0, borderRadius: "10px", color: '#FFFFFF' }}
           type="submit"
           form="payment-form"
           disabled={!stripe || !paymentElementReady || processing}

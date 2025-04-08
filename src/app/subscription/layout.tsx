@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "react-toastify/dist/ReactToastify.css";
-import "../../styles/subscription.css"; 
+import "../../styles/subscription.css";
 import { ToastContainer } from "react-toastify";
 
 export const metadata: Metadata = {
@@ -15,7 +15,7 @@ export default function SubscriptionLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="subscription-layout"> 
+    <div className="subscription-layout">
       {/* Global Toast Container */}
       <ToastContainer
         position="top-center"

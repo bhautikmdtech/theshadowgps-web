@@ -128,11 +128,8 @@ export const SubscriptionService = {
     return response.data;
   },
   async deletePaymentMethod(token: string, paymentMethodId: string) {
-    const response = await axiosClient.put(
+    const response = await axiosClient.delete(
       `/api/app/subscription/payment-methods/${paymentMethodId}`,
-      {
-        paymentMethodId,
-      },
       {
         headers: {
           Authorization: `Bearer ${token}`,
