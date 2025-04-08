@@ -35,7 +35,7 @@ export const createDeviceMarker = ({
     container.className = "relative device-marker z-1";
     container.innerHTML = `
       <div class="absolute w-9 h-9 bg-green-500 opacity-50 rounded-full animate-ping"></div>
-      <div class="relative w-9 h-9 rounded-full bg-white border-2 border-white shadow-md flex items-center justify-center hover:scale-110 hover:shadow-lg transition-transform">
+      <div class="relative w-9 h-9 rounded-full border-2 border-white shadow-md flex items-center justify-center hover:scale-110 hover:shadow-lg transition-transform">
         ${
           device?.imageUrl
             ? `<img src="${device.imageUrl}" class="w-6 h-6 rounded-full object-cover" onerror="this.style.display='none'">`
@@ -58,7 +58,7 @@ export const createDeviceMarker = ({
       maxWidth: "250px",
       className: "custom-popup z-2",
     }).setHTML(`
-        <div class="p-3 rounded-lg shadow-lg bg-white border">
+        <div class="p-3 rounded-lg shadow-lg border">
             <div class="flex items-center space-x-2 mb-2">
                 ${
                   device?.imageUrl
@@ -153,7 +153,7 @@ export const createStartMarker = ({
       maxWidth: "250px",
       className: "custom-popup z-2",
     }).setHTML(`
-      <div class="p-3 rounded-lg shadow-lg bg-white border">
+      <div class="p-3 rounded-lg shadow-lg border">
           <div class="flex items-center space-x-2 mb-2">
               ${
                 device?.imageUrl

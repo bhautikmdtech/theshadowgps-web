@@ -48,10 +48,10 @@ const ExpiryTimer = ({ expiresAt }: { expiresAt: string }) => {
   return (
     <div className="text-xs text-gray-500 text-center m-0">
       <p className="font-semibold m-0">Expires In</p>
-      <p className="text-black font-bold text-sm m-0">
+      <p className="font-bold text-sm m-0">
         {timeLeft.hours} : {timeLeft.minutes} : {timeLeft.seconds}
       </p>
-      <p className="text-black text-sm m-0">hour : min : sec</p>
+      <p className="text-sm m-0">hour : min : sec</p>
     </div>
   );
 };

@@ -123,7 +123,7 @@ export default function SocketCheckerViewer() {
   }, [responses]);
 
   return (
-    <div className="container mx-auto p-4 max-w-6xl bg-white dark:bg-gray-800 min-h-screen text-black dark:text-white">
+    <div className="container mx-auto p-4 max-w-6xl bg-white dark:bg-gray-800 min-h-screen dark:text-white">
       <h1 className="text-3xl font-bold mb-6 text-center">Socket Checker</h1>
 
       {/* Connection Form */}
@@ -143,7 +143,7 @@ export default function SocketCheckerViewer() {
             id="socketUrl"
             value={socketUrl}
             onChange={(e) => setSocketUrl(e.target.value)}
-            className="w-full p-3 border rounded text-black dark:text-white bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
+            className="w-full p-3 border rounded bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
             placeholder="e.g. http://localhost:5000"
             required
           />
@@ -158,7 +158,7 @@ export default function SocketCheckerViewer() {
             id="token"
             value={token}
             onChange={(e) => setToken(e.target.value)}
-            className="w-full p-3 border rounded text-black dark:text-white bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
+            className="w-full p-3 border rounded bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
             placeholder="Your authentication token"
           />
         </div>
@@ -200,7 +200,7 @@ export default function SocketCheckerViewer() {
             id="selectedEvent"
             value={selectedEvent}
             onChange={(e) => setSelectedEvent(e.target.value)}
-            className="w-full p-3 border rounded text-black dark:text-white bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
+            className="w-full p-3 border rounded bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
             disabled={!isConnected}
             required
           >
@@ -223,7 +223,7 @@ export default function SocketCheckerViewer() {
               id="requestIdent"
               value={requestIdent}
               onChange={(e) => setRequestIdent(e.target.value)}
-              className="w-full p-3 border rounded text-black dark:text-white bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
+              className="w-full p-3 border rounded bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
               placeholder="e.g. 123456"
               disabled={!isConnected}
               required

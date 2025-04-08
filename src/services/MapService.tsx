@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import MapControls from "@/app/sharelocation/components/MapControls";
+import { useTheme } from "next-themes";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiYWJoaXNoZWtiaGF0aWEwMiIsImEiOiJjbTZpZXlwd2kwOGhtMmpxMmo4cXQ1YzBvIn0.6VmLnWwyzFJ8PvgY6-3jXA";
@@ -22,13 +23,16 @@ export default function MapComponent({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [mapReady, setMapReady] = useState(false);
+  const { theme, systemTheme } = useTheme();
+  const currentTheme = theme === "system" ? systemTheme : theme;
 
+  // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/streets-v11",
+      style: getMapStyle(currentTheme),
       center: [initialPosition.lng, initialPosition.lat],
       zoom: 14,
       minZoom: 1,
@@ -51,6 +55,19 @@ export default function MapComponent({
       setMapReady(false);
     };
   }, []);
+
+  // Update map style when theme changes
+  useEffect(() => {
+    if (mapRef.current && currentTheme) {
+      mapRef.current.setStyle(getMapStyle(currentTheme));
+    }
+  }, [currentTheme]);
+
+  const getMapStyle = (theme: string | undefined) => {
+    return theme === "dark"
+      ? "mapbox://styles/mapbox/dark-v11"
+      : "mapbox://styles/mapbox/light-v11";
+  };
 
   return (
     <div className="relative w-full h-full">
