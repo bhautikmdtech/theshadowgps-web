@@ -23,7 +23,7 @@ export interface Subscription {
   status: string;
   amount: string;
   interval: string;
-  intervalCount?: number;
+  interval_count?: number;
   renewalDate: string;
   cancelAt?: string;
   isCancelled?: boolean;
