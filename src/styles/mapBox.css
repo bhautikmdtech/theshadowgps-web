@@ -7,12 +7,7 @@
   padding: 0 !important;
 }
 
-.mapboxgl-ctrl-group {
-  box-shadow: none !important;
-  background-color: transparent !important;
-}
-
-.mapboxgl-ctrl-group .map-control-btn {
+.map-control-btn {
   width: 48px !important;
   height: 48px !important;
   display: flex !important;
@@ -24,15 +19,11 @@
   transition: all 0.2s ease-in-out !important;
   padding: 0 !important;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-}
-
-.mapboxgl-ctrl-group .dropdown-button {
-  width: 65px !important;
-  height: 65px !important;
+  padding: 8px !important;
 }
 
 /* Hover effect */
-.mapboxgl-ctrl-group .map-control-btn:hover {
+.map-control-btn:hover {
   transform: scale(1.05);
 }
 
@@ -97,12 +88,10 @@
   }
 }
 
-/* Enhance map controls */
-.mapboxgl-ctrl-logo {
+/* .mapboxgl-ctrl-logo {
   margin: 0 !important;
 }
 
-/* Ensure map container fills available space */
 .map-container {
   position: absolute;
   top: 0;
@@ -111,7 +100,6 @@
   right: 0;
 }
 
-/* Custom popup styles */
 .mapboxgl-popup-content {
   padding: 10px;
   border-radius: 8px;
@@ -127,7 +115,6 @@
   border-top-color: white;
 }
 
-/* Pulsing location dot */
 .pulsing-dot {
   width: 20px;
   height: 20px;
@@ -146,4 +133,4 @@
   border-radius: 50%;
   background: rgba(255, 0, 0, 0.3);
   animation: pulse 1.5s ease-in-out infinite;
-}
+} */

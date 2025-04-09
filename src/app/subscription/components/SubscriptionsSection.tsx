@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Accordion, Badge, Button } from "react-bootstrap";
 import { FaCreditCard, FaCube, FaExclamationTriangle } from "react-icons/fa";
-import { MdEdit } from "react-icons/md";
 import Image from "next/image";
 import { SubscriptionService } from "./subscriptionService";
 import UpdatePaymentModal from "./UpdatePaymentModal";
@@ -189,10 +188,8 @@ export default function SubscriptionsSection({
       let gracePeriodMessage = "";
       if (remainingDays <= 0) {
         gracePeriodMessage = `Your grace period has expired. Please update your payment method to restore service.`;
-      } else if (remainingDays === 1) {
-        gracePeriodMessage = `Your latest payment has failed. Your service will be interrupted in 1 day if no action is taken. Please update your payment method before ${formattedGraceEndDate} to continue your subscription.${nextPaymentAttemptMessage}`;
       } else {
-        gracePeriodMessage = `Your latest payment has failed. Update your payment method to continue this subscription. You have ${remainingDays} days remaining until service interruption on ${formattedGraceEndDate}.${nextPaymentAttemptMessage}`;
+        gracePeriodMessage = `Your card on file was declined. To continue receiving alerts and services, please update your payment method. If not updated, your subscription will end on ${formattedGraceEndDate}`;
       }
 
       transformedSubscription.isInGracePeriod = true;
@@ -205,21 +202,17 @@ export default function SubscriptionsSection({
   });
 
   const activeSubscriptions = processedSubscriptions.filter(
-    (sub) =>
-      sub.status === "active" ||
-      sub.status === "trialing" ||
-      sub.status === "past_due" ||
-      sub.isInGracePeriod ||
-      (sub.status === "active" && sub.isCollectionPaused)
+    (sub) => sub.status === "active" || sub.status === "trialing"
   );
 
   const inactiveSubscriptions = processedSubscriptions.filter(
     (sub) =>
-      sub.status !== "active" &&
-      sub.status !== "trialing" &&
-      sub.status !== "past_due" &&
-      !sub.isInGracePeriod &&
-      !(sub.status === "active" && sub.isCollectionPaused)
+      sub.status === "canceled" ||
+      sub.status === "incomplete" ||
+      sub.status === "incomplete_expired" ||
+      sub.status === "paused" ||
+      sub.status === "unpaid" ||
+      sub.status === "past_due"
   );
 
   const getStatusBadge = (subscription: any) => {
@@ -363,7 +356,10 @@ export default function SubscriptionsSection({
     }
   };
 
-  const renderActiveSubscriptionButtons = (subscription: Subscription) => {
+  const renderActiveSubscriptionButtons = (
+    subscription: Subscription,
+    isActive: boolean
+  ) => {
     if (subscription.isCancelled) {
       return (
         <>
@@ -436,7 +432,7 @@ export default function SubscriptionsSection({
             className="flex-grow-1"
             onClick={() => handleUpdatePayment(subscription.id)}
           >
-            Update Payment Method
+            Reactivate Subscription
           </Button>
         </>
       );
@@ -483,30 +479,6 @@ export default function SubscriptionsSection({
     }
 
     return null;
-  };
-
-  const renderInactiveSubscriptionButtons = (subscription: Subscription) => {
-    return (
-      <Button
-        style={{
-          backgroundColor: "#337CFD",
-          border: 0,
-          borderRadius: "10px",
-          color: "#FFFFFF",
-        }}
-        className="w-100 rounded-pill"
-        onClick={() => confirmReactivateSubscription(subscription.id)}
-        disabled={isProcessing}
-      >
-        {processingSubscriptionId === subscription.id ? (
-          <>
-            <PageLoader type="spinner" size="sm" className="me-2" />
-          </>
-        ) : (
-          "Reactivate"
-        )}
-      </Button>
-    );
   };
 
   const renderPaymentMethod = (subscription: Subscription) => {
@@ -659,15 +631,13 @@ export default function SubscriptionsSection({
                   </div>
                 )}
             </div>
-            {isActive && renderPaymentMethod(subscription)}
+            {renderPaymentMethod(subscription)}
           </div>
         </div>
       </div>
 
       <div className="d-flex" style={{ gap: "10px" }}>
-        {isActive
-          ? renderActiveSubscriptionButtons(subscription)
-          : renderInactiveSubscriptionButtons(subscription)}
+        {renderActiveSubscriptionButtons(subscription, isActive)}
       </div>
     </div>
   );

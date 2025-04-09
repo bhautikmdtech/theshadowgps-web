@@ -15,13 +15,11 @@ export const MAPBOX_DARK =
 interface MapComponentProps {
   initialPosition: { lng: number; lat: number };
   onMapLoad?: (map: mapboxgl.Map) => void;
-  onPositionChange?: (position: { lng: number; lat: number }) => void;
 }
 
 export default function MapComponent({
   initialPosition,
   onMapLoad,
-  onPositionChange,
 }: MapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);

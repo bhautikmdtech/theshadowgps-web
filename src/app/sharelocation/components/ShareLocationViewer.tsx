@@ -8,6 +8,7 @@ import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 import dynamic from "next/dynamic";
 import type { GeoJSON } from "geojson";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "next-themes";
 
 const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
 
@@ -33,6 +34,9 @@ export default function LiveTracker({
   shareToken: string;
   initialData: any;
 }) {
+  const { theme, systemTheme } = useTheme();
+  const currentTheme = theme === "system" ? systemTheme : theme;
+
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -225,9 +229,26 @@ export default function LiveTracker({
             width={180}
             height={50}
           />
-          <span className="text-sm text-blue-500 font-medium cursor-pointer">
-            Get your tracker now
-          </span>
+
+          {/* Divider with custom color */}
+          <div
+            className="h-8  mx-2"
+            style={{ backgroundColor: "#337CFD", width: "2px" }}
+          ></div>
+          <div className="flex items-center gap-2">
+            <Image
+              src="/images/map/shopicon.svg"
+              alt="ShadowGPS Logo"
+              width={40}
+              height={40}
+            />
+            <span
+              className="text-sm font-medium cursor-pointer"
+              style={{ color: currentTheme === "dark" ? "#60A5FA" : "#3B82F6" }}
+            >
+              Get your tracker now
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -247,7 +268,10 @@ export default function LiveTracker({
           )}
 
           <div>
-            <h6 className="font-medium m-0">
+            <h6
+              className="font-medium m-0"
+              style={{ color: currentTheme === "dark" ? "#E5E7EB" : "#0C1F3F" }}
+            >
               {device?.deviceName || "My Tracker"}
             </h6>
           </div>
@@ -266,7 +290,6 @@ export default function LiveTracker({
               lat: positions[positions.length - 1].lat,
             }}
             onMapLoad={handleMapLoad}
-            onPositionChange={() => {}}
           />
         ) : (
           <div className="h-full bg-gray-100 flex flex-col">

@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import { FaLayerGroup, FaMapMarkerAlt, FaCarSide } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
+import Image from "next/image";
 
 export const MAPBOX_LIGHT =
   "mapbox://styles/abhishekbhatia02/cm7ektl0a006601r3ednqdyxu";
@@ -12,7 +12,7 @@ export const MAPBOX_DARK =
   "mapbox://styles/abhishekbhatia02/cm7el93sj00i901s7gawghy7j";
 
 interface MapControlsProps {
-  map: mapboxgl.Map | null;
+  map: mapboxgl.Map;
   deviceLocation?: { lng: number; lat: number };
 }
 
@@ -21,6 +21,8 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   const [mapStyle, setMapStyle] = useState("streets-v11");
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
   const { theme, systemTheme } = useTheme();
   const currentTheme = theme === "system" ? systemTheme : theme;
 
@@ -172,14 +174,22 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     }
   }, [currentTheme]);
 
-  // ... rest of your existing functions remain the same ...
-
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   return (
-    <div
-      className={`relative mapboxgl-ctrl mapboxgl-ctrl-group flex flex-col gap-2 rounded-lg shadow-lg`}
-    >
+    <div className={`relative flex flex-col gap-2`}>
       {/* Map Type Button */}
-      <>
+      <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}
           className={`map-control-btn bg-white dark:bg-gray-700 ${
@@ -190,7 +200,13 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
           aria-label="Change map style"
           aria-expanded={isDropdownOpen}
         >
-          <FaLayerGroup size={18} />
+          <Image
+            src={"/images/map/layer.svg"}
+            alt={"label"}
+            width={10}
+            height={10}
+            className="rounded-lg object-cover w-full"
+          />
         </button>
 
         {/* Dropdown Menu */}
@@ -206,31 +222,30 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
               <button
                 key={id}
                 onClick={() => changeMapStyle(type)}
-                className={`dropdown-button`}
+                className={`dropdown-button w-20 h-14 rounded-lg ${
+                  mapStyle === type
+                    ? "border-4 border-gray-500"
+                    : "border border-transparent"
+                }`}
                 aria-label={`Switch to ${label} map`}
               >
-                <img
+                <Image
                   src={img}
                   alt={label}
+                  width={100}
+                  height={100}
                   className="rounded-lg object-cover w-full"
                 />
-                {/* <span
-                  className={`text-sm mt-1 ${
-                    currentTheme === "dark" ? "text-white" : "text-gray-800"
-                  }`}
-                >
-                  {label}
-                </span> */}
               </button>
             ))}
           </div>
         )}
-      </>
+      </div>
 
       {/* Move to Device Location */}
       <button
         onClick={handleDeviceLocationClick}
-        className={`map-control-btn ${
+        className={`map-control-btn p-8 ${
           currentTheme === "dark"
             ? "bg-gray-700 hover:bg-gray-600 text-white"
             : "bg-gray-100 hover:bg-gray-200 text-gray-800"
@@ -238,7 +253,13 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
         title="Move to Device Location"
         aria-label="Move to device location"
       >
-        <FaCarSide size={18} />
+        <Image
+          src={"/images/map/car.svg"}
+          alt={"label"}
+          width={10}
+          height={10}
+          className="rounded-lg object-cover w-full"
+        />
       </button>
 
       {/* Move to User Location */}
@@ -252,7 +273,13 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
         title="Move to My Location"
         aria-label="Move to my location"
       >
-        <FaMapMarkerAlt size={18} />
+        <Image
+          src={"/images/map/car-mobile-location.svg"}
+          alt={"label"}
+          width={10}
+          height={10}
+          className="rounded-lg object-cover w-full"
+        />
       </button>
     </div>
   );

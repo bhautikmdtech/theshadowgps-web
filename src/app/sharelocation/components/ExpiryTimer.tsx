@@ -1,8 +1,11 @@
 "use client"; // Ensure this runs only on the client
 
 import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 
 const ExpiryTimer = ({ expiresAt }: { expiresAt: string }) => {
+  const { theme, systemTheme } = useTheme();
+  const currentTheme = theme === "system" ? systemTheme : theme;
   
   const [timeLeft, setTimeLeft] = useState<{
     hours: string;
@@ -46,12 +49,12 @@ const ExpiryTimer = ({ expiresAt }: { expiresAt: string }) => {
   if (!timeLeft) return null; // Prevents SSR mismatch
 
   return (
-    <div className="text-xs text-gray-500 text-center m-0">
-      <p className="font-semibold m-0">Expires In</p>
-      <p className="font-bold text-sm m-0">
+    <div className="text-xs text-center m-0">
+      <p className="m-0" style={{color: currentTheme === "dark" ? "#9CA3AF" : "#3D4B65"}}>Expires In</p>
+      <p className="font-bold text-sm m-0" style={{color: currentTheme === "dark" ? "#E5E7EB" : "#0C1F3F"}}>
         {timeLeft.hours} : {timeLeft.minutes} : {timeLeft.seconds}
       </p>
-      <p className="text-sm m-0">hour : min : sec</p>
+      <p className="text-sm m-0" style={{color: currentTheme === "dark" ? "#9CA3AF" : "#3D4B65"}}>hour : min : sec</p>
     </div>
   );
 };
