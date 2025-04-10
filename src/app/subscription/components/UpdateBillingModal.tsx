@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Modal, Button, Form, Spinner } from 'react-bootstrap';
+import { useState, useEffect } from "react";
+import { Modal, Button, Form, Spinner } from "react-bootstrap";
 
 interface UpdateBillingModalProps {
   show: boolean;
   onClose: () => void;
-  onConfirm: (data: { name: string, email: string }) => Promise<void>;
+  onConfirm: (data: { name: string; email: string }) => Promise<void>;
   isProcessing: boolean;
   initialData: {
     name: string;
@@ -17,7 +17,7 @@ export default function UpdateBillingModal({
   onClose,
   onConfirm,
   isProcessing,
-  initialData
+  initialData,
 }: UpdateBillingModalProps) {
   const [formData, setFormData] = useState(initialData);
 
@@ -28,9 +28,9 @@ export default function UpdateBillingModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -40,12 +40,7 @@ export default function UpdateBillingModal({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={onClose}
-      backdrop="static"
-      keyboard={false}
-    >
+    <Modal show={show} onHide={onClose} backdrop="static" keyboard={false}>
       <Modal.Header closeButton>
         <Modal.Title>Update Customer Information</Modal.Title>
       </Modal.Header>
@@ -74,10 +69,10 @@ export default function UpdateBillingModal({
       <Modal.Footer>
         <Button
           style={{
-            backgroundColor: '#E1ECFF',
+            backgroundColor: "#E1ECFF",
             border: 0,
-            borderRadius: '10px',
-            color: '#337CFD',
+            borderRadius: "10px",
+            color: "#337CFD",
           }}
           onClick={onClose}
           disabled={isProcessing}
@@ -85,12 +80,12 @@ export default function UpdateBillingModal({
           Cancel
         </Button>
         <Button
-         style={{
-          backgroundColor: '#337CFD',
-          border: 0,
-          borderRadius: '10px',
-          color: '#FFFFFF',
-        }}
+          style={{
+            backgroundColor: "#337CFD",
+            border: 0,
+            borderRadius: "10px",
+            color: "#FFFFFF",
+          }}
           type="submit"
           form="billing-form"
           disabled={isProcessing}
@@ -114,4 +109,4 @@ export default function UpdateBillingModal({
       </Modal.Footer>
     </Modal>
   );
-} 
+}

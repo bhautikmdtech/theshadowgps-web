@@ -3,8 +3,8 @@ import { Accordion } from "react-bootstrap";
 import { FaCheck, FaTrash, FaEllipsisV, FaCreditCard } from "react-icons/fa";
 import { SubscriptionService } from "./subscriptionService";
 import { toast } from "react-toastify";
-import Image from 'next/image';
-import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
+import Image from "next/image";
+import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 
 interface PaymentMethod {
   id: string;
@@ -42,7 +42,9 @@ export default function PaymentMethodsSection({
   const getCardIcon = (brand: string): React.ReactNode => {
     const brands: Record<string, React.ReactNode> = {
       visa: <PaymentIcon type="Visa" format="flatRounded" width={30} />,
-      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" width={30} />,
+      mastercard: (
+        <PaymentIcon type="Mastercard" format="flatRounded" width={30} />
+      ),
       amex: <PaymentIcon type="Amex" format="flatRounded" width={30} />,
       discover: <PaymentIcon type="Discover" format="flatRounded" width={30} />,
       diners: <PaymentIcon type="Diners" format="flatRounded" width={30} />,
@@ -129,8 +131,8 @@ export default function PaymentMethodsSection({
 
   return (
     <Accordion defaultActiveKey="0" className="mb-3 border-0">
-           <Accordion.Item eventKey='0' className='border-0'>
-           <Accordion.Header className='bg-white'>
+      <Accordion.Item eventKey="0" className="border-0">
+        <Accordion.Header className="bg-white">
           <span
             style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
           >
@@ -147,7 +149,7 @@ export default function PaymentMethodsSection({
                   className="payment-method flex justify-between items-center py-2 border-b"
                 >
                   <div className="payment-info flex items-center">
-                  <div className="card-icon mr-3">
+                    <div className="card-icon mr-3">
                       {(() => {
                         const IconComponent = getCardIcon(method.brand);
                         return (
@@ -155,7 +157,10 @@ export default function PaymentMethodsSection({
                             {React.isValidElement(IconComponent) ? (
                               IconComponent
                             ) : (
-                              <FaCreditCard size={26} className="text-gray-800" />
+                              <FaCreditCard
+                                size={26}
+                                className="text-gray-800"
+                              />
                             )}
                           </>
                         );
@@ -239,10 +244,15 @@ export default function PaymentMethodsSection({
                 </div>
               ))}
               <div
-              className='add-payment-btn mt-3 flex items-center cursor-pointer gap-2 '
+                className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2 "
                 onClick={handleAddPaymentMethod}
               >
-                <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
+                <Image
+                  src="/add-circle.svg"
+                  alt="Edit"
+                  width={24}
+                  height={24}
+                />
                 <span>Add payment method</span>
               </div>
             </div>
@@ -250,8 +260,10 @@ export default function PaymentMethodsSection({
             <div
               className="add-payment-btn flex items-center cursor-pointer gap-2 "
               onClick={handleAddPaymentMethod}
-              style={{color:'#0C1F3F'}}
-            > <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
+              style={{ color: "#0C1F3F" }}
+            >
+              {" "}
+              <Image src="/add-circle.svg" alt="Edit" width={24} height={24} />
               <span>Add payment method</span>
             </div>
           )}

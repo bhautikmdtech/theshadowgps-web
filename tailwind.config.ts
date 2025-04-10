@@ -1,4 +1,3 @@
-// tailwind.config.ts
 import type { Config } from "tailwindcss";
 
 const config: Config = {
@@ -17,6 +16,9 @@ const config: Config = {
       },
     },
     extend: {
+      fontFamily: {
+        cereal: ['"Airbnb Cereal"', "sans-serif"],
+      },
       borderColor: {
         DEFAULT: "oklch(var(--border))",
       },
@@ -64,4 +66,5 @@ const config: Config = {
   },
   plugins: [],
 };
+
 export default config;

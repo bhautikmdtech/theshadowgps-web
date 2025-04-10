@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { FaChevronLeft, FaExclamationCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
-import { loadStripe, Stripe } from "@stripe/stripe-js";
+import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js";
 
 import { SubscriptionData } from "./types";
 import SubscriptionsSection from "./SubscriptionsSection";
@@ -29,6 +29,12 @@ type SubscriptionViewerProps = {
     data: SubscriptionData;
   };
 };
+
+interface APIError extends Error {
+  response?: {
+    data?: string;
+  };
+}
 
 const BackButton = () => {
   const closeWindow = () => {
@@ -124,8 +130,11 @@ export default function SubscriptionViewer({
     try {
       const response = await SubscriptionService.getSubscriptionData(token);
       setSubscriptionData(response.data);
-    } catch (err: any) {
-      toast.error(err?.response?.data || err.message || "Failed to load data");
+    } catch (err: unknown) {
+      const error = err as APIError;
+      toast.error(
+        error?.response?.data || error.message || "Failed to load data"
+      );
     }
   };
 
@@ -152,10 +161,19 @@ export default function SubscriptionViewer({
 
   return (
     <div className="bg-white min-vh-100">
-      <nav className="bg-white border-bottom mb-3">
-        <div className="container py-2 d-flex align-items-center">
-          <BackButton />
-          <h5 className="mb-0">Subscription Management</h5>
+      <nav className="bg-white border-bottom mb-3" style={{ height: "48px" }}>
+        <div className="container p-2.5 d-flex align-items-center ">
+          <div>
+            <BackButton />
+          </div>
+          <div className="ms-5">
+            <h5
+              className="mb-0"
+              style={{ color: "#0C1F3F", fontSize: "19px", fontWeight: "600" }}
+            >
+              Subscription Management
+            </h5>
+          </div>
         </div>
       </nav>
 
@@ -210,7 +228,7 @@ export default function SubscriptionViewer({
                 },
               },
               paymentMethodCreation: "manual",
-            } as any
+            } as StripeElementsOptions
           }
         >
           <AddPaymentModal

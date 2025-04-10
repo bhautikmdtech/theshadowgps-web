@@ -1,5 +1,5 @@
-import { Modal, Button,Badge, Spinner } from "react-bootstrap";
-import Image from 'next/image';
+import { Modal, Button, Badge, Spinner } from "react-bootstrap";
+import Image from "next/image";
 import { PaymentMethod } from "./types";
 import {
   FaCreditCard,
@@ -56,7 +56,9 @@ export default function UpdatePaymentModal({
   const getCardIcon = (brand: string): React.ReactNode => {
     const brands: Record<string, React.ReactNode> = {
       visa: <PaymentIcon type="Visa" format="flatRounded" width={30} />,
-      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" width={30} />,
+      mastercard: (
+        <PaymentIcon type="Mastercard" format="flatRounded" width={30} />
+      ),
       amex: <PaymentIcon type="Amex" format="flatRounded" width={30} />,
       discover: <PaymentIcon type="Discover" format="flatRounded" width={30} />,
       diners: <PaymentIcon type="Diners" format="flatRounded" width={30} />,
@@ -92,25 +94,28 @@ export default function UpdatePaymentModal({
                   }`}
                   onClick={() => onPaymentMethodSelect(method.id)}
                   style={{
-                    cursor: 'pointer',
-                    border: '1px solid #CFD2D9',
-                    borderRadius: '25px',
+                    cursor: "pointer",
+                    border: "1px solid #CFD2D9",
+                    borderRadius: "25px",
                   }}
                 >
                   <div className="d-flex align-items-center flex-grow-1">
                     <div className="me-3">
-                    {(() => {
-                                const IconComponent = getCardIcon(method.brand);
-                                return (
-                                  <>
-                                    {React.isValidElement(IconComponent) ? (
-                                      IconComponent
-                                    ) : (
-                                      <FaCreditCard size={26} className="text-gray-800" />
-                                    )}
-                                  </>
-                                );
-                              })()}
+                      {(() => {
+                        const IconComponent = getCardIcon(method.brand);
+                        return (
+                          <>
+                            {React.isValidElement(IconComponent) ? (
+                              IconComponent
+                            ) : (
+                              <FaCreditCard
+                                size={26}
+                                className="text-gray-800"
+                              />
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                     <div>
                       <div
@@ -120,7 +125,7 @@ export default function UpdatePaymentModal({
                             : ""
                         }`}
                       >
-                        {getCardLabel(method.brand)} ending in {method.last4}
+                        {getCardLabel(method.brand)} **** {method.last4}
                         {method.isDefault && (
                           <Badge bg="primary" className="ms-2 rounded-pill">
                             Default
@@ -143,15 +148,15 @@ export default function UpdatePaymentModal({
                 onAddNewPaymentMethod();
               }}
               style={{
-                backgroundColor: '#E1ECFF',
+                backgroundColor: "#E1ECFF",
                 border: 0,
-                borderRadius: '10px',
-                color: '#337CFD',
-                cursor: "pointer", 
-                minHeight: "45px" 
+                borderRadius: "10px",
+                color: "#337CFD",
+                cursor: "pointer",
+                minHeight: "45px",
               }}
             >
-                <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
+              <Image src="/add-circle.svg" alt="Edit" width={24} height={24} />
               <span>Add new payment method</span>
             </div>
           </>
@@ -167,26 +172,34 @@ export default function UpdatePaymentModal({
                 onClose();
                 onAddNewPaymentMethod();
               }}
-              style={{  backgroundColor: '#E1ECFF',
+              style={{
+                backgroundColor: "#E1ECFF",
                 border: 0,
-                borderRadius: '10px',
-                color: '#337CFD',
-                cursor: "pointer", 
-                minHeight: "45px"  }}
+                borderRadius: "10px",
+                color: "#337CFD",
+                cursor: "pointer",
+                minHeight: "45px",
+              }}
             >
-              <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
+              <Image src="/add-circle.svg" alt="Edit" width={24} height={24} />
               <span>Add payment method</span>
             </div>
           </>
         )}
       </Modal.Body>
-      <Modal.Footer>
+      <Modal.Footer
+        style={{
+          padding: "14px 10px",
+          borderTop: "1px solid rgb(207, 210, 217)",
+          borderRadius: "5px",
+        }}
+      >
         <Button
-           style={{
-            backgroundColor: '#E1ECFF',
+          style={{
+            backgroundColor: "#E1ECFF",
             border: 0,
-            borderRadius: '10px',
-            color: '#337CFD',
+            borderRadius: "10px",
+            color: "#337CFD",
           }}
           onClick={onClose}
           disabled={isProcessing}
@@ -195,10 +208,10 @@ export default function UpdatePaymentModal({
         </Button>
         <Button
           style={{
-            backgroundColor: '#337CFD',
+            backgroundColor: "#337CFD",
             border: 0,
-            borderRadius: '10px',
-            color: '#FFFFFF',
+            borderRadius: "10px",
+            color: "#FFFFFF",
           }}
           onClick={onConfirm}
           disabled={isProcessing || !selectedPaymentMethodId}

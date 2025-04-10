@@ -18,7 +18,7 @@ export default async function ShareLocationPage({
 
   try {
     const response = await axiosClient.get(
-      `/api/common/getSharedLocation/${shareToken}`,
+      `/api/app/noauth/getSharedLocation/${shareToken}`,
       {
         headers: {
           Accept: "application/json",

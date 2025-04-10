@@ -33,7 +33,6 @@ export default function InvoiceHistorySection({
   token,
   customer,
   invoices,
-  onRefresh,
 }: InvoiceHistorySectionProps) {
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [invoicesData, setInvoicesData] = useState<Invoice[]>(
@@ -117,10 +116,16 @@ export default function InvoiceHistorySection({
                       style={{
                         backgroundColor:
                           invoice.status === "paid"
-                            ? "#cee2ff"
-                            : invoice.status === "open"
-                            ? "#e0e0e0"
-                            : "#6c757d",
+                            ? "#D6E6FF"
+                            : invoice.status === "failed"
+                            ? "#ffe6e6"
+                            : invoice.status === "draft"
+                            ? "#ffbf80"
+                            : invoice.status === "uncollectible"
+                            ? "#9999ff"
+                            : invoice.status === "void"
+                            ? "#f0f0f5"
+                            : "#6c757d", // default color for any other status
                         color:
                           invoice.status === "paid" || invoice.status === "open"
                             ? "#3D4B65"

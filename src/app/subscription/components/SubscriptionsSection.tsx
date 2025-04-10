@@ -154,54 +154,42 @@ export default function SubscriptionsSection({
     }
   };
 
-  const processedSubscriptions = subscriptions.map((subscription: any) => {
-    if (subscription.gracePeriodMessage !== undefined) {
-      return subscription;
-    }
-
-    const transformedSubscription = {
-      ...subscription,
-    };
-
-    if (subscription.isInGracePeriod) {
-      const remainingDays = subscription.gracePeriodRemainingDays || 0;
-      const formattedGraceEndDate = subscription.graceEndDate
-        ? new Date(subscription.graceEndDate).toLocaleDateString("en-US", {
-            month: "numeric",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "";
-
-      let nextPaymentAttemptMessage = "";
-      if (subscription.nextPaymentAttempt) {
-        const nextAttemptDate = new Date(subscription.nextPaymentAttempt);
-        const formattedNextAttempt = nextAttemptDate.toLocaleDateString(
-          "en-US",
-          {
-            month: "numeric",
-            day: "numeric",
-            year: "numeric",
-          }
-        );
-        nextPaymentAttemptMessage = ` We'll attempt to charge your payment method again on ${formattedNextAttempt}.`;
+  const processedSubscriptions = subscriptions.map(
+    (subscription: Subscription) => {
+      if (subscription.gracePeriodMessage !== undefined) {
+        return subscription;
       }
 
-      let gracePeriodMessage = "";
-      if (remainingDays <= 0) {
-        gracePeriodMessage = `Your grace period has expired. Please update your payment method to restore service.`;
-      } else {
-        gracePeriodMessage = `Your card on file was declined. To continue receiving alerts and services, please update your payment method. If not updated, your subscription will end on ${formattedGraceEndDate}`;
+      const transformedSubscription = {
+        ...subscription,
+      };
+
+      if (subscription.isInGracePeriod) {
+        const remainingDays = subscription.gracePeriodRemainingDays || 0;
+        const formattedGraceEndDate = subscription.graceEndDate
+          ? new Date(subscription.graceEndDate).toLocaleDateString("en-US", {
+              month: "numeric",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "";
+
+        let gracePeriodMessage = "";
+        if (remainingDays <= 0) {
+          gracePeriodMessage = `Your grace period has expired. Please update your payment method to restore service.`;
+        } else {
+          gracePeriodMessage = `Your card on file was declined. To continue receiving alerts and services, please update your payment method. If not updated, your subscription will end on ${formattedGraceEndDate}`;
+        }
+
+        transformedSubscription.isInGracePeriod = true;
+        transformedSubscription.graceEndDate = formattedGraceEndDate;
+        transformedSubscription.gracePeriodMessage = gracePeriodMessage;
+        transformedSubscription.gracePeriodRemainingDays = remainingDays;
       }
 
-      transformedSubscription.isInGracePeriod = true;
-      transformedSubscription.graceEndDate = formattedGraceEndDate;
-      transformedSubscription.gracePeriodMessage = gracePeriodMessage;
-      transformedSubscription.gracePeriodRemainingDays = remainingDays;
+      return transformedSubscription;
     }
-
-    return transformedSubscription;
-  });
+  );
 
   const activeSubscriptions = processedSubscriptions.filter(
     (sub) => sub.status === "active" || sub.status === "trialing"
@@ -393,7 +381,7 @@ export default function SubscriptionsSection({
             className="flex-grow-1"
             onClick={() => handleUpdatePlan(subscription.id)}
           >
-            Update Plan
+            Update
           </Button>
         </>
       );
@@ -407,24 +395,6 @@ export default function SubscriptionsSection({
       return (
         <>
           <Button
-            className="flex-grow-1"
-            style={{
-              backgroundColor: "#E1ECFF",
-              border: 0,
-              borderRadius: "10px",
-              color: "#337CFD",
-            }}
-            onClick={() => confirmCancelSubscription(subscription.id)}
-          >
-            {processingSubscriptionId === subscription.id ? (
-              <>
-                <PageLoader type="spinner" size="sm" className="me-2" />
-              </>
-            ) : (
-              "Cancel"
-            )}
-          </Button>
-          <Button
             style={{
               backgroundColor: "#337CFD",
               border: 0,
@@ -434,7 +404,7 @@ export default function SubscriptionsSection({
             className="flex-grow-1"
             onClick={() => handleUpdatePayment(subscription.id)}
           >
-            Reactivate Subscription
+            Reactivate
           </Button>
         </>
       );
@@ -474,7 +444,7 @@ export default function SubscriptionsSection({
             className="flex-grow-1"
             onClick={() => handleUpdatePlan(subscription.id)}
           >
-            Update Plan
+            Update
           </Button>
         </>
       );
@@ -643,6 +613,79 @@ export default function SubscriptionsSection({
       </div>
     </div>
   );
+  const renderInactiveSubscriptionCard = (
+    subscription: Subscription,
+    isActive: boolean
+  ) => (
+    <div
+      key={subscription.id}
+      style={{
+        border: `1px solid ${isActive ? "#CFD2D9" : "#dee2e6"}`,
+        padding: "16px",
+        borderRadius: "16px",
+        backgroundColor: "#FFFFFF",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+      }}
+    >
+      <div className="mb-3">
+        <div className="d-flex align-items-start">
+          <div
+            className="me-3 rounded-circle"
+            style={{
+              width: isActive ? "60px" : "50px",
+              height: isActive ? "60px" : "50px",
+              flexShrink: 0,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: isActive ? "transparent" : "#E8E8E8",
+            }}
+          >
+            {subscription.device?.deviceImage ? (
+              <Image
+                src={subscription.device.deviceImage}
+                alt="Device"
+                width={60}
+                height={60}
+                className="rounded-circle"
+              />
+            ) : (
+              <FaCube className="text-dark" />
+            )}
+          </div>
+          <div>
+            <div
+              className="fw-bold"
+              style={{ color: "#0C1F3F", fontSize: "16px" }}
+            >
+              {subscription.device?.deviceName || "My Device"}
+              {!isActive && subscription.device?.deviceName && (
+                <span style={{ fontWeight: "normal", color: "#666" }}>
+                  {" "}
+                  (My Accord)
+                </span>
+              )}
+            </div>
+
+            <div style={{ color: "#3D4B65", fontSize: "14px" }}>
+              {subscription.isCancelled
+                ? `Available until ${formatDate(subscription.currentPeriodEnd)}`
+                : subscription.isFreeTrial
+                ? `Start subscription on ${formatDate(
+                    subscription.currentPeriodEnd
+                  )}`
+                : `Your subscription renews on  ${formatDate(
+                    subscription.currentPeriodEnd
+                  )}.`}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="d-flex" style={{ gap: "10px" }}>
+        {renderActiveSubscriptionButtons(subscription, isActive)}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -695,7 +738,7 @@ export default function SubscriptionsSection({
             {inactiveSubscriptions.length > 0 ? (
               inactiveSubscriptions.map((subscription) => (
                 <div key={subscription.id} className="p-3">
-                  {renderSubscriptionCard(subscription, false)}
+                  {renderInactiveSubscriptionCard(subscription, false)}
                 </div>
               ))
             ) : (

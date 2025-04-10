@@ -122,10 +122,10 @@ export default function BillingInformationSection({
                   display: "flex",
                   justifyContent: "center",
                   alignItems: "center",
-                  gap: "10px",
+                  gap: "5px",
                 }}
               >
-                <Image src="/pencil.svg" alt="Edit" width={24} height={24} />
+                <Image src="/pencil.svg" alt="Edit" width={20} height={20} />
                 <span
                   style={{
                     color: "#0C1F3F",
