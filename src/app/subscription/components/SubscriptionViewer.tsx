@@ -63,7 +63,6 @@ export default function SubscriptionViewer({
   token,
   initialData,
 }: SubscriptionViewerProps) {
-  console.log(initialData)
   const [subscriptionData, setSubscriptionData] =
     useState<SubscriptionData | null>(initialData?.data || null);
   const [stripeInitialized, setStripeInitialized] = useState(false);
@@ -115,10 +114,7 @@ export default function SubscriptionViewer({
       return;
     }
 
-    const initialized = await initializeStripe(
-      stripePublishableKey,
-      clientSecret
-    );
+    await initializeStripe(stripePublishableKey, clientSecret);
     if (stripePromise && clientSecret) {
       setShowAddPaymentModal(true);
     }
@@ -132,6 +128,16 @@ export default function SubscriptionViewer({
       toast.error(err?.response?.data || err.message || "Failed to load data");
     }
   };
+
+  // useEffect(() => {
+  //   if (!subscriptionData) return;
+
+  //   const timeout = setTimeout(() => {
+  //     refreshSubscriptionData();
+  //   }, 50000); // Call it ONCE after 10 seconds
+
+  //   return () => clearTimeout(timeout); // Cleanup on unmount or change
+  // }, [subscriptionData]);
 
   if (!subscriptionData) {
     return (

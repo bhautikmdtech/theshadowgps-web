@@ -143,6 +143,8 @@ export default function SubscriptionsSection({
         currentSubscriptionId,
         selectedPaymentMethodId
       );
+      // ⏳ Wait 10 seconds before refreshing
+      await new Promise((resolve) => setTimeout(resolve, 10000));
       await onRefresh();
       setShowUpdatePaymentModal(false);
     } catch (error) {
