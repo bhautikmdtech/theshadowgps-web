@@ -187,15 +187,15 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   return (
-    <div className={`relative flex flex-col gap-2`}>
+    <div className={`relative flex flex-col gap-2 md:right-4 md:top-2 fixed right-1 bottom-25 z-10`}>
       {/* Map Type Button */}
       <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}
-          className={`map-control-btn bg-white dark:bg-gray-700 ${
+          className={`map-control-btn bg-white dark:bg-gray-700 w-10 h-10 rounded-lg flex items-center justify-center ${
             currentTheme === "dark"
               ? "bg-gray-700 hover:bg-gray-600 text-white"
-              : "bg-gray-100 hover:bg-gray-200 text-gray-800"
+              : "bg-white hover:bg-gray-100 text-gray-800"
           }`}
           aria-label="Change map style"
           aria-expanded={isDropdownOpen}
@@ -203,9 +203,9 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
           <Image
             src={"/images/map/layer.svg"}
             alt={"label"}
-            width={10}
-            height={10}
-            className="rounded-lg object-cover w-full"
+            width={20}
+            height={20}
+            className="object-contain"
           />
         </button>
 
@@ -245,40 +245,40 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       {/* Move to Device Location */}
       <button
         onClick={handleDeviceLocationClick}
-        className={`map-control-btn p-8 ${
+        className={`map-control-btn w-10 h-10 rounded-lg flex items-center justify-center ${
           currentTheme === "dark"
             ? "bg-gray-700 hover:bg-gray-600 text-white"
-            : "bg-gray-100 hover:bg-gray-200 text-gray-800"
+            : "bg-white hover:bg-gray-100 text-gray-800"
         }`}
         title="Move to Device Location"
         aria-label="Move to device location"
       >
         <Image
           src={"/images/map/car.svg"}
-          alt={"label"}
-          width={10}
-          height={10}
-          className="rounded-lg object-cover w-full"
+          alt={"Device Location"}
+          width={20}
+          height={20}
+          className="object-contain"
         />
       </button>
 
       {/* Move to User Location */}
       <button
         onClick={handleUserLocationClick}
-        className={`map-control-btn ${
+        className={`map-control-btn w-10 h-10 rounded-lg flex items-center justify-center ${
           currentTheme === "dark"
             ? "bg-gray-700 hover:bg-gray-600 text-white"
-            : "bg-gray-100 hover:bg-gray-200 text-gray-800"
+            : "bg-white hover:bg-gray-100 text-gray-800"
         }`}
         title="Move to My Location"
         aria-label="Move to my location"
       >
         <Image
           src={"/images/map/car-mobile-location.svg"}
-          alt={"label"}
-          width={10}
-          height={10}
-          className="rounded-lg object-cover w-full"
+          alt={"My Location"}
+          width={20}
+          height={20}
+          className="object-contain"
         />
       </button>
     </div>

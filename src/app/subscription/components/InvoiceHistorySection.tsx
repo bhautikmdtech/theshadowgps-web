@@ -120,9 +120,9 @@ export default function InvoiceHistorySection({
                             : invoice.status === "failed"
                             ? "#ffe6e6"
                             : invoice.status === "draft"
-                            ? "#ffbf80"
+                            ? "#ffe6e6"
                             : invoice.status === "uncollectible"
-                            ? "#9999ff"
+                            ? "#ffe6e6"
                             : invoice.status === "void"
                             ? "#f0f0f5"
                             : "#6c757d", // default color for any other status
@@ -130,6 +130,8 @@ export default function InvoiceHistorySection({
                           invoice.status === "paid" || invoice.status === "open"
                             ? "#3D4B65"
                             : "white",
+                        fontSize: "12px",
+                        fontWeight: "700",
                       }}
                     >
                       {invoice.status.charAt(0).toUpperCase() +

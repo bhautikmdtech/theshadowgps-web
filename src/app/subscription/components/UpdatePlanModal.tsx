@@ -90,9 +90,15 @@ export default function UpdatePlanModal({
                           >
                             {plan.name}
                             {isCurrentPlan && (
-                              <Badge bg="success" className="ms-2">
-                                Current Plan
-                              </Badge>
+                            //  <Badge style={{backgroundColor: "#31C48D !important", color: "#ffffff"}} className="ms-md-2">
+                                
+                            //   </Badge>
+                                <span
+                                className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                                style={{ backgroundColor: "#D6E6FF" ,color: "#3D4B65"}} 
+                              >
+                              Current Plan
+                              </span>
                             )}
                           </div>
                           {plan.description && (
@@ -114,7 +120,7 @@ export default function UpdatePlanModal({
                 );
               })}
             </div>
-            <div className="alert alert-info mt-4">
+            <div className="alert  mt-4" style={{backgroundColor: "#FEE6DA", color: "#3D4B65"}}>
               <FaInfoCircle className="me-2" />
               Your subscription will be updated immediately. You&apos;ll be
               charged the prorated amount for the remainder of your billing

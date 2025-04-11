@@ -161,15 +161,22 @@ export default function SubscriptionViewer({
 
   return (
     <div className="bg-white min-vh-100">
-      <nav className="bg-white border-bottom mb-3" style={{ height: "48px" }}>
-        <div className="container p-2.5 d-flex align-items-center ">
+      <nav className="bg-white border-bottom mb-3" style={{ height: "58px" }}>
+        <div
+          className="container d-flex align-items-center "
+          style={{ paddingTop: "16px", paddingBottom: "16px" }}
+        >
           <div>
             <BackButton />
           </div>
-          <div className="ms-5">
+          <div className="ms-2">
             <h5
               className="mb-0"
-              style={{ color: "#0C1F3F", fontSize: "19px", fontWeight: "600" }}
+              style={{
+                color: "#0C1F3F",
+                fontSize: "18px",
+                fontWeight: "500",
+              }}
             >
               Subscription Management
             </h5>

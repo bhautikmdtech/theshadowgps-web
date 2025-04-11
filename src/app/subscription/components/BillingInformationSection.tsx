@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Accordion, Button } from "react-bootstrap";
+import { Accordion } from "react-bootstrap";
 import Image from "next/image";
 import UpdateBillingModal from "./UpdateBillingModal";
 import { SubscriptionService } from "./subscriptionService";
@@ -75,53 +75,72 @@ export default function BillingInformationSection({
           <Accordion.Body className="p-3">
             <div
               style={{
-                border: "1px solid #CFD2D9",
+                border: "1px solid #E5E7EB",
                 borderRadius: "16px",
-                padding: "16px",
+                padding: "24px",
                 backgroundColor: "#FFFFFF",
               }}
             >
-              <div className="flex gap-5 mb-2">
-                <div
-                  className="text-muted small"
-                  style={{
-                    color: "#3D4B65",
-                    fontSize: "18px",
-                    fontWeight: "700",
-                  }}
-                >
-                  Name
-                </div>
-                <div style={{ color: "#0C1F3F", fontSize: "16px" }}>
-                  {" "}
-                  {customer.name || "Not available"}
-                </div>
-              </div>
-              <div className="flex gap-5">
-                <div
-                  className="text-muted small"
-                  style={{
+              <div style={{ 
+                display: "flex", 
+                flexDirection: "column",
+                gap: "12px",
+                maxWidth: "100%"
+              }}>
+                <div style={{ 
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "24px"
+                }}>
+                  <div style={{ 
+                    minWidth: "60px",
                     color: "#6C757D",
-                    fontSize: "18px",
+                    fontSize: "14px",
                     fontWeight: "700",
-                  }}
-                >
-                  Email
+                    whiteSpace: "nowrap"
+                  }}>
+                    Name
+                  </div>
+                  <div style={{ 
+                    color: "#0C1F3F",
+                    fontSize: "14px",
+                    wordBreak: "break-word",
+                    flex: 1
+                  }}>
+                    {customer.name || "Not available"}
+                  </div>
                 </div>
-                <div style={{ color: "#0C1F3F", fontSize: "16px" }}>
-                  {customer.email || "Not available"}
+                <div style={{ 
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "24px"
+                }}>
+                  <div style={{ 
+                    minWidth: "60px",
+                    color: "#6C757D",
+                    fontSize: "14px",
+                    fontWeight: "700",
+                    whiteSpace: "nowrap"
+                  }}>
+                    Email
+                  </div>
+                  <div style={{ 
+                    color: "#0C1F3F",
+                    fontSize: "14px",
+                    wordBreak: "break-word",
+                    flex: 1
+                  }}>
+                    {customer.email || "Not available"}
+                  </div>
                 </div>
               </div>
             </div>
             <div>
-              <Button
-                variant="link"
-                className="text-decoration-none text-primary p-0 mt-3"
+              <div
+                className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2 "
                 onClick={handleShowUpdateBilling}
                 style={{
                   display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
                   gap: "5px",
                 }}
               >
@@ -136,7 +155,7 @@ export default function BillingInformationSection({
                   {" "}
                   Update information
                 </span>
-              </Button>
+              </div>
             </div>
           </Accordion.Body>
         </Accordion.Item>

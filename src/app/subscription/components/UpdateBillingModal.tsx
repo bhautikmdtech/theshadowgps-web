@@ -46,22 +46,50 @@ export default function UpdateBillingModal({
       </Modal.Header>
       <Modal.Body>
         <Form id="billing-form" onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label>Name</Form.Label>
+          <Form.Group className="mb-4">
+            <Form.Label style={{ 
+              fontSize: '14px',
+              color: '#0C1F3F',
+              marginBottom: '8px'
+            }}>Name</Form.Label>
             <Form.Control
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
+              size="lg"
+              style={{
+                fontSize: "16px",
+                color: "#6E798B",
+                padding: "16px",
+                border: "1px solid #E5E7EB",
+                borderRadius: "8px",
+                backgroundColor: "#FFFFFF",
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+              }}
             />
           </Form.Group>
-          <Form.Group className="mb-3">
-            <Form.Label>Email</Form.Label>
+          <Form.Group className="mb-4">
+            <Form.Label style={{ 
+              fontSize: '14px',
+              color: '#0C1F3F',
+              marginBottom: '8px'
+            }}>Email</Form.Label>
             <Form.Control
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
+              size="lg"
+              style={{
+                fontSize: "16px",
+                color: "#6E798B",
+                padding: " 16px",
+                border: "1px solid #E5E7EB",
+                borderRadius: "8px",
+                backgroundColor: "#FFFFFF",
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+              }}
             />
           </Form.Group>
         </Form>

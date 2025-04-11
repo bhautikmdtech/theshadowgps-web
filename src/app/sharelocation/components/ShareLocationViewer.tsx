@@ -93,7 +93,10 @@ export default function LiveTracker({
   // Update route line
   const updateRoute = useCallback((positions: Position[]) => {
     const map = mapRef.current;
-    if (!map || positions.length < 2) return;
+    const sourceId = routeSourceRef.current;
+    const layerId = routeLayerRef.current;
+
+    if (!map || positions.length < 2 || !sourceId || !layerId) return;
 
     const coordinates = positions.map(
       (p) => [p.lng, p.lat] as [number, number]
@@ -103,8 +106,8 @@ export default function LiveTracker({
       map.once("style.load", () => updateRoute(positions));
       return;
     }
-
-    const routeGeoJSON: GeoJSON = {
+    console.log(coordinates);
+    const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
       properties: {},
       geometry: {
@@ -114,22 +117,20 @@ export default function LiveTracker({
     };
 
     try {
-      const existingSource = map.getSource(
-        routeSourceRef.current
-      ) as mapboxgl.GeoJSONSource;
-      if (existingSource) {
-        existingSource.setData(routeGeoJSON);
+      const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+      if (source) {
+        source.setData(routeGeoJSON);
       } else {
-        map.addSource(routeSourceRef.current, {
+        map.addSource(sourceId, {
           type: "geojson",
           data: routeGeoJSON,
         });
 
-        if (!map.getLayer(routeLayerRef.current)) {
+        if (!map.getLayer(layerId)) {
           map.addLayer({
-            id: routeLayerRef.current,
+            id: layerId,
             type: "line",
-            source: routeSourceRef.current,
+            source: sourceId,
             layout: {
               "line-join": "round",
               "line-cap": "round",
@@ -148,34 +149,34 @@ export default function LiveTracker({
   }, []);
 
   const handlePositionUpdate = useCallback(
-    (newPosition: Position) => {
+    async (newPosition: Position) => {
+      let updated: Position[] = [];
       setPositions((prev) => {
         const last = prev[prev.length - 1];
         if (last?.lat === newPosition.lat && last?.lng === newPosition.lng) {
           return prev;
         }
 
-        const updated = [...prev, newPosition];
+        updated = [...prev, newPosition];
 
         if (deviceMarkerRef.current) {
           deviceMarkerRef.current.setLngLat([newPosition.lng, newPosition.lat]);
         }
 
-        updateRoute(updated);
-
-        if (mapRef.current) {
-          mapRef.current.flyTo({
-            center: [newPosition.lng, newPosition.lat],
-            zoom: 16,
-            speed: 0.8,
-            curve: 1.2,
-            duration: 2000,
-            essential: true,
-          });
-        }
-
         return updated;
       });
+      await updateRoute(updated);
+
+      if (mapRef.current) {
+        mapRef.current.flyTo({
+          center: [newPosition.lng, newPosition.lat],
+          zoom: 16,
+          speed: 0.8,
+          curve: 1.2,
+          duration: 2000,
+          essential: true,
+        });
+      }
     },
     [updateRoute]
   );
@@ -232,7 +233,7 @@ export default function LiveTracker({
 
           {/* Divider with custom color */}
           <div
-            className="h-8  mx-2"
+            className="h-8 mx-2"
             style={{ backgroundColor: "#337CFD", width: "2px" }}
           ></div>
           <div className="flex items-center gap-2">
@@ -251,12 +252,35 @@ export default function LiveTracker({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between w-full">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/images/logoFull.svg"
+              alt="ShadowGPS Logo"
+              width={120}
+              height={35}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+              <Image
+                src="/images/map/shopicon.svg"
+                alt="Shop Icon"
+                width={24}
+                height={24}
+              />
+              <span className="text-sm text-blue-500">Get your tracker</span>
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
+
+        <div className="hidden md:flex items-center gap-2">
           {device?.imageUrl ? (
             <Image
               src={device.imageUrl}
-              alt="ShadowGPS Logo"
+              alt="Device Image"
               width={40}
               height={40}
               className="rounded-full object-cover border"
@@ -267,7 +291,7 @@ export default function LiveTracker({
             </div>
           )}
 
-          <div>
+          <div className="hidden md:block">
             <h6
               className="font-medium m-0"
               style={{ color: currentTheme === "dark" ? "#E5E7EB" : "#0C1F3F" }}
@@ -276,21 +300,59 @@ export default function LiveTracker({
             </h6>
           </div>
 
-          <ExpiryTimer
-            expiresAt={initialData?.expiresAt || "2025-04-05T05:24:29.258Z"}
-          />
+          <div className="hidden md:block">
+            <ExpiryTimer
+              expiresAt={initialData?.expiresAt || "2025-04-05T05:24:29.258Z"}
+            />
+          </div>
         </div>
       </div>
 
       <div className="flex-1 relative">
         {isReady && positions.length > 0 ? (
-          <MapComponent
-            initialPosition={{
-              lng: positions[positions.length - 1].lng,
-              lat: positions[positions.length - 1].lat,
-            }}
-            onMapLoad={handleMapLoad}
-          />
+          <>
+            <MapComponent
+              initialPosition={{
+                lng: positions[positions.length - 1].lng,
+                lat: positions[positions.length - 1].lat,
+              }}
+              onMapLoad={handleMapLoad}
+            />
+            {/* Mobile Bottom Panel */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[24px] shadow-lg">
+              <div className="flex items-center justify-between p-4">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {device?.imageUrl ? (
+                      <Image
+                        src={device.imageUrl}
+                        alt="Device"
+                        width={40}
+                        height={40}
+                        className="rounded-full object-cover border"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold">
+                        {device?.deviceName?.charAt(0) || "T"}
+                      </div>
+                    )}
+                    <div>
+                      <h6 className="font-medium text-base m-0 text-gray-900 dark:text-gray-100">
+                        {device?.deviceName || "My Tracker"}
+                      </h6>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <ExpiryTimer
+                    expiresAt={
+                      initialData?.expiresAt || "2025-04-05T05:24:29.258Z"
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </>
         ) : (
           <div className="h-full bg-gray-100 flex flex-col">
             <div className="flex-1 relative overflow-hidden">

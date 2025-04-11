@@ -5,6 +5,8 @@ import Image from "next/image";
 import { SubscriptionService } from "./subscriptionService";
 import UpdatePaymentModal from "./UpdatePaymentModal";
 import UpdatePlanModal from "./UpdatePlanModal";
+import CancelSubscriptionModal from "./CancelSubscriptionModal";
+import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
 import { PaymentMethod, Plan, Subscription } from "./types";
 import { PageLoader } from "@/components";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
@@ -28,6 +30,8 @@ export default function SubscriptionsSection({
 }: SubscriptionsSectionProps) {
   const [showUpdatePlanModal, setShowUpdatePlanModal] = useState(false);
   const [showUpdatePaymentModal, setShowUpdatePaymentModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showReactivateModal, setShowReactivateModal] = useState(false);
   const [currentSubscriptionId, setCurrentSubscriptionId] = useState<
     string | null
   >(null);
@@ -43,9 +47,9 @@ export default function SubscriptionsSection({
 
   const getCardIcon = (brand: string): React.ReactNode => {
     const brands: Record<string, React.ReactNode> = {
-      visa: <PaymentIcon type="Visa" format="flatRounded" width={30} />,
+      visa: <PaymentIcon type="Visa" format="flatRounded" width={40} />,
       mastercard: (
-        <PaymentIcon type="Mastercard" format="flatRounded" width={30} />
+        <PaymentIcon type="Mastercard" format="flatRounded" width={40} />
       ),
       amex: <PaymentIcon type="Amex" format="flatRounded" width={30} />,
       discover: <PaymentIcon type="Discover" format="flatRounded" width={30} />,
@@ -58,17 +62,18 @@ export default function SubscriptionsSection({
 
   const confirmCancelSubscription = async (subscriptionId: string) => {
     if (!subscriptionId) return;
+    setCurrentSubscriptionId(subscriptionId);
+    setShowCancelModal(true);
+  };
 
-    const confirm = window.confirm(
-      "Are you sure you want to Cancel this subscription?"
-    );
-
-    if (!confirm) return;
+  const handleConfirmCancel = async () => {
+    if (!currentSubscriptionId) return;
 
     try {
-      setProcessingSubscriptionId(subscriptionId);
-      await SubscriptionService.cancelSubscription(token, subscriptionId);
+      setProcessingSubscriptionId(currentSubscriptionId);
+      await SubscriptionService.cancelSubscription(token, currentSubscriptionId);
       await onRefresh();
+      setShowCancelModal(false);
     } catch (error) {
       console.error("Failed to cancel subscription:", error);
     } finally {
@@ -78,16 +83,18 @@ export default function SubscriptionsSection({
 
   const confirmReactivateSubscription = async (subscriptionId: string) => {
     if (!subscriptionId) return;
+    setCurrentSubscriptionId(subscriptionId);
+    setShowReactivateModal(true);
+  };
 
-    const confirm = window.confirm(
-      "Are you sure you want to renew this subscription?"
-    );
-    if (!confirm) return;
+  const handleConfirmReactivate = async () => {
+    if (!currentSubscriptionId) return;
 
     try {
-      setProcessingSubscriptionId(subscriptionId);
-      await SubscriptionService.reactivateSubscription(token, subscriptionId);
+      setProcessingSubscriptionId(currentSubscriptionId);
+      await SubscriptionService.reactivateSubscription(token, currentSubscriptionId);
       await onRefresh();
+      setShowReactivateModal(false);
     } catch (error) {
       console.error("Failed to reactivate subscription:", error);
     } finally {
@@ -205,15 +212,18 @@ export default function SubscriptionsSection({
       sub.status === "past_due"
   );
 
-  const getStatusBadge = (subscription: any) => {
+  const getStatusBadge = (subscription: Subscription) => {
     if (subscription.status === "trialing") {
       return (
         <>
-          <Badge bg="success" className="ms-md-2">
-            Active
-          </Badge>{" "}
-          <Badge bg="warning" text="dark" className="ms-md-2">
-            Free Trial (ends {formatDate(subscription.trialEndDate)})
+         <Badge
+         className="active-badge-rounded-pill"
+         style={{ backgroundColor: "rgb(214, 230, 255) !important" ,color: "#3D4B65"}} 
+       >
+        Active
+       </Badge>{" "}
+       <Badge style={{backgroundColor: "#31C48D !important", color: "#ffffff"}} className="free-trial-badge-rounded-pill">
+            Free Trial (ends {formatDate(subscription.currentPeriodEnd)})
           </Badge>
         </>
       );
@@ -222,10 +232,10 @@ export default function SubscriptionsSection({
     if (subscription.isInGracePeriod) {
       return (
         <>
-          <Badge bg="danger" className="ms-md-2">
+         <Badge style={{backgroundColor: "#FEE6DA !important", color: "#3D4B65"}} className="cancle-badge-rounded-pill">
             Payment Failed
           </Badge>
-          <Badge bg="danger" className="ms-md-2">
+          <Badge style={{backgroundColor: "#FEE6DA !important", color: "#3D4B65"}} className="cancle-badge-rounded-pill">
             Grace Period
             {subscription.graceEndDate &&
               ` (until ${subscription.graceEndDate})`}
@@ -239,28 +249,31 @@ export default function SubscriptionsSection({
       subscription.paymentStatus === "failed"
     ) {
       return (
-        <Badge bg="danger" className="ms-md-2">
-          Payment Failed
-        </Badge>
+        <Badge style={{backgroundColor: "#FEE6DA !important", color: "#3D4B65"}} className="cancle-badge-rounded-pill">
+        Payment Failed
+      </Badge>
       );
     }
 
     if (subscription.isCollectionPaused) {
       return (
-        <Badge bg="danger" className="ms-md-2">
-          Payment Paused
-          {subscription.resumeAt && ` (until ${subscription.resumeAt})`}
-        </Badge>
+        
+         <Badge style={{backgroundColor: "#FEE6DA !important", color: "#3D4B65"}} className="cancle-badge-rounded-pill">
+         Payment Paused
+       </Badge>
       );
     }
 
     if (subscription.isCancelled) {
       return (
         <>
-          <Badge bg="success" className="ms-md-2">
-            Active
-          </Badge>{" "}
-          <Badge bg="danger" className="ms-md-2">
+          <Badge
+         className="active-badge-rounded-pill"
+         style={{ backgroundColor: "rgb(214, 230, 255) !important" ,color: "#3D4B65"}} 
+       >
+        Active
+       </Badge>{" "}
+          <Badge style={{backgroundColor: "#FEE6DA !important", color: "#3D4B65"}} className="cancle-badge-rounded-pill">
             Cancel on {formatDate(subscription.cancelAt || "")}
           </Badge>
         </>
@@ -269,22 +282,25 @@ export default function SubscriptionsSection({
 
     if (subscription.status === "active") {
       return (
-        <Badge bg="success" className="ms-md-2">
-          Active
-        </Badge>
+         <Badge
+         className="active-badge-rounded-pill"
+         style={{ backgroundColor: "rgb(214, 230, 255) !important" ,color: "#3D4B65"}} 
+       >
+        Active
+       </Badge>
       );
     }
 
     if (subscription.status === "canceled") {
       return (
-        <Badge bg="secondary" className="ms-md-2">
+        <Badge style={{backgroundColor: "#FEE6DA", color: "#3D4B65"}} className="cancle-badge-rounded-pill">
           Canceled
         </Badge>
       );
     }
 
     return (
-      <Badge bg="secondary" className="ms-md-2">
+      <Badge className="ms-md-2">
         {subscription.status.charAt(0).toUpperCase() +
           subscription.status.slice(1)}
       </Badge>
@@ -292,14 +308,14 @@ export default function SubscriptionsSection({
   };
 
   const formatInterval = (interval: string, interval_count: number = 1) => {
-    let formattedInterval = "Monthly";
+    let formattedInterval = "Month";
 
     if (interval?.toLowerCase() === "month") {
       formattedInterval =
         interval_count === 1
-          ? "Monthly"
+          ? "Month"
           : interval_count === 3
-          ? "Quarterly"
+          ? "Quarter"
           : `Every ${interval_count} months`;
     } else if (interval?.toLowerCase() === "year") {
       formattedInterval =
@@ -346,10 +362,7 @@ export default function SubscriptionsSection({
     }
   };
 
-  const renderActiveSubscriptionButtons = (
-    subscription: Subscription,
-    isActive: boolean
-  ) => {
+  const renderActiveSubscriptionButtons = (subscription: Subscription) => {
     if (subscription.isCancelled) {
       return (
         <>
@@ -368,7 +381,7 @@ export default function SubscriptionsSection({
                 <PageLoader type="spinner" size="sm" className="me-2" />
               </>
             ) : (
-              "Renew Subscription"
+              "Renew "
             )}
           </Button>
           <Button
@@ -474,11 +487,9 @@ export default function SubscriptionsSection({
         </div>
         <div className="card-details d-flex">
           <div
-            className="card-number"
             style={{
               color: "#0C1F3F",
               fontSize: "16px",
-              fontWeight: "600",
             }}
           >
             **** {subscription.paymentMethod.last4}
@@ -504,14 +515,11 @@ export default function SubscriptionsSection({
     );
   };
 
-  const renderSubscriptionCard = (
-    subscription: Subscription,
-    isActive: boolean
-  ) => (
+  const renderSubscriptionCard = (subscription: Subscription) => (
     <div
       key={subscription.id}
       style={{
-        border: `1px solid ${isActive ? "#CFD2D9" : "#dee2e6"}`,
+        border: '1px solid #CFD2D9',
         padding: "16px",
         borderRadius: "16px",
         backgroundColor: "#FFFFFF",
@@ -523,13 +531,13 @@ export default function SubscriptionsSection({
           <div
             className="me-3 rounded-circle"
             style={{
-              width: isActive ? "60px" : "50px",
-              height: isActive ? "60px" : "50px",
+              width: "60px",
+              height: "60px",
               flexShrink: 0,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              backgroundColor: isActive ? "transparent" : "#E8E8E8",
+              backgroundColor: "transparent",
             }}
           >
             {subscription.device?.deviceImage ? (
@@ -550,15 +558,9 @@ export default function SubscriptionsSection({
               style={{ color: "#0C1F3F", fontSize: "16px" }}
             >
               {subscription.device?.deviceName || "My Device"}
-              {!isActive && subscription.device?.deviceName && (
-                <span style={{ fontWeight: "normal", color: "#666" }}>
-                  {" "}
-                  (My Accord)
-                </span>
-              )}
             </div>
             <div
-              style={{ color: isActive ? "#0C1F3F" : "#666", fontSize: "14px" }}
+              style={{ color: "#0C1F3F", fontSize: "14px" }}
             >
               {formatInterval(
                 subscription.interval,
@@ -572,22 +574,26 @@ export default function SubscriptionsSection({
                 color: "#0C1F3F",
                 fontSize: "15px",
                 marginTop: "2px",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
               }}
             >
               <span className="subscription-interval fw-bold">
                 ${subscription.amount}
               </span>{" "}
+              <span style={{color: "#3D4B65", fontSize: "14px"}}>
               per{" "}
               {formatInterval(
                 subscription.interval,
                 subscription.interval_count
-              )}
+              )}</span>
             </div>
             <div style={{ color: "#0C1F3F", fontSize: "14px" }}>
               {subscription.isCancelled
                 ? `Available until ${formatDate(subscription.currentPeriodEnd)}`
                 : subscription.isFreeTrial
-                ? `Start subscription on ${formatDate(
+                ? ` Subscription starts on ${formatDate(
                     subscription.currentPeriodEnd
                   )}`
                 : `Renews on ${formatDate(subscription.currentPeriodEnd)}`}
@@ -609,18 +615,16 @@ export default function SubscriptionsSection({
       </div>
 
       <div className="d-flex" style={{ gap: "10px" }}>
-        {renderActiveSubscriptionButtons(subscription, isActive)}
+        {renderActiveSubscriptionButtons(subscription)}
       </div>
     </div>
   );
-  const renderInactiveSubscriptionCard = (
-    subscription: Subscription,
-    isActive: boolean
-  ) => (
+
+  const renderInactiveSubscriptionCard = (subscription: Subscription) => (
     <div
       key={subscription.id}
       style={{
-        border: `1px solid ${isActive ? "#CFD2D9" : "#dee2e6"}`,
+        border: '1px solid #dee2e6',
         padding: "16px",
         borderRadius: "16px",
         backgroundColor: "#FFFFFF",
@@ -632,13 +636,13 @@ export default function SubscriptionsSection({
           <div
             className="me-3 rounded-circle"
             style={{
-              width: isActive ? "60px" : "50px",
-              height: isActive ? "60px" : "50px",
+              width: "60px",
+              height: "60px",
               flexShrink: 0,
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              backgroundColor: isActive ? "transparent" : "#E8E8E8",
+              backgroundColor: "transparent",
             }}
           >
             {subscription.device?.deviceImage ? (
@@ -659,19 +663,13 @@ export default function SubscriptionsSection({
               style={{ color: "#0C1F3F", fontSize: "16px" }}
             >
               {subscription.device?.deviceName || "My Device"}
-              {!isActive && subscription.device?.deviceName && (
-                <span style={{ fontWeight: "normal", color: "#666" }}>
-                  {" "}
-                  (My Accord)
-                </span>
-              )}
             </div>
 
             <div style={{ color: "#3D4B65", fontSize: "14px" }}>
               {subscription.isCancelled
                 ? `Available until ${formatDate(subscription.currentPeriodEnd)}`
                 : subscription.isFreeTrial
-                ? `Start subscription on ${formatDate(
+                ? `Subscription starts on  ${formatDate(
                     subscription.currentPeriodEnd
                   )}`
                 : `Your subscription renews on  ${formatDate(
@@ -682,7 +680,7 @@ export default function SubscriptionsSection({
         </div>
       </div>
       <div className="d-flex" style={{ gap: "10px" }}>
-        {renderActiveSubscriptionButtons(subscription, isActive)}
+        {renderActiveSubscriptionButtons(subscription)}
       </div>
     </div>
   );
@@ -714,7 +712,7 @@ export default function SubscriptionsSection({
             {activeSubscriptions.length > 0 ? (
               activeSubscriptions.map((subscription) => (
                 <div key={subscription.id} className="p-3">
-                  {renderSubscriptionCard(subscription, true)}
+                  {renderSubscriptionCard(subscription)}
                 </div>
               ))
             ) : (
@@ -738,7 +736,7 @@ export default function SubscriptionsSection({
             {inactiveSubscriptions.length > 0 ? (
               inactiveSubscriptions.map((subscription) => (
                 <div key={subscription.id} className="p-3">
-                  {renderInactiveSubscriptionCard(subscription, false)}
+                  {renderInactiveSubscriptionCard(subscription)}
                 </div>
               ))
             ) : (
@@ -755,7 +753,7 @@ export default function SubscriptionsSection({
         onClose={() => setShowUpdatePlanModal(false)}
         onConfirm={confirmUpdatePlan}
         isProcessing={isProcessing}
-        plans={plans} // You'll need to pass plans from parent
+        plans={plans}
         currentPlanId={currentPlanId}
         selectedPlanId={selectedPlanId}
         onPlanSelect={(planId: string) => setSelectedPlanId(planId)}
@@ -770,6 +768,20 @@ export default function SubscriptionsSection({
         selectedPaymentMethodId={selectedPaymentMethodId}
         onPaymentMethodSelect={(id: string) => setSelectedPaymentMethodId(id)}
         onAddNewPaymentMethod={onAddNewPaymentMethod}
+      />
+
+      <CancelSubscriptionModal
+        show={showCancelModal}
+        onClose={() => setShowCancelModal(false)}
+        onConfirm={handleConfirmCancel}
+        isProcessing={processingSubscriptionId === currentSubscriptionId}
+      />
+
+      <ReactivateSubscriptionModal
+        show={showReactivateModal}
+        onClose={() => setShowReactivateModal(false)}
+        onConfirm={handleConfirmReactivate}
+        isProcessing={processingSubscriptionId === currentSubscriptionId}
       />
     </>
   );

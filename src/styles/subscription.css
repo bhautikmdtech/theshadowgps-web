@@ -319,8 +319,7 @@ body.modal-open {
 }
 
 /* Fix for active badge */
-.badge.bg-success.rounded-pill {
-  background-color: #28a745 !important;
+.badge.rounded-pill {
   padding: 4px 8px;
 }
 
@@ -328,3 +327,31 @@ body.modal-open {
 .card-element-container {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+.free-trial-badge-rounded-pill {
+  background-color: #31C48D !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  font-weight: 500 !important;
+  margin: 5px;
+  border-radius: 10px;
+}
+.active-badge-rounded-pill {
+  background-color: rgb(214, 230, 255) !important;
+  color: #3D4B65 !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  font-weight: 500 !important;
+  margin: 5px;
+  border-radius: 10px;
+}
+.cancle-badge-rounded-pill {
+  background-color: #FEE6DA !important;
+  color: #3D4B65 !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  font-weight: 500 !important;
+  margin: 5px;
+  border-radius: 10px;
+}
+

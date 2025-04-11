@@ -5,6 +5,9 @@
 
 .mapboxgl-popup-content {
   padding: 0 !important;
+  border-radius: 22px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  width: 200px !important;
 }
 
 .map-control-btn {
