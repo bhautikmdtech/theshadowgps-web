@@ -238,7 +238,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
       return date.toLocaleDateString("en-US", {
         year: "numeric",
-        month: "short",
+        month: "long",
         day: "numeric",
       });
     } catch (error) {
@@ -551,7 +551,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               </div>
               {activeSubscriptions.length > 0 ? (
                 activeSubscriptions.map((sub) => (
-                  <div key={sub.id} className="p-3">
+                  <div key={sub.id} className="p-3 mb-4">
                     {renderSubscriptionCard(sub, true)}
                   </div>
                 ))
@@ -576,7 +576,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               </div>
               {inactiveSubscriptions.length > 0 ? (
                 inactiveSubscriptions.map((sub) => (
-                  <div key={sub.id} className="p-3">
+                  <div key={sub.id} className="p-3 mb-4">
                     {renderSubscriptionCard(sub, false)}
                   </div>
                 ))
