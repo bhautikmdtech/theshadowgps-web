@@ -556,7 +556,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                   </div>
                 ))
               ) : (
-                <p className="px-3 text-muted">No active subscriptions</p>
+                <p className="px-3 text-muted text-center">
+                  No active subscriptions
+                </p>
               )}
             </div>
 
@@ -579,7 +581,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                   </div>
                 ))
               ) : (
-                <p className="px-3 text-muted">No inactive subscriptions</p>
+                <p className="px-3 text-muted text-center">
+                  No inactive subscriptions
+                </p>
               )}
             </div>
           </Accordion.Body>
