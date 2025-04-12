@@ -1,16 +1,14 @@
-import { Modal, Button, Spinner } from 'react-bootstrap';
-import Image from 'next/image';
-import { PaymentMethod } from './types';
-import {
-  FaCreditCard,
-} from 'react-icons/fa';
-import { PaymentIcon } from 'react-svg-credit-card-payment-icons';
-import React from 'react';
+import { Modal, Button, Spinner } from "react-bootstrap";
+import Image from "next/image";
+import { PaymentMethod } from "./types";
+import { FaCreditCard } from "react-icons/fa";
+import { PaymentIcon } from "react-svg-credit-card-payment-icons";
+import React from "react";
 
 interface UpdatePaymentModalProps {
   show: boolean;
   onClose: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: () => any;
   isProcessing: boolean;
   paymentMethods: PaymentMethod[];
   selectedPaymentMethodId: string | null;
@@ -30,20 +28,20 @@ export default function UpdatePaymentModal({
 }: UpdatePaymentModalProps) {
   // Helper function to get card label from the brand
   const getCardLabel = (brand: string): string => {
-    if (!brand) return 'Card';
+    if (!brand) return "Card";
     return brand.charAt(0).toUpperCase() + brand.slice(1);
   };
 
   const getCardIcon = (brand: string): React.ReactNode => {
     const brands: Record<string, React.ReactNode> = {
-      visa: <PaymentIcon type='Visa' format='flatRounded' width={30} />,
+      visa: <PaymentIcon type="Visa" format="flatRounded" width={30} />,
       mastercard: (
-        <PaymentIcon type='Mastercard' format='flatRounded' width={30} />
+        <PaymentIcon type="Mastercard" format="flatRounded" width={30} />
       ),
-      amex: <PaymentIcon type='Amex' format='flatRounded' width={30} />,
-      discover: <PaymentIcon type='Discover' format='flatRounded' width={30} />,
-      diners: <PaymentIcon type='Diners' format='flatRounded' width={30} />,
-      jcb: <PaymentIcon type='Jcb' format='flatRounded' width={30} />,
+      amex: <PaymentIcon type="Amex" format="flatRounded" width={30} />,
+      discover: <PaymentIcon type="Discover" format="flatRounded" width={30} />,
+      diners: <PaymentIcon type="Diners" format="flatRounded" width={30} />,
+      jcb: <PaymentIcon type="Jcb" format="flatRounded" width={30} />,
     };
 
     return brands[brand.toLowerCase()] || <FaCreditCard />;
@@ -52,36 +50,36 @@ export default function UpdatePaymentModal({
     <Modal
       show={show}
       onHide={onClose}
-      backdrop='static'
+      backdrop="static"
       keyboard={false}
       style={{ zIndex: 9999 }}
-      className='update-payment-modal'
+      className="update-payment-modal"
     >
-      <Modal.Header closeButton style={{ backgroundColor: '#f8f9fa' }}>
+      <Modal.Header closeButton style={{ backgroundColor: "#f8f9fa" }}>
         <Modal.Title>Update Payment Method</Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {paymentMethods.length > 0 ? (
           <>
-            <div className='mb-3'>
-              <h6 className='mb-3'>Select payment method</h6>
+            <div className="mb-3">
+              <h6 className="mb-3">Select payment method</h6>
               {paymentMethods.map((method: PaymentMethod) => (
                 <div
                   key={method.id}
                   className={`p-3  mb-3 ${
                     selectedPaymentMethodId === method.id
-                      ? 'border-primary bg-light'
-                      : ''
+                      ? "border-primary bg-light"
+                      : ""
                   }`}
                   onClick={() => onPaymentMethodSelect(method.id)}
                   style={{
-                    cursor: 'pointer',
-                    border: '1px solid #CFD2D9',
-                    borderRadius: '25px',
+                    cursor: "pointer",
+                    border: "1px solid #CFD2D9",
+                    borderRadius: "25px",
                   }}
                 >
-                  <div className='d-flex align-items-center flex-grow-1'>
-                    <div className='me-3'>
+                  <div className="d-flex align-items-center flex-grow-1">
+                    <div className="me-3">
                       {(() => {
                         const IconComponent = getCardIcon(method.brand);
                         return (
@@ -91,7 +89,7 @@ export default function UpdatePaymentModal({
                             ) : (
                               <FaCreditCard
                                 size={26}
-                                className='text-gray-800'
+                                className="text-gray-800"
                               />
                             )}
                           </>
@@ -102,21 +100,24 @@ export default function UpdatePaymentModal({
                       <div
                         className={`fw-medium ${
                           selectedPaymentMethodId === method.id
-                            ? 'text-primary'
-                            : ''
+                            ? "text-primary"
+                            : ""
                         }`}
                       >
                         {getCardLabel(method.brand)} **** {method.last4}
                         {method.isDefault && (
                           <span
-                          className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
-                          style={{ backgroundColor: "#D6E6FF" ,color: "#3D4B65"}} 
-                        >
-                          Default
-                        </span>
+                            className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: "#D6E6FF",
+                              color: "#3D4B65",
+                            }}
+                          >
+                            Default
+                          </span>
                         )}
                       </div>
-                      <small className='text-muted'>
+                      <small className="text-muted">
                         Expires {method.expMonth}/{method.expYear}
                       </small>
                     </div>
@@ -124,48 +125,48 @@ export default function UpdatePaymentModal({
                 </div>
               ))}
             </div>
-            <h6 className='mb-3'>Or add a new payment method</h6>
+            <h6 className="mb-3">Or add a new payment method</h6>
             <div
-              className='d-flex align-items-center justify-content-center text-primary  p-2 rounded cursor-pointer gap-2'
+              className="d-flex align-items-center justify-content-center text-primary  p-2 rounded cursor-pointer gap-2"
               onClick={() => {
                 onClose();
                 onAddNewPaymentMethod();
               }}
               style={{
-                backgroundColor: '#E1ECFF',
+                backgroundColor: "#E1ECFF",
                 border: 0,
-                borderRadius: '10px',
-                color: '#337CFD',
-                cursor: 'pointer',
-                minHeight: '45px',
+                borderRadius: "10px",
+                color: "#337CFD",
+                cursor: "pointer",
+                minHeight: "45px",
               }}
             >
-              <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
+              <Image src="/add-circle.svg" alt="Edit" width={24} height={24} />
               <span>Add new payment method</span>
             </div>
           </>
         ) : (
           <>
-            <div className='alert alert-info mb-4'>
+            <div className="alert alert-info mb-4">
               No saved payment methods available. Please add a new payment
               method below.
             </div>
             <div
-              className='d-flex align-items-center justify-content-center text-primary  p-2 rounded cursor-pointer gap-2'
+              className="d-flex align-items-center justify-content-center text-primary  p-2 rounded cursor-pointer gap-2"
               onClick={() => {
                 onClose();
                 onAddNewPaymentMethod();
               }}
               style={{
-                backgroundColor: '#E1ECFF',
+                backgroundColor: "#E1ECFF",
                 border: 0,
-                borderRadius: '10px',
-                color: '#337CFD',
-                cursor: 'pointer',
-                minHeight: '45px',
+                borderRadius: "10px",
+                color: "#337CFD",
+                cursor: "pointer",
+                minHeight: "45px",
               }}
             >
-              <Image src='/add-circle.svg' alt='Edit' width={24} height={24} />
+              <Image src="/add-circle.svg" alt="Edit" width={24} height={24} />
               <span>Add payment method</span>
             </div>
           </>
@@ -173,17 +174,17 @@ export default function UpdatePaymentModal({
       </Modal.Body>
       <Modal.Footer
         style={{
-          padding: '14px 10px',
-          borderTop: '1px solid rgb(207, 210, 217)',
-          borderRadius: '5px',
+          padding: "14px 10px",
+          borderTop: "1px solid rgb(207, 210, 217)",
+          borderRadius: "5px",
         }}
       >
         <Button
           style={{
-            backgroundColor: '#E1ECFF',
+            backgroundColor: "#E1ECFF",
             border: 0,
-            borderRadius: '10px',
-            color: '#337CFD',
+            borderRadius: "10px",
+            color: "#337CFD",
           }}
           onClick={onClose}
           disabled={isProcessing}
@@ -192,10 +193,10 @@ export default function UpdatePaymentModal({
         </Button>
         <Button
           style={{
-            backgroundColor: '#337CFD',
+            backgroundColor: "#337CFD",
             border: 0,
-            borderRadius: '10px',
-            color: '#FFFFFF',
+            borderRadius: "10px",
+            color: "#FFFFFF",
           }}
           onClick={onConfirm}
           disabled={isProcessing || !selectedPaymentMethodId}
@@ -203,17 +204,17 @@ export default function UpdatePaymentModal({
           {isProcessing ? (
             <>
               <Spinner
-                as='span'
-                animation='border'
-                size='sm'
-                role='status'
-                aria-hidden='true'
-                className='me-2'
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-2"
               />
               Processing...
             </>
           ) : (
-            'Update Payment Method'
+            "Update Payment Method"
           )}
         </Button>
       </Modal.Footer>

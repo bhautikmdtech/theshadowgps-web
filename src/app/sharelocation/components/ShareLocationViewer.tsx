@@ -232,7 +232,7 @@ export default function LiveTracker({
           />
 
           {/* Divider with custom color */}
-          <div
+          <div  
             className="h-8 mx-2"
             style={{ backgroundColor: "#337CFD", width: "2px" }}
           ></div>
@@ -277,6 +277,7 @@ export default function LiveTracker({
         </div>
 
         <div className="hidden md:flex items-center gap-2">
+          <ThemeToggle />
           {device?.imageUrl ? (
             <Image
               src={device.imageUrl}

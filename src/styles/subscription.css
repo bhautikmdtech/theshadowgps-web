@@ -328,7 +328,7 @@ body.modal-open {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 .free-trial-badge-rounded-pill {
-  background-color: #31C48D !important;
+  background-color: #31c48d !important;
   color: #ffffff !important;
   font-size: 12px !important;
   padding: 4px 8px !important;
@@ -338,7 +338,7 @@ body.modal-open {
 }
 .active-badge-rounded-pill {
   background-color: rgb(214, 230, 255) !important;
-  color: #3D4B65 !important;
+  color: #3d4b65 !important;
   font-size: 12px !important;
   padding: 4px 8px !important;
   font-weight: 500 !important;
@@ -346,8 +346,8 @@ body.modal-open {
   border-radius: 10px;
 }
 .cancle-badge-rounded-pill {
-  background-color: #FEE6DA !important;
-  color: #3D4B65 !important;
+  background-color: #fee6da !important;
+  color: #3d4b65 !important;
   font-size: 12px !important;
   padding: 4px 8px !important;
   font-weight: 500 !important;
@@ -355,3 +355,29 @@ body.modal-open {
   border-radius: 10px;
 }
 
+/* bbbbb */
+.lightButton {
+  background-color: #e1ecff !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  color: #337cfd !important;
+}
+
+.darkButton {
+  background-color: #337cfd !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  color: #ffffff !important;
+}
+
+.lightButton:hover,
+.darkButton:hover {
+  opacity: 0.8;
+}
+.subscriptionCard .badge {
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  font-weight: 500 !important;
+  margin: 5px;
+  border-radius: 10px;
+}

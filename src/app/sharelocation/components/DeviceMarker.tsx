@@ -53,8 +53,8 @@ export const createDeviceMarker = ({
     const popup = new mapboxgl.Popup({
       offset: [0, 0],
       closeButton: false,
-      closeOnClick: true,
-      closeOnMove: true,
+      closeOnClick: false,
+      closeOnMove: false,
       maxWidth: '200px',
       className: 'custom-popup z-2',
     }).setHTML(`
@@ -77,10 +77,14 @@ export const createDeviceMarker = ({
                 
                 ${
                   position.address
-                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position.address)}" 
+                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        position.address
+                      )}" 
                          target="_blank"
                          class="text-[14px]"
-                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${position.address}</a>`
+                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${
+                           position.address
+                         }</a>`
                     : ''
                 }
                 ${
@@ -133,8 +137,8 @@ export const createStartMarker = ({
     const popup = new mapboxgl.Popup({
       offset: [0, 0],
       closeButton: false,
-      closeOnClick: true,
-      closeOnMove: true,
+      closeOnClick: false,
+      closeOnMove: false,
       maxWidth: '200px',
       className: 'custom-popup z-2',
     }).setHTML(`
@@ -143,10 +147,14 @@ export const createStartMarker = ({
                
                 ${
                   position.address
-                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position.address)}" 
+                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        position.address
+                      )}" 
                          target="_blank"
                          class="text-[14px]"
-                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${position.address}</a>`
+                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${
+                           position.address
+                         }</a>`
                     : ''
                 }
                 ${
