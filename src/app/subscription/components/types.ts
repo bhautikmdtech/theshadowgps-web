@@ -36,11 +36,12 @@ export interface Subscription {
   paymentMethod?: PaymentMethod;
   planId: string;
   paymentStatus?: string;
-  gracePeriodRemainingDays?: number;
+  graceStatus?: string;
   currentPeriodEnd: string;
   isFreeTrial: boolean;
   nextPaymentAttempt?: string;
   pauseResumesAt?: string;
+  reactivate?: boolean;
 }
 
 export interface Plan {

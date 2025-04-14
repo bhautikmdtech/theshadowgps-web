@@ -17,6 +17,7 @@ interface UpdatePlanModalProps {
   plans: Plan[];
   currentPlanId: string | null;
   selectedPlanId: string | null;
+  reactivateStart: boolean;
   onPlanSelect: (planId: string) => void;
 }
 
@@ -28,6 +29,7 @@ export default function UpdatePlanModal({
   plans,
   currentPlanId,
   selectedPlanId,
+  reactivateStart,
   onPlanSelect,
 }: UpdatePlanModalProps) {
   const [localSelectedPlanId, setLocalSelectedPlanId] = useState<string | null>(
@@ -163,7 +165,7 @@ export default function UpdatePlanModal({
           disabled={
             isProcessing ||
             !localSelectedPlanId ||
-            currentPlanId === localSelectedPlanId
+            (!reactivateStart && currentPlanId === localSelectedPlanId) // ← allow same plan only when reactivating
           }
         >
           {isProcessing ? (

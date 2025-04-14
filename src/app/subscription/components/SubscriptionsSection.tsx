@@ -39,16 +39,16 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     string | null
   >(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [reactivateStart, setReactivateStart] = useState(false);
 
   // Memoized processed subscriptions
   const { activeSubscriptions, inactiveSubscriptions } = React.useMemo(() => {
     const getGracePeriodMessage = (subscription: Subscription): string => {
-      const remainingDays = subscription.gracePeriodRemainingDays || 0;
       const formattedDate = formatDate(subscription.graceEndDate);
 
-      return remainingDays <= 0
-        ? "Your grace period has expired. Please update your payment method to restore service."
-        : `Your card on file was declined. To continue service, please update your payment method before ${formattedDate}`;
+      return subscription.graceStatus === "active"
+        ? `Your card on file was declined. To continue receiving alerts and services, please update your payment method. If not updated, your subscription will end on ${formattedDate}`
+        : "Your grace period has expired. Please update your payment method to restore service.";
     };
 
     const formatDate = (dateString?: string): string => {
@@ -64,8 +64,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       }
     };
 
-    const now = Date.now();
-
     const processed =
       subscriptions &&
       subscriptions.map((sub) => ({
@@ -79,16 +77,14 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       activeSubscriptions: processed.filter(
         (sub: any) =>
           ["active", "trialing"].includes(sub.status) ||
-          (sub.status === "past_due" &&
-            new Date(sub.graceEndDate).getTime() > now)
+          (sub.status === "past_due" && sub.graceStatus === "active")
       ),
       inactiveSubscriptions: processed.filter(
         (sub: any) =>
           ["canceled", "incomplete", "incomplete_expired", "unpaid"].includes(
             sub.status
           ) ||
-          (sub.status === "past_due" &&
-            new Date(sub.graceEndDate).getTime() <= now)
+          (sub.status === "past_due" && sub.graceStatus === "expired")
       ),
     };
   }, [subscriptions]);
@@ -123,6 +119,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         await action();
         await onRefresh();
         closeModal();
+        if (reactivateStart) {
+          openModal("updatePayment", currentSubscription);
+        }
       } catch (error) {
         console.error("Subscription action failed:", error);
       } finally {
@@ -174,16 +173,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       await new Promise((resolve) => setTimeout(resolve, 10000));
     });
   }, [handleSubscriptionAction, selectedPaymentMethodId, token]);
-
-  // Helper functions
-  const getGracePeriodMessage = (subscription: Subscription): string => {
-    const remainingDays = subscription.gracePeriodRemainingDays || 0;
-    const formattedDate = formatDate(subscription.graceEndDate);
-
-    return remainingDays <= 0
-      ? "Your grace period has expired. Please update your payment method to restore service."
-      : `Your card on file was declined. To continue service, please update your payment method before ${formattedDate}`;
-  };
 
   const formatDate = (dateString?: string): string => {
     if (!dateString) return "N/A";
@@ -349,6 +338,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   ): JSX.Element | null => {
     const isActive = ["active", "trialing"].includes(subscription.status);
     const isPastDue = subscription.status === "past_due";
+
     const isCanceled = subscription.status === "canceled";
 
     if (isCanceled) {
@@ -373,20 +363,16 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       );
     }
 
-    if (isPastDue || subscription.isInGracePeriod) {
+    if (isPastDue && subscription.isInGracePeriod) {
       return (
         <>
           <Button
-            variant="outline-primary"
-            className="flex-grow-1 me-2 lightButton"
-            onClick={() => openModal("updatePlan", subscription)}
-          >
-            Update
-          </Button>
-          <Button
             variant="primary"
             className="flex-grow-1 darkButton"
-            onClick={() => openModal("updatePayment", subscription)}
+            onClick={() => {
+              setReactivateStart(true);
+              openModal("updatePlan", subscription);
+            }}
           >
             Reactivate
           </Button>
@@ -599,6 +585,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         plans={plans}
         currentPlanId={currentSubscription?.planId || ""}
         selectedPlanId={selectedPlanId}
+        reactivateStart={reactivateStart}
         onPlanSelect={setSelectedPlanId}
       />
 
