@@ -1,4 +1,4 @@
-import { Modal, Button, Spinner } from 'react-bootstrap';
+import { Modal, Button, Spinner } from "react-bootstrap";
 
 interface ReactivateSubscriptionModalProps {
   show: boolean;
@@ -16,10 +16,11 @@ export default function ReactivateSubscriptionModal({
   return (
     <Modal show={show} onHide={onClose} backdrop="static" keyboard={false}>
       <Modal.Header closeButton>
-        <Modal.Title>Reactivate Subscription?</Modal.Title>
+        <Modal.Title>Renew Subscription?</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-      Your payment method will be charged, and services will resume right away.
+        Your payment method will be charged, and services will resume right
+        away.
       </Modal.Body>
       <Modal.Footer>
         <Button
@@ -32,7 +33,7 @@ export default function ReactivateSubscriptionModal({
           onClick={onClose}
           disabled={isProcessing}
         >
-         Cancel
+          Cancel
         </Button>
         <Button
           style={{
@@ -57,10 +58,10 @@ export default function ReactivateSubscriptionModal({
               Processing...
             </>
           ) : (
-            " Reactivate"
+            " Renew"
           )}
         </Button>
       </Modal.Footer>
     </Modal>
   );
-} 
+}
