@@ -30,6 +30,7 @@ export interface Subscription {
   isInGracePeriod?: boolean;
   graceEndDate?: string;
   gracePeriodMessage?: string;
+  gracePeriodRemainingDays?: number;
   isCollectionPaused?: boolean;
   resumeAt?: string;
   device?: Device;

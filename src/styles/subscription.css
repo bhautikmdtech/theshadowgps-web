@@ -381,3 +381,14 @@ body.modal-open {
   margin: 5px;
   border-radius: 10px;
 }
+.alert-msg {
+  background-color: #fee6da !important;
+  color: #3d4b65 !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  font-weight: 500 !important;
+  border-radius: 10px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

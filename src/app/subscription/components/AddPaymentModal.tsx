@@ -53,26 +53,36 @@ export default function AddPaymentModal({
         await stripe.createPaymentMethod({ elements });
 
       if (stripeError) throw new Error(stripeError.message);
+      console.log("paymentMethod", paymentMethod);
       if (!paymentMethod) throw new Error("No payment method returned.");
 
-      await axiosClient.post(
-        `/api/app/subscription/payment-methods/${customerId}`,
-        { paymentMethodId: paymentMethod.id },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        }
-      );
+      try {
+        await axiosClient.post(
+          `/api/app/subscription/payment-methods/${customerId}`,
+          { paymentMethodId: paymentMethod.id },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+          }
+        );
 
-      toast.success("Payment method added successfully!");
-      await onRefresh();
-      onClose();
-    } catch (err: any) {
-      const msg = err?.message || "Something went wrong";
+        toast.success("Payment method added successfully!");
+        await onRefresh();
+        onClose();
+      } catch (apiError: any) {
+        // Handle backend API errors
+        const errorMessage = apiError.response?.data?.message || 
+                            apiError.response?.data?.error || 
+                            apiError.message || 
+                            "Failed to add payment method";
+        throw new Error(errorMessage);
+      }
+    } catch (err: Error | unknown) {
+      const msg = err instanceof Error ? err.message : "Something went wrong";
       setError(msg);
-      toast.error(msg);
+      toast.error('Failed to add payment method');
     } finally {
       setProcessing(false);
     }

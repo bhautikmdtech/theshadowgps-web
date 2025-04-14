@@ -18,12 +18,14 @@ interface DeviceMarkerProps {
   position: Position;
   device?: Device | null;
   mapRef: React.MutableRefObject<mapboxgl.Map | null>;
+  isMotion?: boolean;
 }
 
 export const createDeviceMarker = ({
   position,
   device,
   mapRef,
+  isMotion,
 }: DeviceMarkerProps): mapboxgl.Marker | null => {
   if (!mapRef.current) {
     console.error('Map instance is not available');
@@ -34,7 +36,7 @@ export const createDeviceMarker = ({
     const container = document.createElement('div');
     container.className = 'relative device-marker z-1';
     container.innerHTML = `
-      <div class="absolute w-10 h-10 bg-green-500 opacity-50 rounded-full animate-ping"></div>
+      ${isMotion ? `<div class="absolute w-10 h-10 bg-green-500 opacity-50 rounded-full animate-ping"></div>` : ''}
       <div class="relative w-10 h-10 rounded-full border-2 border-white shadow-md flex items-center justify-center hover:scale-110 hover:shadow-lg transition-transform">
         ${
           device?.imageUrl
@@ -53,7 +55,7 @@ export const createDeviceMarker = ({
     const popup = new mapboxgl.Popup({
       offset: [0, 0],
       closeButton: false,
-      closeOnClick: false,
+      closeOnClick: true,
       closeOnMove: false,
       maxWidth: '200px',
       className: 'custom-popup z-2',
@@ -137,7 +139,7 @@ export const createStartMarker = ({
     const popup = new mapboxgl.Popup({
       offset: [0, 0],
       closeButton: false,
-      closeOnClick: false,
+      closeOnClick: true,
       closeOnMove: false,
       maxWidth: '200px',
       className: 'custom-popup z-2',

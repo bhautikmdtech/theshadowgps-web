@@ -72,6 +72,7 @@ export default function LiveTracker({
         position: latest,
         device: device || undefined,
         mapRef,
+        isMotion: positions.length > 2 ? true :false,
       });
 
       // Create start marker if it doesn't exist
