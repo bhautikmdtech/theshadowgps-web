@@ -318,11 +318,6 @@ body.modal-open {
   color: white;
 }
 
-/* Fix for active badge */
-.badge.rounded-pill {
-  padding: 4px 8px;
-}
-
 /* Style for flat card design */
 .card-element-container {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -359,15 +354,17 @@ body.modal-open {
 .lightButton {
   background-color: #e1ecff !important;
   border: 0 !important;
-  border-radius: 10px !important;
+  border-radius: 16px !important;
   color: #337cfd !important;
+  padding: 10px 15px !important;
 }
 
 .darkButton {
   background-color: #337cfd !important;
   border: 0 !important;
-  border-radius: 10px !important;
+  border-radius: 16px !important;
   color: #ffffff !important;
+  padding: 10px 15px !important;
 }
 
 .lightButton:hover,

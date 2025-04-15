@@ -81,7 +81,7 @@ export default function InvoiceHistorySection({
       <Accordion.Item eventKey="0" className="border-0">
         <Accordion.Header className="bg-white">
           <span
-            style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
+            style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
           >
             Invoice History
           </span>

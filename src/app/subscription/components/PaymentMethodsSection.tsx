@@ -39,7 +39,9 @@ export default function PaymentMethodsSection({
 }: PaymentMethodsSectionProps) {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(null);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
+    string | null
+  >(null);
   const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -124,7 +126,7 @@ export default function PaymentMethodsSection({
       await onRefresh();
       setIsProcessing(false);
       toast.success("Default payment method updated successfully");
-    } catch (error: APIError) {
+    } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||
         error.message ||
@@ -152,7 +154,7 @@ export default function PaymentMethodsSection({
         <Accordion.Item eventKey="0" className="border-0">
           <Accordion.Header className="bg-white">
             <span
-              style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
+              style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
             >
               Payment Methods
             </span>
@@ -197,7 +199,10 @@ export default function PaymentMethodsSection({
                           {method.isDefault && (
                             <span
                               className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
-                              style={{ backgroundColor: "#D6E6FF" ,color: "#3D4B65"}} 
+                              style={{
+                                backgroundColor: "#D6E6FF",
+                                color: "#3D4B65",
+                              }}
                             >
                               Default
                             </span>
@@ -278,7 +283,12 @@ export default function PaymentMethodsSection({
                 style={{ color: "#0C1F3F" }}
               >
                 {" "}
-                <Image src="/add-circle.svg" alt="Edit" width={24} height={24} />
+                <Image
+                  src="/add-circle.svg"
+                  alt="Edit"
+                  width={24}
+                  height={24}
+                />
                 <span>Add payment method</span>
               </div>
             )}
@@ -291,7 +301,8 @@ export default function PaymentMethodsSection({
           <Modal.Title>Delete Payment Method?</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-        Deleting this card may interrupt your subscription if no backup is available.
+          Deleting this card may interrupt your subscription if no backup is
+          available.
         </Modal.Body>
         <Modal.Footer>
           <Button

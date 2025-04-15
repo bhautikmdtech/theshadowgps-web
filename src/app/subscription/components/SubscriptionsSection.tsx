@@ -1,6 +1,7 @@
 import React, { useState, useCallback, JSX } from "react";
 import { Accordion, Badge, Button, Alert } from "react-bootstrap";
-import { FaCreditCard, FaCube, FaExclamationTriangle } from "react-icons/fa";
+import { FaCreditCard, FaCube } from "react-icons/fa";
+import { PiWarningCircleLight } from "react-icons/pi";
 import Image from "next/image";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { SubscriptionService } from "./subscriptionService";
@@ -47,8 +48,8 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       const formattedDate = formatDate(subscription.graceEndDate);
 
       return subscription.graceStatus === "active"
-        ? `Your card on file was declined. To continue receiving alerts and services, please update your payment method. If not updated, your subscription will end on ${formattedDate}`
-        : "Your grace period has expired. Please update your payment method to restore service.";
+        ? `Your card has expired. Update it to avoid subscription cancellation.`
+        : "Your grace period has expired. Please select a plan and add a payment method to restore your service.";
     };
 
     const formatDate = (dateString?: string): string => {
@@ -225,20 +226,26 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   };
 
   const getStatusMessage = (subscription: Subscription): string => {
+    const periodEnd = safeFormatDate(subscription.currentPeriodEnd);
+    const graceEnd = safeFormatDate(subscription.graceEndDate);
+
     if (subscription.isCancelled) {
-      return `Available until ${safeFormatDate(subscription.currentPeriodEnd)}`;
+      return `Valid until ${periodEnd}`;
     }
-    if (subscription.isFreeTrial) {
-      return `Subscription starts on ${safeFormatDate(
-        subscription.currentPeriodEnd
-      )}`;
+
+    if (subscription.graceStatus === "expired") {
+      return `Grace period expired on ${graceEnd}`;
     }
+
     if (subscription.isInGracePeriod) {
-      return `Grace Period ends on ${safeFormatDate(
-        subscription.graceEndDate
-      )}`;
+      return `Grace period ends on ${graceEnd}`;
     }
-    return `Renews on ${safeFormatDate(subscription.currentPeriodEnd)}`;
+
+    if (subscription.isFreeTrial) {
+      return `Subscription starts on ${periodEnd}`;
+    }
+
+    return `Next renewal ${periodEnd}`;
   };
 
   const safeFormatDate = (dateString?: string | null): string => {
@@ -261,12 +268,10 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
   const getCardIcon = (brand: string): React.ReactNode => {
     const brands: Record<string, React.ReactNode> = {
-      visa: <PaymentIcon type="Visa" format="flatRounded" width={38} />,
-      mastercard: (
-        <PaymentIcon type="Mastercard" format="flatRounded" width={38} />
-      ),
-      amex: <PaymentIcon type="Amex" format="flatRounded" width={28} />,
-      discover: <PaymentIcon type="Discover" format="flatRounded" width={28} />,
+      visa: <PaymentIcon type="Visa" format="flatRounded" />,
+      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" />,
+      amex: <PaymentIcon type="Amex" format="flatRounded" />,
+      discover: <PaymentIcon type="Discover" format="flatRounded" />,
     };
 
     return brands[brand.toLowerCase()] || <FaCreditCard size={26} />;
@@ -304,9 +309,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             color: "#fff",
             fontSize: "12px",
           }}
-          className="rounded-pill fontWeight-medium m-[5px]"
+          className="rounded-pill fontWeight-medium"
         >
-          Free Trial (ends {formatDate(subscription.currentPeriodEnd)})
+          Trial ends ({formatDate(subscription.currentPeriodEnd)})
         </Badge>
       );
     }
@@ -320,7 +325,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             color: "#3D4B65",
             fontSize: "12px",
           }}
-          className="rounded-pill fontWeight-medium m-[5px]"
+          className="rounded-pill fontWeight-medium"
         >
           Payment Failed
         </Badge>
@@ -336,7 +341,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             color: "#3D4B65 !important",
             fontSize: "12px",
           }}
-          className="rounded-pill fontWeight-medium m-[5px]"
+          className="rounded-pill fontWeight-medium"
         >
           Cancel on{" "}
           {subscription.cancelAt && ` (${formatDate(subscription.cancelAt)})`}
@@ -354,7 +359,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             fontSize: "12px",
           }}
           bg="warning"
-          className="rounded-pill fontWeight-medium m-[5px]"
+          className="rounded-pill fontWeight-medium"
         >
           Grace Period{" "}
           {subscription.graceEndDate &&
@@ -371,7 +376,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             color: `${statusConfig[baseStatus].text} !important`,
             fontSize: "12px",
           }}
-          className="rounded-pill fontWeight-medium m-[5px]"
+          className="rounded-pill fontWeight-medium"
         >
           {statusConfig[baseStatus].label}
         </Badge>
@@ -393,10 +398,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         </div>
         <div className="d-flex align-items-center">
           <span
-            className="text-dark"
             style={{
-              color: "#0C1F3F",
-              fontSize: "16px",
+              color: "#3D4B65",
+              fontSize: "12px",
             }}
           >
             **** {subscription.paymentMethod.last4}
@@ -404,12 +408,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           <Button
             variant="link"
             onClick={() => openModal("updatePayment", subscription)}
-            className="p-0"
+            className="p-0 ms-2 flex align-items-start"
             style={{
               color: "#6c757d",
-              marginLeft: "5px",
-              display: "flex",
-              alignItems: "flex-start",
             }}
           >
             <Image src="/pencil.svg" alt="Edit" width={20} height={20} />
@@ -513,10 +514,10 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
       }}
     >
-      <div className="d-flex align-items-start">
+      <div className="flex items-start flex-wrap gap-3">
         <div
-          className="me-3 rounded-circle w-full"
-          style={{ maxWidth: "60px !important" }}
+          className="rounded-circle w-full"
+          style={{ maxWidth: "60px !important", minWidth: "60px !important" }}
         >
           {subscription.device?.deviceImage ? (
             <Image
@@ -543,23 +544,22 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           >
             {subscription.device?.deviceName || "My Device"}
           </h6>
-          <div style={{ color: "#0C1F3F", fontSize: "14px" }}>
+          <div
+            className="d-flex flex-wrap align-items-center gap-2 my-1.5"
+            style={{ color: "#0C1F3F", fontSize: "12px" }}
+          >
             {formatInterval(subscription.interval, subscription.interval_count)}{" "}
             Plan
-            <div className="d-flex flex-wrap align-items-center ml-1">
+            <div className="d-flex flex-wrap align-items-center gap-2">
               {getStatusBadge(subscription)}
             </div>
           </div>
 
           <div
-            className="fw-medium"
+            className="gap-1 flex align-items-center my-1"
             style={{
               color: "#0C1F3F",
-              fontSize: "15px",
-              marginTop: "2px",
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
+              fontSize: "14px",
             }}
           >
             <span className="fw-bold subscription-interval">
@@ -575,7 +575,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             </span>
           </div>
 
-          <div style={{ color: "#0C1F3F", fontSize: "14px" }}>
+          <div style={{ color: "#3D4B65", fontSize: "12px" }}>
             {getStatusMessage(subscription)}
 
             {/* Cancellation date if applicable */}
@@ -587,16 +587,22 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             {subscription.isInGracePeriod &&
               subscription.gracePeriodMessage && (
                 <Alert
-                  variant="warning"
-                  className="mt-2 mb-0 py-2 px-3 d-flex align-items-center"
+                  variant="light"
+                  className="mt-2 p-2 d-flex align-items-center border-1"
+                  style={{ color: "#3D4B65", fontSize: "12px" }}
                 >
-                  <FaExclamationTriangle className="me-2" />
+                  <PiWarningCircleLight
+                    className="me-2"
+                    size={18}
+                    color="#FF824C"
+                    style={{ minWidth: "18px" }}
+                  />
                   {subscription.gracePeriodMessage}
                 </Alert>
               )}
           </div>
 
-          {isActive && renderPaymentMethod(subscription)}
+          {!isActive && renderPaymentMethod(subscription)}
         </div>
       </div>
       <div className="d-flex mt-3 gap-2">
@@ -606,12 +612,12 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   );
 
   return (
-    <div className="container-fluid p-0">
-      <Accordion defaultActiveKey="0" className="mb-4">
+    <>
+      <Accordion defaultActiveKey="0" className="mb-3 border-0">
         <Accordion.Item eventKey="0" className="border-0">
           <Accordion.Header className="bg-white">
             <span
-              style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
+              style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
             >
               Subscriptions
             </span>
@@ -622,7 +628,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 <span
                   style={{
                     color: "#0C1F3F",
-                    fontSize: "18px",
+                    fontSize: "16px",
                     fontWeight: "600",
                   }}
                 >
@@ -707,7 +713,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         onConfirm={handleReactivate}
         isProcessing={isProcessing}
       />
-    </div>
+    </>
   );
 };
 

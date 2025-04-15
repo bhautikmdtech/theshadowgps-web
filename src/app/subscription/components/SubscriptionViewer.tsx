@@ -164,7 +164,7 @@ export default function SubscriptionViewer({
     <div className="bg-white min-vh-100">
       <nav className="bg-white border-bottom mb-3" style={{ height: "58px" }}>
         <div
-          className="container d-flex align-items-center "
+          className="container d-flex align-items-center"
           style={{ paddingTop: "16px", paddingBottom: "16px" }}
         >
           <div>

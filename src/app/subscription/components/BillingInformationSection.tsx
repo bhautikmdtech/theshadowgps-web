@@ -67,7 +67,7 @@ export default function BillingInformationSection({
         <Accordion.Item eventKey="0" className="border-0">
           <Accordion.Header>
             <span
-              style={{ color: "#0C1F3F", fontSize: "20px", fontWeight: "700" }}
+              style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
             >
               Billing And Shipping Information
             </span>
@@ -81,55 +81,69 @@ export default function BillingInformationSection({
                 backgroundColor: "#FFFFFF",
               }}
             >
-              <div style={{ 
-                display: "flex", 
-                flexDirection: "column",
-                gap: "12px",
-                maxWidth: "100%"
-              }}>
-                <div style={{ 
+              <div
+                style={{
                   display: "flex",
-                  alignItems: "flex-start",
-                  gap: "24px"
-                }}>
-                  <div style={{ 
-                    minWidth: "60px",
-                    color: "#6C757D",
-                    fontSize: "14px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap"
-                  }}>
+                  flexDirection: "column",
+                  gap: "12px",
+                  maxWidth: "100%",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minWidth: "60px",
+                      color: "#3D4B65",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Name
                   </div>
-                  <div style={{ 
-                    color: "#0C1F3F",
-                    fontSize: "14px",
-                    wordBreak: "break-word",
-                    flex: 1
-                  }}>
+                  <div
+                    style={{
+                      color: "#0C1F3F",
+                      fontSize: "14px",
+                      wordBreak: "break-word",
+                      flex: 1,
+                    }}
+                  >
                     {customer.name || "Not available"}
                   </div>
                 </div>
-                <div style={{ 
-                  display: "flex",
-                  alignItems: "flex-start",
-                  gap: "24px"
-                }}>
-                  <div style={{ 
-                    minWidth: "60px",
-                    color: "#6C757D",
-                    fontSize: "14px",
-                    fontWeight: "700",
-                    whiteSpace: "nowrap"
-                  }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "24px",
+                  }}
+                >
+                  <div
+                    style={{
+                      minWidth: "60px",
+                      color: "#3D4B65",
+                      fontSize: "14px",
+                      fontWeight: "700",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     Email
                   </div>
-                  <div style={{ 
-                    color: "#0C1F3F",
-                    fontSize: "14px",
-                    wordBreak: "break-word",
-                    flex: 1
-                  }}>
+                  <div
+                    style={{
+                      color: "#0C1F3F",
+                      fontSize: "14px",
+                      wordBreak: "break-word",
+                      flex: 1,
+                    }}
+                  >
                     {customer.email || "Not available"}
                   </div>
                 </div>
