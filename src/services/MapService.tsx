@@ -7,6 +7,7 @@ import { useTheme } from "next-themes";
 
 mapboxgl.accessToken =
   "pk.eyJ1IjoiYWJoaXNoZWtiaGF0aWEwMiIsImEiOiJjbTZpZXlwd2kwOGhtMmpxMmo4cXQ1YzBvIn0.6VmLnWwyzFJ8PvgY6-3jXA";
+
 export const MAPBOX_LIGHT =
   "mapbox://styles/abhishekbhatia02/cm7ektl0a006601r3ednqdyxu";
 export const MAPBOX_DARK =
@@ -33,7 +34,7 @@ export default function MapComponent({
 
     const map = new mapboxgl.Map({
       container: mapContainerRef.current,
-      style: getMapStyle(currentTheme),
+      style: currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT,
       center: [initialPosition.lng, initialPosition.lat],
       zoom: 14,
       minZoom: 1,
@@ -60,15 +61,12 @@ export default function MapComponent({
   // Update map style when theme changes
   useEffect(() => {
     if (mapRef.current && currentTheme) {
-      mapRef.current.setStyle(getMapStyle(currentTheme));
+      const themeStyleUrl =
+        currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
+
+      mapRef.current.setStyle(themeStyleUrl);
     }
   }, [currentTheme]);
-
-  const getMapStyle = (theme: string | undefined) => {
-    return theme === "dark"
-      ? "mapbox://styles/mapbox/dark-v11"
-      : "mapbox://styles/mapbox/light-v11";
-  };
 
   return (
     <div className="relative w-full h-full">

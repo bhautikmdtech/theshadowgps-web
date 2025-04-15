@@ -28,21 +28,21 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
 
   const mapStyles = [
     {
-      id: "custom-default", // Unique identifier
-      type: "streets-v11",
+      id: "custom-default",
+      type: "mapbox://styles/mapbox/streets-v11",
       label: "Default",
       img: "/images/map/road.svg",
     },
     {
-      id: "satellite-streets", // Unique identifier
-      type: "satellite-streets-v11",
+      id: "satellite-streets",
+      type: "mapbox://styles/mapbox/satellite-streets-v11",
       label: "Satellite",
       img: "/images/map/satellite.svg",
     },
     {
-      id: "theme-toggle", // Unique identifier
-      type: currentTheme === "dark" ? "dark-v11" : "light-v11",
-      label: theme === "dark" ? "Dark" : "Light",
+      id: "theme-toggle",
+      type: currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT,
+      label: currentTheme === "dark" ? "Dark" : "Light",
       img: "/images/map/hybrid.svg",
     },
   ];
@@ -64,14 +64,14 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     setIsDropdownOpen((prev) => !prev);
   };
 
-  const changeMapStyle = (style: string) => {
+  const changeMapStyle = (styleUrl: string) => {
     if (!logMapState()) return;
 
-    setMapStyle(style);
+    setMapStyle(styleUrl);
     setIsDropdownOpen(false);
 
     try {
-      map!.setStyle(`mapbox://styles/mapbox/${style}`);
+      map!.setStyle(styleUrl);
 
       // Re-add markers after style change
       map!.once("style.load", () => {
@@ -166,11 +166,9 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     );
   };
   useEffect(() => {
-    if ((map && mapStyle === "dark-v11") || mapStyle === "light-v11") {
-      const newStyle = currentTheme === "dark" ? "dark-v11" : "light-v11";
-      if (mapStyle !== newStyle) {
-        changeMapStyle(newStyle);
-      }
+    const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
+    if (map && mapStyle !== themeStyleUrl) {
+      changeMapStyle(themeStyleUrl);
     }
   }, [currentTheme]);
 
@@ -187,7 +185,9 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   return (
-    <div className={`relative flex flex-col gap-2 md:right-4 md:top-2 fixed right-1 bottom-25 z-10`}>
+    <div
+      className={`relative flex flex-col gap-2 md:right-4 md:top-2 fixed right-1 bottom-25 z-10`}
+    >
       {/* Map Type Button */}
       <div ref={dropdownRef} className="relative">
         <button
