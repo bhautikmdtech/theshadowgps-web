@@ -1,4 +1,5 @@
 export interface Customer {
+  userId: string;
   id: string;
   name: string | null;
   email: string | null;
@@ -19,6 +20,8 @@ export interface Device {
 }
 
 export interface Subscription {
+  deviceId: string;
+  subscriptionIdDb: string;
   id: string;
   status: string;
   amount: string;

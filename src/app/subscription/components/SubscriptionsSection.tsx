@@ -6,13 +6,14 @@ import Image from "next/image";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { SubscriptionService } from "./subscriptionService";
 import { PageLoader } from "@/components";
-import type { PaymentMethod, Plan, Subscription } from "./types";
+import type { Customer, PaymentMethod, Plan, Subscription } from "./types";
 import UpdatePlanModal from "./UpdatePlanModal";
 import UpdatePaymentModal from "./UpdatePaymentModal";
 import CancelSubscriptionModal from "./CancelSubscriptionModal";
 import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
 
 interface SubscriptionsSectionProps {
+  customer: Customer;
   subscriptions: Subscription[];
   token: string;
   plans: Plan[];
@@ -24,6 +25,7 @@ interface SubscriptionsSectionProps {
 type ModalType = "updatePlan" | "updatePayment" | "cancel" | "reactivate";
 
 const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
+  customer,
   subscriptions,
   token,
   plans,
@@ -41,6 +43,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   >(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [reactivateStart, setReactivateStart] = useState(false);
+  const [newSubStart, setNewSubStart] = useState(false);
 
   // Memoized processed subscriptions
   const { activeSubscriptions, inactiveSubscriptions } = React.useMemo(() => {
@@ -119,7 +122,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         setIsProcessing(true);
         await action();
         await onRefresh();
-        closeModal();
+        await closeModal();
         if (reactivateStart) {
           openModal("updatePayment", currentSubscription);
         }
@@ -152,26 +155,57 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   );
 
   const handlePlanUpdate = useCallback(() => {
-    if (!selectedPlanId) return;
-    handleSubscriptionAction(() =>
-      SubscriptionService.updateSubscriptionPlan(
-        token,
-        currentSubscription!.id,
-        selectedPlanId
-      )
-    );
-  }, [handleSubscriptionAction, selectedPlanId, token]);
+    if (!selectedPlanId || !currentSubscription) return;
+
+    handleSubscriptionAction(async () => {
+      if (!newSubStart) {
+        await SubscriptionService.updateSubscriptionPlan(
+          token,
+          currentSubscription.id,
+          selectedPlanId
+        );
+      }
+    });
+  }, [
+    handleSubscriptionAction,
+    selectedPlanId,
+    currentSubscription,
+    newSubStart,
+    token,
+  ]);
 
   const handlePaymentUpdate = useCallback(() => {
-    if (!selectedPaymentMethodId) return;
+    if (!selectedPaymentMethodId || !currentSubscription || !customer) return;
+
     handleSubscriptionAction(async () => {
-      await SubscriptionService.updatePaymentMethod(
-        token,
-        currentSubscription!.id,
-        selectedPaymentMethodId
-      );
+      if (newSubStart) {
+        await SubscriptionService.createNewSubscription(
+          token,
+          selectedPlanId || "",
+          customer.id,
+          selectedPaymentMethodId || "",
+          {
+            subscriptionIdDb: currentSubscription.subscriptionIdDb,
+            deviceId: currentSubscription.deviceId,
+            userId: customer.userId,
+          }
+        );
+      } else {
+        await SubscriptionService.updatePaymentMethod(
+          token,
+          currentSubscription.id,
+          selectedPaymentMethodId
+        );
+      }
     });
-  }, [handleSubscriptionAction, selectedPaymentMethodId, token]);
+  }, [
+    selectedPaymentMethodId,
+    currentSubscription,
+    customer,
+    newSubStart,
+    token,
+    handleSubscriptionAction,
+  ]);
 
   const formatDate = (dateString?: string): string => {
     if (!dateString) return "N/A";
@@ -434,11 +468,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               variant="primary"
               className="flex-grow-1 darkButton"
               onClick={() => {
-                console.log("first");
-                alert(
-                  "Processing code, here we implement new subscription fetching code"
-                );
-                // openModal("updatePlan", subscription);
+                setNewSubStart(true);
+                setReactivateStart(true);
+                openModal("updatePlan", subscription);
               }}
             >
               Get Subcription
@@ -630,7 +662,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               )}
           </div>
 
-          {!isActive && renderPaymentMethod(subscription)}
+          {isActive && renderPaymentMethod(subscription)}
         </div>
       </div>
       <div className="d-flex mt-3 gap-2">
@@ -724,6 +756,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         isProcessing={isProcessing}
         paymentMethods={paymentMethods}
         selectedPaymentMethodId={selectedPaymentMethodId}
+        newSubStart={newSubStart}
         onPaymentMethodSelect={setSelectedPaymentMethodId}
         onAddNewPaymentMethod={onAddNewPaymentMethod}
       />

@@ -12,6 +12,7 @@ interface UpdatePaymentModalProps {
   isProcessing: boolean;
   paymentMethods: PaymentMethod[];
   selectedPaymentMethodId: string | null;
+  newSubStart: boolean;
   onPaymentMethodSelect: (id: string) => void;
   onAddNewPaymentMethod: () => void;
 }
@@ -23,6 +24,7 @@ export default function UpdatePaymentModal({
   isProcessing,
   paymentMethods,
   selectedPaymentMethodId,
+  newSubStart,
   onPaymentMethodSelect,
   onAddNewPaymentMethod,
 }: UpdatePaymentModalProps) {
@@ -213,6 +215,8 @@ export default function UpdatePaymentModal({
               />
               Processing...
             </>
+          ) : newSubStart ? (
+            "Get new subscription"
           ) : (
             "Update Payment Method"
           )}

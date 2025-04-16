@@ -66,6 +66,30 @@ export const SubscriptionService = {
     return response.data;
   },
 
+  async createNewSubscription(
+    token: string,
+    priceId: string,
+    customerId: string,
+    paymentMethodId: string,
+    metadata: Record<string, string>
+  ) {
+    const response = await axiosClient.post(
+      `/api/app/subscription/createNewSubscription`,
+      {
+        priceId,
+        customerId,
+        paymentMethodId,
+        metadata,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      }
+    );
+    return response.data;
+  },
   async updatePaymentMethod(
     token: string,
     subscriptionId: string,
