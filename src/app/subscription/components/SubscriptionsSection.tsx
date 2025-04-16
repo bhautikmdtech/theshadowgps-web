@@ -229,23 +229,23 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     const periodEnd = safeFormatDate(subscription.currentPeriodEnd);
     const graceEnd = safeFormatDate(subscription.graceEndDate);
 
+    let statusMessage = "";
+
     if (subscription.isCancelled) {
-      return `Valid until ${periodEnd}`;
+      statusMessage = `Valid until ${periodEnd}`;
+    } else if (subscription.status === "canceled") {
+      statusMessage = `Subscription canceled (${periodEnd})`;
+    } else if (subscription.graceStatus === "expired") {
+      statusMessage = `Grace period expired on ${graceEnd}`;
+    } else if (subscription.isInGracePeriod) {
+      statusMessage = `Grace period ends on ${graceEnd}`;
+    } else if (subscription.isFreeTrial) {
+      statusMessage = `Subscription starts on ${periodEnd}`;
+    } else {
+      statusMessage = `Next renewal ${periodEnd}`; // optional fallback
     }
 
-    if (subscription.graceStatus === "expired") {
-      return `Grace period expired on ${graceEnd}`;
-    }
-
-    if (subscription.isInGracePeriod) {
-      return `Grace period ends on ${graceEnd}`;
-    }
-
-    if (subscription.isFreeTrial) {
-      return `Subscription starts on ${periodEnd}`;
-    }
-
-    return `Next renewal ${periodEnd}`;
+    return statusMessage;
   };
 
   const safeFormatDate = (dateString?: string | null): string => {
@@ -344,7 +344,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           className="rounded-pill fontWeight-medium"
         >
           Cancel on{" "}
-          {subscription.cancelAt && ` (${formatDate(subscription.cancelAt)})`}
+          {subscription.cancelAt
+            ? ` (${formatDate(subscription.cancelAt)})`
+            : ` (${formatDate(subscription.currentPeriodEnd)})`}
         </Badge>
       );
     }
@@ -426,31 +428,40 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     const isActive = ["active", "trialing"].includes(subscription.status);
     const isPastDue = subscription.status === "past_due";
 
-    const isCanceled =
-      subscription.isCancelled || subscription.status === "canceled";
-
-    if (isCanceled) {
+    if (subscription.isCancelled || subscription.status === "canceled") {
       return (
         <>
-          <Button
-            variant="outline-primary"
-            className="flex-grow-1 lightButton"
-            onClick={() => openModal("reactivate", subscription)}
-            disabled={isProcessing}
-          >
-            {currentSubscription?.id === subscription.id && isProcessing ? (
-              <PageLoader type="spinner" size="sm" />
-            ) : (
-              "Renew"
-            )}
-          </Button>
-          <Button
-            variant="primary"
-            className="flex-grow-1 darkButton"
-            onClick={() => openModal("updatePlan", subscription)}
-          >
-            Update
-          </Button>
+          {subscription.status === "canceled" ? (
+            <Button
+              variant="primary"
+              className="flex-grow-1 darkButton"
+              onClick={() => openModal("updatePlan", subscription)}
+            >
+              Get Subcription
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="outline-primary"
+                className="flex-grow-1 lightButton"
+                onClick={() => openModal("reactivate", subscription)}
+                disabled={isProcessing}
+              >
+                {currentSubscription?.id === subscription.id && isProcessing ? (
+                  <PageLoader type="spinner" size="sm" />
+                ) : (
+                  "Renew"
+                )}
+              </Button>
+              <Button
+                variant="primary"
+                className="flex-grow-1 darkButton"
+                onClick={() => openModal("updatePlan", subscription)}
+              >
+                Update
+              </Button>
+            </>
+          )}
         </>
       );
     }
@@ -602,7 +613,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               )}
           </div>
 
-          {!isActive && renderPaymentMethod(subscription)}
+          {!isActive &&
+            subscription.status !== "canceled" &&
+            renderPaymentMethod(subscription)}
         </div>
       </div>
       <div className="d-flex mt-3 gap-2">
