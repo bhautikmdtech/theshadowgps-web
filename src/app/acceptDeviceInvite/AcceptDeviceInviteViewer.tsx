@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HiCheckCircle, HiXCircle } from "react-icons/hi";
 
 interface AcceptDeviceInviteViewerProps {
   response: {
@@ -34,44 +35,52 @@ export default function AcceptDeviceInviteViewer({
     }
   }, [userId, deviceId, email]);
 
+  const renderStoreButton = () => {
+    if (platform === "ios") {
+      return (
+        <a
+          href="https://apps.apple.com/us/app/com.ShadowGPS.ios"
+          className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded transition mt-4 block"
+        >
+          Download on the App Store
+        </a>
+      );
+    }
+    if (platform === "android") {
+      return (
+        <a
+          href="https://play.google.com/store/apps/details?id=com.ShadowGPS.android"
+          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition mt-4 block"
+        >
+          Get it on Google Play
+        </a>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-      <div className="bg-white p-8 rounded-lg shadow-md text-center max-w-md w-full">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
         {error ? (
-          <>
-            <h1 className="text-2xl font-semibold text-red-600">
+          <div>
+            <HiXCircle className="mx-auto text-red-500 w-12 h-12 mb-4" />
+            <h1 className="text-2xl font-bold text-red-600 mb-2">
               Invite Not Found
             </h1>
-            <p className="mt-2 text-gray-600">{error}</p>
-          </>
+            <p className="text-gray-600">{error}</p>
+          </div>
         ) : (
-          <>
-            <h1 className="text-2xl font-semibold text-green-600">
+          <div>
+            <HiCheckCircle className="mx-auto text-green-500 w-12 h-12 mb-4" />
+            <h1 className="text-2xl font-bold text-green-600 mb-2">
               Invite Accepted!
             </h1>
-            <p className="mt-2 text-gray-600">
+            <p className="text-gray-700">
               You now have access to the shared device.
             </p>
-
-            <div className="mt-6 store-buttons">
-              {platform === "ios" && (
-                <a
-                  href="https://apps.apple.com/us/app/com.ShadowGPS.ios"
-                  className="bg-blue-500 text-white px-4 py-2 rounded block mt-2"
-                >
-                  Download on the App Store
-                </a>
-              )}
-              {platform === "android" && (
-                <a
-                  href="https://play.google.com/store/apps/details?id=com.ShadowGPS.android"
-                  className="bg-green-500 text-white px-4 py-2 rounded block mt-2"
-                >
-                  Get it on Google Play
-                </a>
-              )}
-            </div>
-          </>
+            {renderStoreButton()}
+          </div>
         )}
       </div>
     </div>
