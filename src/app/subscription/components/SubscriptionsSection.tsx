@@ -547,7 +547,20 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               className="d-flex align-items-center justify-content-center rounded-circle bg-light"
               style={{ width: 60, height: 60 }}
             >
-              <FaCube size={24} className="text-secondary" />
+              {subscription.device?.deviceName ? (
+                <span
+                  className="text-uppercase fw-bold text-secondary"
+                  style={{ fontSize: 14 }}
+                >
+                  {subscription.device.deviceName
+                    .split(" ")
+                    .map((word) => word[0])
+                    .join("")
+                    .slice(0, 2)}
+                </span>
+              ) : (
+                <FaCube size={24} className="text-secondary" />
+              )}
             </div>
           )}
         </div>
