@@ -170,8 +170,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         currentSubscription!.id,
         selectedPaymentMethodId
       );
-      // Wait for Stripe webhook to process
-      await new Promise((resolve) => setTimeout(resolve, 10000));
     });
   }, [handleSubscriptionAction, selectedPaymentMethodId, token]);
 
@@ -435,7 +433,13 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             <Button
               variant="primary"
               className="flex-grow-1 darkButton"
-              onClick={() => openModal("updatePlan", subscription)}
+              onClick={() => {
+                console.log("first");
+                alert(
+                  "Processing code, here we implement new subscription fetching code"
+                );
+                // openModal("updatePlan", subscription);
+              }}
             >
               Get Subcription
             </Button>
@@ -613,9 +617,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               )}
           </div>
 
-          {!isActive &&
-            subscription.status !== "canceled" &&
-            renderPaymentMethod(subscription)}
+          {!isActive && renderPaymentMethod(subscription)}
         </div>
       </div>
       <div className="d-flex mt-3 gap-2">
