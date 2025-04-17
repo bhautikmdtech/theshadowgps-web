@@ -11,6 +11,7 @@ import UpdatePlanModal from "./UpdatePlanModal";
 import UpdatePaymentModal from "./UpdatePaymentModal";
 import CancelSubscriptionModal from "./CancelSubscriptionModal";
 import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
+import { toast } from "react-toastify";
 
 interface SubscriptionsSectionProps {
   customer: Customer;
@@ -51,7 +52,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       const formattedDate = formatDate(subscription.graceEndDate);
 
       return subscription.graceStatus === "active"
-        ? `Your card has expired. Update it to avoid subscription cancellation.`
+        ? `Your card on file was declined. To continue receiving alerts and services please update your payment method. If not updated, your subscription will end on ${formattedDate}`
         : "Your grace period has expired. Please select a plan and add a payment method to restore your service.";
     };
 
@@ -91,7 +92,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           (sub.status === "past_due" && sub.graceStatus === "expired")
       ),
     };
-  }, [subscriptions]);
+  }, [subscriptions, onRefresh]);
 
   // Modal handlers
   const openModal = useCallback(
@@ -115,41 +116,59 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
   // Action handlers
   const handleSubscriptionAction = useCallback(
-    async (action: () => Promise<void>) => {
+    async (action: () => Promise<void>, successMessage: string) => {
       if (!currentSubscription) return;
 
       try {
         setIsProcessing(true);
         await action();
         await onRefresh();
-        await closeModal();
+
+        closeModal();
+
+        toast.success(successMessage, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+
         if (reactivateStart) {
           openModal("updatePayment", currentSubscription);
         }
       } catch (error) {
         console.error("Subscription action failed:", error);
+        toast.error("Operation failed. Please try again.", {
+          position: "top-right",
+          autoClose: 5000,
+        });
       } finally {
         setIsProcessing(false);
       }
     },
-    [currentSubscription, onRefresh, closeModal]
+    [currentSubscription, closeModal, reactivateStart]
   );
 
   const handleCancel = useCallback(
     () =>
-      handleSubscriptionAction(() =>
-        SubscriptionService.cancelSubscription(token, currentSubscription!.id)
+      handleSubscriptionAction(
+        () =>
+          SubscriptionService.cancelSubscription(
+            token,
+            currentSubscription!.id
+          ),
+        "Subscription cancelled successfully"
       ),
     [handleSubscriptionAction, token]
   );
 
   const handleReactivate = useCallback(
     () =>
-      handleSubscriptionAction(() =>
-        SubscriptionService.reactivateSubscription(
-          token,
-          currentSubscription!.id
-        )
+      handleSubscriptionAction(
+        () =>
+          SubscriptionService.reactivateSubscription(
+            token,
+            currentSubscription!.id
+          ),
+        "Subscription reactivated successfully"
       ),
     [handleSubscriptionAction, token]
   );
@@ -165,7 +184,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           selectedPlanId
         );
       }
-    });
+    }, "Subscription plan updated successfully");
   }, [
     handleSubscriptionAction,
     selectedPlanId,
@@ -174,10 +193,12 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     token,
   ]);
 
-  const handlePaymentUpdate = useCallback(() => {
+  const handlePaymentUpdate = useCallback(async () => {
     if (!selectedPaymentMethodId || !currentSubscription || !customer) return;
 
-    handleSubscriptionAction(async () => {
+    try {
+      setIsProcessing(true);
+
       if (newSubStart) {
         await SubscriptionService.createNewSubscription(
           token,
@@ -197,14 +218,43 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           selectedPaymentMethodId
         );
       }
-    });
+
+      await onRefresh();
+
+      toast.success(
+        newSubStart
+          ? "New subscription created successfully"
+          : "Payment method updated successfully",
+        {
+          position: "top-right",
+          autoClose: 5000,
+        }
+      );
+
+      closeModal();
+
+      if (reactivateStart) {
+        openModal("updatePayment", currentSubscription);
+      }
+    } catch (error) {
+      console.error("Payment update failed:", error);
+      toast.error("Operation failed. Please try again.", {
+        position: "top-right",
+        autoClose: 5000,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   }, [
     selectedPaymentMethodId,
     currentSubscription,
     customer,
     newSubStart,
     token,
-    handleSubscriptionAction,
+    selectedPlanId,
+    onRefresh,
+    closeModal,
+    reactivateStart,
   ]);
 
   const formatDate = (dateString?: string): string => {
@@ -457,7 +507,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   const renderSubscriptionActions = (
     subscription: Subscription
   ): JSX.Element | null => {
-    const isActive = ["active", "trialing"].includes(subscription.status);
+    const isActive = ["active", "trialing", "past_due"].includes(
+      subscription.status
+    );
     const isPastDue = subscription.status === "past_due";
 
     if (subscription.isCancelled || subscription.status === "canceled") {
@@ -502,7 +554,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       );
     }
 
-    if (isPastDue && subscription.isInGracePeriod) {
+    if (isPastDue && subscription.graceStatus === "expired") {
       return (
         <>
           <Button
