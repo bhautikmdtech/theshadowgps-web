@@ -219,8 +219,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         );
       }
 
-      await onRefresh();
-
       toast.success(
         newSubStart
           ? "New subscription created successfully"
@@ -230,20 +228,13 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           autoClose: 5000,
         }
       );
-
-      closeModal();
-
-      if (reactivateStart) {
-        openModal("updatePayment", currentSubscription);
-      }
-    } catch (error) {
+      window.location.reload();
+    } catch (error: any) {
       console.error("Payment update failed:", error);
-      toast.error("Operation failed. Please try again.", {
+      toast.error(`Operation failed. ${error.message}`, {
         position: "top-right",
         autoClose: 5000,
       });
-    } finally {
-      setIsProcessing(false);
     }
   }, [
     selectedPaymentMethodId,
@@ -252,9 +243,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     newSubStart,
     token,
     selectedPlanId,
-    onRefresh,
-    closeModal,
-    reactivateStart,
   ]);
 
   const formatDate = (dateString?: string): string => {
