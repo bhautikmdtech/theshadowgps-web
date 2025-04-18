@@ -27,7 +27,7 @@ export default async function SubscriptionPage({
       }
     );
 
-    return <PaymentStatusViewer response={response.data} />;
+    return <PaymentStatusViewer response={response.data} status={status} />;
   } catch (error) {
     console.error("Error fetching payment status:", error);
     return (
@@ -36,6 +36,7 @@ export default async function SubscriptionPage({
           status: "error",
           error: "Failed to load payment status. Please try again later.",
         }}
+        status={status}
       />
     );
   }

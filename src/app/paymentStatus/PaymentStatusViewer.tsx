@@ -9,6 +9,7 @@ import {
 } from "react-icons/hi";
 
 interface PaymentStatusViewerProps {
+  status: string;
   response: {
     transaction_id?: string;
     status?: "success" | "pending" | "failed" | "cancelled" | "error";
@@ -32,128 +33,72 @@ interface PaymentStatusViewerProps {
 
 export default function PaymentStatusViewer({
   response,
+  status,
 }: PaymentStatusViewerProps) {
-  console.log(response);
-  const [platform, setPlatform] = useState<"ios" | "android" | "other">(
-    "other"
-  );
   const [isWebView, setIsWebView] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
-  // Function to send message to WebView
   const sendWebViewMessage = (data: any) => {
     if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
       try {
-        (window as any).ReactNativeWebView.postMessage(JSON.stringify(data));
-        console.log("Message sent to WebView:", data);
-      } catch (e) {
-        console.error("Error posting to WebView:", e);
+        const message = JSON.stringify(data);
+        (window as any).ReactNativeWebView.postMessage(message);
+        console.log("Sent to WebView:", message);
+      } catch (error) {
+        console.error("Error sending to WebView:", error);
       }
     }
   };
 
   useEffect(() => {
-    // Check if we're in a WebView
-    const webViewDetected = !!(window as any).ReactNativeWebView;
-    setIsWebView(webViewDetected);
+    // Check if running in WebView
+    setIsWebView(!!(window as any).ReactNativeWebView);
 
-    // Platform detection
-    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    setPlatform(isIOS ? "ios" : isAndroid ? "android" : "other");
-
-    // Build data object for WebView
-    const dataObject = {
-      transactionId: response.transaction_id || "",
-      status: response.status || "",
-      message: response.message || "",
-      subscriptionDetails: response.subscriptionDetails || null,
+    const paymentData = {
+      transactionId: response.transaction_id,
+      status: response.status,
+      message: response.message,
+      subscriptionDetails: response.subscriptionDetails,
     };
 
-    // Store in sessionStorage for web access
-    try {
-      sessionStorage.setItem("paymentData", JSON.stringify(dataObject));
-    } catch (e) {
-      console.error("Error saving to sessionStorage:", e);
-    }
+    // Store in sessionStorage (for web fallback)
+    sessionStorage.setItem("paymentData", JSON.stringify(paymentData));
 
-    // WebView communication
-    if (webViewDetected) {
-      // Initial message with all data
-      sendWebViewMessage(dataObject);
+    sendWebViewMessage(paymentData);
 
-      // Auto-close on success
-      if (response.status === "success") {
-        console.log("Payment successful, sending close action");
+    if (status === "success") {
+      // First close attempt
+      sendWebViewMessage({
+        action: "close",
+        status: "success",
+        autoClose: true,
+      });
 
-        // First close attempt
+      // Fallback close attempt after delay
+      const timer = setTimeout(() => {
         sendWebViewMessage({
           action: "close",
           status: "success",
           autoClose: true,
+          fallback: true,
         });
+      }, 500);
 
-        // Fallback close attempt after delay
-        const fallbackTimer = setTimeout(() => {
-          sendWebViewMessage({
-            action: "close",
-            status: "success",
-            autoClose: true,
-            fallback: true,
-          });
-        }, 500);
-
-        return () => clearTimeout(fallbackTimer);
-      } else {
-        // Show close button after delay for non-success states
-        const closeButtonTimer = setTimeout(() => {
-          setShowCloseButton(true);
-        }, 1500);
-
-        return () => clearTimeout(closeButtonTimer);
-      }
+      return () => clearTimeout(timer);
     } else {
-      console.log("Not in WebView - running in browser");
+      const timer = setTimeout(() => {
+        setShowCloseButton(true);
+      }, 1500);
+
+      return () => clearTimeout(timer);
     }
   }, [response]);
 
-  const renderStoreButton = () => {
-    if (platform === "ios") {
-      return (
-        <a
-          href="https://apps.apple.com/us/app/com.ShadowGPS.ios"
-          className="bg-black hover:bg-gray-800 text-white px-4 py-2 rounded transition mt-4 block"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Download on the App Store
-        </a>
-      );
-    }
-    if (platform === "android") {
-      return (
-        <a
-          href="https://play.google.com/store/apps/details?id=com.ShadowGPS.android"
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition mt-4 block"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Get it on Google Play
-        </a>
-      );
-    }
-    return null;
-  };
-
   const handleClose = () => {
-    if (isWebView) {
-      sendWebViewMessage({
-        action: "close",
-        manual: true,
-      });
-    } else {
-      window.close();
-    }
+    sendWebViewMessage({
+      action: "close",
+      manual: true,
+    });
   };
 
   if (response.error) {
@@ -167,31 +112,26 @@ export default function PaymentStatusViewer({
             Payment Error
           </h1>
           <p className="text-gray-600">{response.error}</p>
-          {renderStoreButton()}
         </div>
       </div>
     );
   }
 
-  const status = response.status || "error";
   const title =
     response.title ||
-    (status === "success"
+    (response.status === "success"
       ? "Payment Successful!"
-      : status === "pending"
+      : response.status === "pending"
       ? "Processing Payment"
       : "Payment Failed");
-  const message = response.message || "";
-  const nextStep = response.nextStep || "";
-  const deviceName = response.deviceName || "your device";
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
       <div
         className={`bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-3 ${
-          status === "success"
+          response.status === "success"
             ? "border-green-500 bg-green-50"
-            : status === "pending"
+            : response.status === "pending"
             ? "border-yellow-500 bg-yellow-50"
             : "border-red-500 bg-red-50"
         }`}
@@ -240,12 +180,15 @@ export default function PaymentStatusViewer({
         )}
 
         {/* Message */}
-        {message && <p className="text-gray-700 mb-6">{message}</p>}
+        {response.message && (
+          <p className="text-gray-700 mb-6">{response.message}</p>
+        )}
 
-        {/* Device Name (for success) */}
-        {status === "success" && (
+        {/* Device Name */}
+        {status === "success" && response.deviceName && (
           <p className="text-gray-700 mb-6">
-            Your device <strong>{deviceName}</strong> is now ready to use!
+            Your device <strong>{response.deviceName}</strong> is now ready to
+            use!
           </p>
         )}
 
@@ -309,27 +252,16 @@ export default function PaymentStatusViewer({
         )}
 
         {/* Next Steps */}
-        {nextStep && (
+        {response.nextStep && (
           <div className="bg-gray-50 p-4 rounded-lg mb-6 text-left">
             <h3 className="text-lg font-semibold mb-3 flex items-center">
               Next Steps
             </h3>
-            <p className="text-gray-700">{nextStep}</p>
-            {status === "failed" && response.supportEmail && (
-              <p className="text-gray-700 mt-3">
-                Need help? Contact us at{" "}
-                <a
-                  href={`mailto:${response.supportEmail}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {response.supportEmail}
-                </a>
-              </p>
-            )}
+            <p className="text-gray-700">{response.nextStep}</p>
           </div>
         )}
 
-        {/* Close/Return Button */}
+        {/* Close Button */}
         {isWebView && showCloseButton && (
           <button
             onClick={handleClose}
@@ -345,10 +277,6 @@ export default function PaymentStatusViewer({
           </button>
         )}
 
-        {/* App Store Buttons */}
-        {!isWebView && renderStoreButton()}
-
-        {/* Footer */}
         <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-500">
           &copy; {new Date().getFullYear()} ShadowGPS - All rights reserved
         </div>
