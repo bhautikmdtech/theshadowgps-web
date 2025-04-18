@@ -13,7 +13,7 @@ export default async function SubscriptionPage({
   searchParams: Promise<{ [key: string]: string }>;
 }) {
   const { transaction_id, status } = await searchParams;
-  console.log(transaction_id, status);
+
   try {
     const response = await axiosClient.get(
       `/api/app/noauth/getPaymentStatus/${transaction_id}/${status}`,
@@ -26,11 +26,14 @@ export default async function SubscriptionPage({
         },
       }
     );
+
     return <PaymentStatusViewer response={response.data} />;
   } catch (error) {
+    console.error("Error fetching payment status:", error);
     return (
       <PaymentStatusViewer
         response={{
+          status: "error",
           error: "Failed to load payment status. Please try again later.",
         }}
       />
