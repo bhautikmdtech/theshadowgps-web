@@ -56,9 +56,9 @@ export default function PaymentStatusViewer({
 
     const paymentData = {
       transactionId: response.transaction_id,
-      status: response.status,
+      status: status,
       message: response.message,
-      subscriptionDetails: response.subscriptionDetails,
+      subscription: response.subscriptionDetails,
     };
 
     // Store in sessionStorage (for web fallback)
