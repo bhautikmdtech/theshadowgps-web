@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Modal, Button, Badge, Spinner } from "react-bootstrap";
+import { Modal, Button, Spinner } from "react-bootstrap";
 import { FaInfoCircle } from "react-icons/fa";
 
 interface Plan {
@@ -118,7 +118,7 @@ export default function UpdatePlanModal({
                           localSelectedPlanId === plan.id ? "text-primary" : ""
                         }`}
                       >
-                        ${parseFloat(plan.amount).toFixed(2)}
+                        ${parseFloat(plan.amount)}
                       </div>
                     </div>
                   </div>

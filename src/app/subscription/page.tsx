@@ -45,7 +45,7 @@ export default async function SubscriptionPage({
         <SubscriptionViewer token={token} initialData={response.data} />
       </Suspense>
     );
-  } catch (error) {
+  } catch (error: any) {
     return (
       <div className="flex justify-center items-center min-h-screen bg-gray-100">
         <div className="p-6 rounded-lg shadow-md max-w-md w-full text-center">

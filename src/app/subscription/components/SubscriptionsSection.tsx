@@ -1,4 +1,4 @@
-import React, { useState, useCallback, JSX } from "react";
+import React, { useState, useCallback, useMemo, JSX } from "react";
 import { Accordion, Badge, Button, Alert } from "react-bootstrap";
 import { FaCreditCard, FaCube } from "react-icons/fa";
 import { PiWarningCircleLight } from "react-icons/pi";
@@ -13,6 +13,8 @@ import CancelSubscriptionModal from "./CancelSubscriptionModal";
 import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
 import { toast } from "react-toastify";
 
+type ModalType = "updatePlan" | "updatePayment" | "cancel" | "reactivate";
+
 interface SubscriptionsSectionProps {
   customer: Customer;
   subscriptions: Subscription[];
@@ -23,7 +25,9 @@ interface SubscriptionsSectionProps {
   onRefresh: () => Promise<void>;
 }
 
-type ModalType = "updatePlan" | "updatePayment" | "cancel" | "reactivate";
+interface ProcessedSubscription extends Subscription {
+  gracePeriodMessage?: string;
+}
 
 const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   customer,
@@ -46,53 +50,98 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   const [reactivateStart, setReactivateStart] = useState(false);
   const [newSubStart, setNewSubStart] = useState(false);
 
-  // Memoized processed subscriptions
-  const { activeSubscriptions, inactiveSubscriptions } = React.useMemo(() => {
-    const getGracePeriodMessage = (subscription: Subscription): string => {
-      const formattedDate = formatDate(subscription.graceEndDate);
+  // Helper functions
+  const formatDate = useCallback((dateString?: string): string => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return "N/A";
+    }
+  }, []);
 
-      return subscription.graceStatus === "active"
-        ? `Your card on file was declined. To continue receiving alerts and services please update your payment method. If not updated, your subscription will end on ${formattedDate}`
-        : "Your grace period has expired. Please select a plan and add a payment method to restore your service.";
+  const formatInterval = useCallback(
+    (interval: string, count: number = 1, short: boolean = false): string => {
+      const intervals: Record<
+        string,
+        Record<number, { short: string; long: string }>
+      > = {
+        month: {
+          1: { short: "Month", long: "Monthly" },
+          3: { short: "Quarter", long: "Quarterly" },
+          12: { short: "Year", long: "Annual" },
+        },
+        year: { 1: { short: "Year", long: "Annual" } },
+        week: {
+          1: { short: "Week", long: "Weekly" },
+          2: { short: "Bi-week", long: "Bi-weekly" },
+        },
+        day: {
+          1: { short: "Day", long: "Daily" },
+          7: { short: "Week", long: "Weekly" },
+          14: { short: "Bi-week", long: "Bi-weekly" },
+        },
+      };
+
+      const match = intervals[interval.toLowerCase()]?.[count];
+      return match
+        ? short
+          ? match.short
+          : match.long
+        : short
+        ? `${count} ${interval.charAt(0).toUpperCase() + interval.slice(1)}`
+        : `Every ${count} ${interval.toLowerCase()}${count !== 1 ? "s" : ""}`;
+    },
+    []
+  );
+
+  const getCardIcon = useCallback((brand: string): React.ReactNode => {
+    const brands: Record<string, React.ReactNode> = {
+      visa: <PaymentIcon type="Visa" format="flatRounded" />,
+      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" />,
+      amex: <PaymentIcon type="Amex" format="flatRounded" />,
+      discover: <PaymentIcon type="Discover" format="flatRounded" />,
     };
+    return brands[brand.toLowerCase()] || <FaCreditCard size={26} />;
+  }, []);
 
-    const formatDate = (dateString?: string): string => {
-      if (!dateString) return "N/A";
-      try {
-        return new Date(dateString).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-      } catch {
-        return "N/A";
+  // Process subscriptions
+  const { activeSubscriptions, inactiveSubscriptions } = useMemo(() => {
+    const processSubscription = (sub: Subscription): ProcessedSubscription => {
+      let gracePeriodMessage = "";
+
+      if (sub.isInGracePeriod) {
+        const formattedDate = formatDate(sub.graceEndDate);
+        gracePeriodMessage =
+          sub.graceStatus === "active"
+            ? `Your card on file was declined. To continue receiving alerts and services please update your payment method. If not updated, your subscription will end on ${formattedDate}`
+            : "Your grace period has expired. Please select a plan and add a payment method to restore your service.";
       }
+
+      return { ...sub, gracePeriodMessage };
     };
 
-    const processed =
-      subscriptions &&
-      subscriptions.map((sub) => ({
-        ...sub,
-        gracePeriodMessage: sub.isInGracePeriod
-          ? getGracePeriodMessage(sub)
-          : undefined,
-      }));
+    const processed = subscriptions.map(processSubscription);
 
     return {
       activeSubscriptions: processed.filter(
-        (sub: any) =>
+        (sub) =>
           ["active", "trialing"].includes(sub.status) ||
           (sub.status === "past_due" && sub.graceStatus === "active")
       ),
       inactiveSubscriptions: processed.filter(
-        (sub: any) =>
+        (sub) =>
           ["canceled", "incomplete", "incomplete_expired", "unpaid"].includes(
             sub.status
           ) ||
           (sub.status === "past_due" && sub.graceStatus === "expired")
       ),
     };
-  }, [subscriptions, onRefresh]);
+  }, [subscriptions, formatDate]);
 
   // Modal handlers
   const openModal = useCallback(
@@ -123,9 +172,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         setIsProcessing(true);
         await action();
         await onRefresh();
-
         closeModal();
-
         toast.success(successMessage, {
           position: "top-right",
           autoClose: 5000,
@@ -144,7 +191,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         setIsProcessing(false);
       }
     },
-    [currentSubscription, closeModal, reactivateStart]
+    [currentSubscription, closeModal, reactivateStart, openModal, onRefresh]
   );
 
   const handleCancel = useCallback(
@@ -157,7 +204,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           ),
         "Subscription cancelled successfully"
       ),
-    [handleSubscriptionAction, token]
+    [currentSubscription, handleSubscriptionAction, token]
   );
 
   const handleReactivate = useCallback(
@@ -170,7 +217,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           ),
         "Subscription reactivated successfully"
       ),
-    [handleSubscriptionAction, token]
+    [currentSubscription, handleSubscriptionAction, token]
   );
 
   const handlePlanUpdate = useCallback(() => {
@@ -223,18 +270,20 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         newSubStart
           ? "New subscription created successfully"
           : "Payment method updated successfully",
-        {
-          position: "top-right",
-          autoClose: 5000,
-        }
+        { position: "top-right", autoClose: 5000 }
       );
-      window.location.reload();
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error: any) {
       console.error("Payment update failed:", error);
       toast.error(`Operation failed. ${error.message}`, {
         position: "top-right",
         autoClose: 5000,
       });
+    } finally {
+      setIsProcessing(false);
     }
   }, [
     selectedPaymentMethodId,
@@ -245,277 +294,203 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     selectedPlanId,
   ]);
 
-  const formatDate = (dateString?: string): string => {
-    if (!dateString) return "N/A";
-    try {
-      return new Date(dateString).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    } catch {
-      return "N/A";
-    }
-  };
+  // Component rendering helpers
+  const getStatusMessage = useCallback(
+    (subscription: Subscription): string => {
+      const periodEnd = formatDate(subscription.currentPeriodEnd);
+      const graceEnd = formatDate(subscription.graceEndDate);
 
-  const formatInterval = (
-    interval: string,
-    count: number = 1,
-    short: boolean = false
-  ): string => {
-    const intervals: Record<
-      string,
-      Record<number, { short: string; long: string }>
-    > = {
-      month: {
-        1: { short: "Month", long: "Monthly" },
-        3: { short: "Quarter", long: "Quarterly" },
-        12: { short: "Year", long: "Annual" },
-      },
-      year: { 1: { short: "Year", long: "Annual" } },
-      week: {
-        1: { short: "Week", long: "Weekly" },
-        2: { short: "Bi-week", long: "Bi-weekly" },
-      },
-      day: {
-        1: { short: "Day", long: "Daily" },
-        7: { short: "Week", long: "Weekly" },
-        14: { short: "Bi-week", long: "Bi-weekly" },
-      },
-    };
-
-    const match = intervals[interval.toLowerCase()]?.[count];
-
-    if (match) {
-      return short ? match.short : match.long;
-    }
-
-    return short
-      ? `${count} ${interval.charAt(0).toUpperCase() + interval.slice(1)}`
-      : `Every ${count} ${interval.toLowerCase()}${count !== 1 ? "s" : ""}`;
-  };
-
-  const getStatusMessage = (subscription: Subscription): string => {
-    const periodEnd = safeFormatDate(subscription.currentPeriodEnd);
-    const graceEnd = safeFormatDate(subscription.graceEndDate);
-
-    let statusMessage = "";
-
-    if (subscription.isCancelled) {
-      statusMessage = `Valid until ${periodEnd}`;
-    } else if (subscription.status === "canceled") {
-      statusMessage = `Subscription canceled (${periodEnd})`;
-    } else if (subscription.graceStatus === "expired") {
-      statusMessage = `Grace period expired on ${graceEnd}`;
-    } else if (subscription.isInGracePeriod) {
-      statusMessage = `Grace period ends on ${graceEnd}`;
-    } else if (subscription.isFreeTrial) {
-      statusMessage = `Subscription starts on ${periodEnd}`;
-    } else {
-      statusMessage = `Next renewal ${periodEnd}`; // optional fallback
-    }
-
-    return statusMessage;
-  };
-
-  const safeFormatDate = (dateString?: string | null): string => {
-    if (!dateString) return "N/A";
-
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Invalid date";
-
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "N/A";
-    }
-  };
-
-  const getCardIcon = (brand: string): React.ReactNode => {
-    const brands: Record<string, React.ReactNode> = {
-      visa: <PaymentIcon type="Visa" format="flatRounded" />,
-      mastercard: <PaymentIcon type="Mastercard" format="flatRounded" />,
-      amex: <PaymentIcon type="Amex" format="flatRounded" />,
-      discover: <PaymentIcon type="Discover" format="flatRounded" />,
-    };
-
-    return brands[brand.toLowerCase()] || <FaCreditCard size={26} />;
-  };
-
-  const getStatusBadge = (subscription: Subscription): JSX.Element => {
-    const baseStatus = (() => {
-      if (
-        ["active", "trialing"].includes(subscription.status) ||
-        (subscription.status === "past_due" &&
-          subscription.graceStatus === "active")
-      ) {
-        return "active";
+      if (subscription.isCancelled) {
+        return `Valid until ${periodEnd}`;
       }
+      if (subscription.status === "canceled") {
+        return `Subscription canceled (${periodEnd})`;
+      }
+      if (subscription.graceStatus === "expired") {
+        return `Grace period expired on ${graceEnd}`;
+      }
+      if (subscription.isInGracePeriod) {
+        return `Grace period ends on ${graceEnd}`;
+      }
+      if (subscription.isFreeTrial) {
+        return `Subscription starts on ${periodEnd}`;
+      }
+      return `Next renewal ${periodEnd}`;
+    },
+    [formatDate]
+  );
 
-      return "inactive";
-    })();
+  const renderStatusBadges = useCallback(
+    (subscription: Subscription, isActive: boolean) => {
+      const badges: JSX.Element[] = [];
 
-    const statusConfig: Record<
-      string,
-      { bg: string; text: string; label: string }
-    > = {
-      active: { bg: "#D6E6FF", text: "#3d4b65", label: "Active" },
-      inactive: { bg: "#FEE6DA", text: "#3D4B65", label: "Inactive" },
-    };
-
-    const additionalBadges: JSX.Element[] = [];
-
-    if (subscription.status === "trialing") {
-      additionalBadges.push(
-        <Badge
-          key="trialing"
-          style={{
-            backgroundColor: "#31C48D !important",
-            color: "#fff",
-            fontSize: "12px",
-          }}
-          className="rounded-pill fontWeight-medium"
-        >
-          Trial ends ({formatDate(subscription.currentPeriodEnd)})
-        </Badge>
-      );
-    }
-
-    if (subscription.status === "past_due") {
-      additionalBadges.push(
-        <Badge
-          key="past_due"
-          style={{
-            backgroundColor: "#FEE6DA !important",
-            color: "#3D4B65",
-            fontSize: "12px",
-          }}
-          className="rounded-pill fontWeight-medium"
-        >
-          Payment Failed
-        </Badge>
-      );
-    }
-
-    if (subscription.isCancelled || subscription.status === "canceled") {
-      additionalBadges.push(
-        <Badge
-          key="canceled"
-          style={{
-            backgroundColor: "#FEE6DA !important",
-            color: "#3D4B65 !important",
-            fontSize: "12px",
-          }}
-          className="rounded-pill fontWeight-medium"
-        >
-          Cancel on{" "}
-          {subscription.cancelAt
-            ? ` (${formatDate(subscription.cancelAt)})`
-            : ` (${formatDate(subscription.currentPeriodEnd)})`}
-        </Badge>
-      );
-    }
-
-    if (subscription.isInGracePeriod) {
-      additionalBadges.push(
-        <Badge
-          key="grace"
-          style={{
-            backgroundColor: "#FEE6DA !important",
-            color: "#3D4B65",
-            fontSize: "12px",
-          }}
-          bg="warning"
-          className="rounded-pill fontWeight-medium"
-        >
-          Grace Period{" "}
-          {subscription.graceEndDate &&
-            ` (until ${formatDate(subscription.graceEndDate)})`}
-        </Badge>
-      );
-    }
-
-    return (
-      <>
-        <Badge
-          style={{
-            backgroundColor: `${statusConfig[baseStatus].bg} !important`,
-            color: `${statusConfig[baseStatus].text} !important`,
-            fontSize: "12px",
-          }}
-          className="rounded-pill fontWeight-medium"
-        >
-          {statusConfig[baseStatus].label}
-        </Badge>
-
-        {additionalBadges}
-      </>
-    );
-  };
-
-  const renderPaymentMethod = (
-    subscription: Subscription
-  ): JSX.Element | null => {
-    if (!subscription.paymentMethod) return null;
-
-    return (
-      <div className="payment-info d-flex items-center mt-2">
-        <div className="card-icon mr-3">
-          {getCardIcon(subscription.paymentMethod.brand)}
-        </div>
-        <div className="d-flex align-items-center">
-          <span
+      if (isActive) {
+        badges.push(
+          <Badge
+            key="active"
             style={{
+              backgroundColor: "#D6E6FF !important",
               color: "#3D4B65",
               fontSize: "12px",
             }}
+            bg="warning"
+            className="rounded-pill fontWeight-medium"
           >
-            **** {subscription.paymentMethod.last4}
-          </span>
-          <Button
-            variant="link"
-            onClick={() => openModal("updatePayment", subscription)}
-            className="p-0 ms-2 flex align-items-start"
-            style={{
-              color: "#6c757d",
-            }}
-          >
-            <Image src="/pencil.svg" alt="Edit" width={20} height={20} />
-          </Button>
-        </div>
-      </div>
-    );
-  };
+            active
+          </Badge>
+        );
 
-  const renderSubscriptionActions = (
-    subscription: Subscription
-  ): JSX.Element | null => {
-    const isActive = ["active", "trialing", "past_due"].includes(
-      subscription.status
-    );
-    const isPastDue = subscription.status === "past_due";
-
-    if (subscription.isCancelled || subscription.status === "canceled") {
-      return (
-        <>
-          {subscription.status === "canceled" ? (
-            <Button
-              variant="primary"
-              className="flex-grow-1 darkButton"
-              onClick={() => {
-                setNewSubStart(true);
-                setReactivateStart(true);
-                openModal("updatePlan", subscription);
+        if (subscription.status === "trialing") {
+          badges.push(
+            <Badge
+              key="trialing"
+              style={{
+                backgroundColor: "#31C48D !important",
+                color: "#fff",
+                fontSize: "12px",
               }}
+              className="rounded-pill fontWeight-medium"
             >
-              Get Subcription
+              Trial ends {formatDate(subscription.currentPeriodEnd)}
+            </Badge>
+          );
+        }
+
+        if (subscription.isCancelled) {
+          badges.push(
+            <Badge
+              key="canceled"
+              style={{
+                backgroundColor: "#FEE6DA !important",
+                color: "#3D4B65 !important",
+                fontSize: "12px",
+              }}
+              className="rounded-pill fontWeight-medium"
+            >
+              Cancel on{" "}
+              {formatDate(
+                subscription.cancelAt || subscription.currentPeriodEnd
+              )}
+            </Badge>
+          );
+        }
+
+        if (subscription.isInGracePeriod) {
+          badges.push(
+            <Badge
+              key="grace"
+              style={{
+                backgroundColor: "#FEE6DA !important",
+                color: "#3D4B65",
+                fontSize: "12px",
+              }}
+              bg="warning"
+              className="rounded-pill fontWeight-medium"
+            >
+              Grace Period{" "}
+              {subscription.graceEndDate &&
+                `ends ${formatDate(subscription.graceEndDate)}`}
+            </Badge>
+          );
+        }
+      } else {
+        if (["canceled", "incomplete"].includes(subscription.status)) {
+          badges.push(
+            <Badge
+              key="canceled"
+              style={{
+                backgroundColor: "#FEE6DA !important",
+                color: "#3D4B65 !important",
+                fontSize: "12px",
+              }}
+              className="rounded-pill fontWeight-medium"
+            >
+              Canceled
+            </Badge>
+          );
+        }
+
+        if (subscription.graceStatus === "expired") {
+          badges.push(
+            <Badge
+              key="grace"
+              style={{
+                backgroundColor: "#FEE6DA !important",
+                color: "#3D4B65",
+                fontSize: "12px",
+              }}
+              bg="warning"
+              className="rounded-pill fontWeight-medium"
+            >
+              Grace Expired{" "}
+              {subscription.graceEndDate &&
+                `${formatDate(subscription.graceEndDate)}`}
+            </Badge>
+          );
+        }
+      }
+
+      return <>{badges}</>;
+    },
+    [formatDate]
+  );
+
+  const renderAlertMessage = useCallback(
+    (subscription: Subscription, isActive: boolean) => {
+      if (["past_due"].includes(subscription.status)) {
+        return (
+          <Alert
+            variant="light"
+            className="mt-2 p-2 d-flex align-items-center border-1"
+            style={{ color: "#3D4B65", fontSize: "12px" }}
+          >
+            <PiWarningCircleLight
+              className="me-2"
+              size={18}
+              color="#FF824C"
+              style={{ minWidth: "18px" }}
+            />
+            {subscription.gracePeriodMessage}
+          </Alert>
+        );
+      }
+    },
+    []
+  );
+
+  const renderPaymentMethod = useCallback(
+    (subscription: Subscription) => {
+      if (!subscription.paymentMethod) return null;
+
+      return (
+        <div className="payment-info d-flex items-center mt-2">
+          <div className="card-icon mr-3">
+            {getCardIcon(subscription.paymentMethod.brand)}
+          </div>
+          <div className="d-flex align-items-center">
+            <span style={{ color: "#3D4B65", fontSize: "12px" }}>
+              **** {subscription.paymentMethod.last4}
+            </span>
+            <Button
+              variant="link"
+              onClick={() => openModal("updatePayment", subscription)}
+              className="p-0 ms-2 flex align-items-start"
+              style={{ color: "#6c757d" }}
+            >
+              <Image src="/pencil.svg" alt="Edit" width={20} height={20} />
             </Button>
-          ) : (
+          </div>
+        </div>
+      );
+    },
+    [getCardIcon, openModal]
+  );
+
+  const renderSubscriptionActions = useCallback(
+    (subscription: Subscription, isActive: boolean) => {
+      if (isActive) {
+        if (subscription.isCancelled) {
+          return (
             <>
               <Button
                 variant="outline-primary"
@@ -537,178 +512,184 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 Update
               </Button>
             </>
-          )}
-        </>
-      );
-    }
+          );
+        }
 
-    if (isPastDue && subscription.graceStatus === "expired") {
-      return (
-        <>
-          <Button
-            variant="primary"
-            className="flex-grow-1 darkButton"
-            onClick={() => {
-              setReactivateStart(true);
-              openModal("updatePlan", subscription);
-            }}
-          >
-            Reactivate
-          </Button>
-        </>
-      );
-    }
-
-    if (isActive) {
-      return (
-        <>
-          <Button
-            variant="outline-primary"
-            className="flex-grow-1 lightButton"
-            onClick={() => openModal("cancel", subscription)}
-            disabled={isProcessing}
-          >
-            {currentSubscription?.id === subscription.id && isProcessing ? (
-              <PageLoader type="spinner" size="sm" />
-            ) : (
-              "Cancel"
-            )}
-          </Button>
-          <Button
-            variant="primary"
-            className="flex-grow-1 darkButton"
-            onClick={() => openModal("updatePlan", subscription)}
-          >
-            Update
-          </Button>
-        </>
-      );
-    }
-
-    return null;
-  };
-
-  const renderSubscriptionCard = (
-    subscription: Subscription,
-    isActive: boolean
-  ) => (
-    <div
-      style={{
-        border: "1px solid #CFD2D9",
-        padding: "16px",
-        borderRadius: "16px",
-        backgroundColor: "#FFFFFF",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
-      }}
-    >
-      <div className="flex items-start flex-wrap gap-3">
-        <div
-          className="rounded-circle w-full"
-          style={{ maxWidth: "60px !important", minWidth: "60px !important" }}
-        >
-          {subscription.device?.deviceImage ? (
-            <Image
-              src={subscription.device.deviceImage}
-              alt="Device"
-              width={60}
-              height={60}
-              className="rounded-circle"
-            />
-          ) : (
-            <div
-              className="d-flex align-items-center justify-content-center rounded-circle bg-light"
-              style={{ width: 60, height: 60 }}
+        return (
+          <>
+            <Button
+              variant="outline-primary"
+              className="flex-grow-1 lightButton"
+              onClick={() => openModal("cancel", subscription)}
+              disabled={isProcessing}
             >
-              {subscription.device?.deviceName ? (
-                <span
-                  className="text-uppercase fw-bold text-secondary"
-                  style={{ fontSize: 14 }}
-                >
-                  {subscription.device.deviceName
-                    .split(" ")
-                    .map((word) => word[0])
-                    .join("")
-                    .slice(0, 2)}
-                </span>
+              {currentSubscription?.id === subscription.id && isProcessing ? (
+                <PageLoader type="spinner" size="sm" />
               ) : (
-                <FaCube size={24} className="text-secondary" />
+                "Cancel"
               )}
-            </div>
-          )}
-        </div>
+            </Button>
+            <Button
+              variant="primary"
+              className="flex-grow-1 darkButton"
+              onClick={() => openModal("updatePlan", subscription)}
+            >
+              Update
+            </Button>
+          </>
+        );
+      }
 
-        <div className="flex-grow-1">
-          <h6
-            className="fw-bold mb-0"
-            style={{ color: "#0C1F3F", fontSize: "16px" }}
-          >
-            {subscription.device?.deviceName || "My Device"}
-          </h6>
+      if (!isActive) {
+        if (["canceled", "incomplete"].includes(subscription.status)) {
+          return (
+            <Button
+              variant="primary"
+              className="flex-grow-1 darkButton"
+              onClick={() => {
+                setNewSubStart(true);
+                setReactivateStart(true);
+                openModal("updatePlan", subscription);
+              }}
+            >
+              {subscription.status === "canceled" ? (
+                <>Re-purchase the subscription</>
+              ) : subscription.status === "incomplete" ? (
+                <>Complete the subscription process</>
+              ) : (
+                <>Re-purchase the subscription</>
+              )}
+            </Button>
+          );
+        }
+
+        if (subscription.graceStatus === "expired") {
+          return (
+            <Button
+              variant="primary"
+              className="flex-grow-1 darkButton"
+              onClick={() => {
+                setReactivateStart(true);
+                openModal("updatePlan", subscription);
+              }}
+            >
+              Reactivate
+            </Button>
+          );
+        }
+      }
+
+      return null;
+    },
+    [isProcessing, currentSubscription, openModal]
+  );
+
+  const renderSubscriptionCard = useCallback(
+    (subscription: ProcessedSubscription, isActive: boolean) => (
+      <div
+        style={{
+          border: "1px solid #CFD2D9",
+          padding: "16px",
+          borderRadius: "16px",
+          backgroundColor: "#FFFFFF",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+        }}
+      >
+        <div className="flex items-start flex-wrap gap-3">
           <div
-            className="d-flex flex-wrap align-items-center gap-2 my-1.5"
-            style={{ color: "#0C1F3F", fontSize: "12px" }}
+            className="rounded-circle w-full"
+            style={{ maxWidth: "60px", minWidth: "60px" }}
           >
-            {formatInterval(subscription.interval, subscription.interval_count)}{" "}
-            Plan
-            <div className="d-flex flex-wrap align-items-center gap-2">
-              {getStatusBadge(subscription)}
-            </div>
+            {subscription.device?.deviceImage ? (
+              <Image
+                src={subscription.device.deviceImage}
+                alt="Device"
+                width={60}
+                height={60}
+                className="rounded-circle"
+              />
+            ) : (
+              <div
+                className="d-flex align-items-center justify-content-center rounded-circle bg-light"
+                style={{ width: 60, height: 60 }}
+              >
+                {subscription.device?.deviceName ? (
+                  <span
+                    className="text-uppercase fw-bold text-secondary"
+                    style={{ fontSize: 14 }}
+                  >
+                    {subscription.device.deviceName
+                      .split(" ")
+                      .map((word) => word[0])
+                      .join("")
+                      .slice(0, 2)}
+                  </span>
+                ) : (
+                  <FaCube size={24} className="text-secondary" />
+                )}
+              </div>
+            )}
           </div>
 
-          <div
-            className="gap-1 flex align-items-center my-1"
-            style={{
-              color: "#0C1F3F",
-              fontSize: "14px",
-            }}
-          >
-            <span className="fw-bold subscription-interval">
-              ${subscription.amount}
-            </span>
-            <span style={{ color: "#3D4B65", fontSize: "14px" }}>
-              per{" "}
+          <div className="flex-grow-1">
+            <h6
+              className="fw-bold mb-0"
+              style={{ color: "#0C1F3F", fontSize: "16px" }}
+            >
+              {subscription.device?.deviceName || "My Device"}
+            </h6>
+            <div
+              className="d-flex flex-wrap align-items-center gap-2 my-1.5"
+              style={{ color: "#0C1F3F", fontSize: "12px" }}
+            >
               {formatInterval(
                 subscription.interval,
-                subscription.interval_count,
-                true
-              )}
-            </span>
+                subscription.interval_count
+              )}{" "}
+              Plan
+              <div className="d-flex flex-wrap align-items-center gap-2">
+                {renderStatusBadges(subscription, isActive)}
+              </div>
+            </div>
+
+            <div
+              className="gap-1 flex align-items-center my-1"
+              style={{ color: "#0C1F3F", fontSize: "14px" }}
+            >
+              <span className="fw-bold subscription-interval">
+                ${subscription.amount}
+              </span>
+              <span style={{ color: "#3D4B65", fontSize: "14px" }}>
+                per{" "}
+                {formatInterval(
+                  subscription.interval,
+                  subscription.interval_count,
+                  true
+                )}
+              </span>
+            </div>
+
+            <div style={{ color: "#3D4B65", fontSize: "12px" }}>
+              {getStatusMessage(subscription)}
+              {renderAlertMessage(subscription, isActive)}
+            </div>
+
+            {isActive && renderPaymentMethod(subscription)}
           </div>
-
-          <div style={{ color: "#3D4B65", fontSize: "12px" }}>
-            {getStatusMessage(subscription)}
-
-            {/* Cancellation date if applicable */}
-            {subscription.cancelAt && !subscription.isCancelled && (
-              <div>Cancels on: {safeFormatDate(subscription.cancelAt)}</div>
-            )}
-
-            {/* Grace period warning */}
-            {subscription.isInGracePeriod &&
-              subscription.gracePeriodMessage && (
-                <Alert
-                  variant="light"
-                  className="mt-2 p-2 d-flex align-items-center border-1"
-                  style={{ color: "#3D4B65", fontSize: "12px" }}
-                >
-                  <PiWarningCircleLight
-                    className="me-2"
-                    size={18}
-                    color="#FF824C"
-                    style={{ minWidth: "18px" }}
-                  />
-                  {subscription.gracePeriodMessage}
-                </Alert>
-              )}
-          </div>
-
-          {isActive && renderPaymentMethod(subscription)}
+        </div>
+        <div className="d-flex mt-3 gap-2">
+          {renderSubscriptionActions(subscription, isActive)}
         </div>
       </div>
-      <div className="d-flex mt-3 gap-2">
-        {renderSubscriptionActions(subscription)}
-      </div>
-    </div>
+    ),
+    [
+      formatInterval,
+      renderStatusBadges,
+      getStatusMessage,
+      renderAlertMessage,
+      renderPaymentMethod,
+      renderSubscriptionActions,
+    ]
   );
 
   return (
@@ -737,7 +718,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               </div>
               {activeSubscriptions.length > 0 ? (
                 activeSubscriptions.map((sub) => (
-                  <div key={sub.id} className="p-3">
+                  <div key={sub.id} data-id={sub.id} className="p-3">
                     {renderSubscriptionCard(sub, true)}
                   </div>
                 ))
@@ -757,12 +738,12 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                     fontWeight: "600",
                   }}
                 >
-                  Inactive Subscriptions{" "}
+                  Inactive Subscriptions
                 </span>
               </div>
               {inactiveSubscriptions.length > 0 ? (
                 inactiveSubscriptions.map((sub) => (
-                  <div key={sub.id} className="p-3 mb-4">
+                  <div key={sub.id} data-id={sub.id} className="p-3 mb-4">
                     {renderSubscriptionCard(sub, false)}
                   </div>
                 ))
