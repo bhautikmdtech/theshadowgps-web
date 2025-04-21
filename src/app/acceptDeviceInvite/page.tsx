@@ -13,15 +13,20 @@ export default async function SubscriptionPage({
 }: {
   searchParams: Promise<{ [key: string]: string }>;
 }) {
-  const { userId, deviceId, notificationId } = await searchParams;
+  const { userId, deviceId, secondaryNotificationId } = await searchParams;
+
+  const payload: Record<string, any> = {
+    secondaryUserId: userId,
+    deviceId,
+  };
+
+  if (secondaryNotificationId) {
+    payload.notificationId = secondaryNotificationId;
+  }
 
   const response = await axiosClient.post(
     "/api/app/noauth/deviceInviteAccept",
-    {
-      secondaryUserId: userId,
-      deviceId,
-      notificationId,
-    },
+    payload,
     {
       headers: {
         Accept: "application/json",
