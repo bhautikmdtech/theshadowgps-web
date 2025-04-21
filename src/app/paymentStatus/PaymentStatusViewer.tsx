@@ -52,47 +52,60 @@ export default function PaymentStatusViewer({
 
   useEffect(() => {
     // Check if running in WebView
-    setIsWebView(!!(window as any).ReactNativeWebView);
-
-    const paymentData = {
-      transactionId: response.transaction_id,
-      status: status,
-      message: response.message,
-      subscription: response.subscriptionDetails,
+    const checkWebView = () => {
+      setIsWebView(!!(window as any).ReactNativeWebView);
     };
 
-    // Store in sessionStorage (for web fallback)
-    sessionStorage.setItem("paymentData", JSON.stringify(paymentData));
+    // Ensure window is available (client-side only)
+    if (typeof window !== "undefined") {
+      checkWebView();
 
-    sendWebViewMessage(paymentData);
+      const paymentData = {
+        transactionId: response.transaction_id,
+        status: status,
+        message: response.message,
+        subscription: response.subscriptionDetails,
+      };
 
-    if (status === "success") {
-      // First close attempt
-      sendWebViewMessage({
-        action: "close",
-        status: "success",
-        autoClose: true,
-      });
+      // Store in sessionStorage (for web fallback)
+      try {
+        sessionStorage.setItem("paymentData", JSON.stringify(paymentData));
+      } catch (e) {
+        console.error("Error saving to sessionStorage:", e);
+      }
 
-      // Fallback close attempt after delay
-      const timer = setTimeout(() => {
+      // Send initial data to WebView
+      sendWebViewMessage(paymentData);
+
+      if (status === "success") {
+        // First close attempt
         sendWebViewMessage({
           action: "close",
           status: "success",
           autoClose: true,
-          fallback: true,
         });
-      }, 500);
 
-      return () => clearTimeout(timer);
-    } else {
-      const timer = setTimeout(() => {
-        setShowCloseButton(true);
-      }, 1500);
+        // Fallback close attempt after delay
+        const timer = setTimeout(() => {
+          sendWebViewMessage({
+            action: "close",
+            status: "success",
+            autoClose: true,
+            fallback: true,
+          });
+        }, 500);
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      } else {
+        // For non-success status, show close button after delay
+        const timer = setTimeout(() => {
+          setShowCloseButton(true);
+        }, 1500);
+
+        return () => clearTimeout(timer);
+      }
     }
-  }, [response]);
+  }, [response, status]);
 
   const handleClose = () => {
     sendWebViewMessage({
@@ -112,6 +125,14 @@ export default function PaymentStatusViewer({
             Payment Error
           </h1>
           <p className="text-gray-600">{response.error}</p>
+          {isWebView && showCloseButton && (
+            <button
+              onClick={handleClose}
+              className="mt-4 px-6 py-3 rounded-full bg-red-600 hover:bg-red-700 text-white font-medium w-full"
+            >
+              Return to App
+            </button>
+          )}
         </div>
       </div>
     );
@@ -119,9 +140,9 @@ export default function PaymentStatusViewer({
 
   const title =
     response.title ||
-    (response.status === "success"
+    (status === "success"
       ? "Payment Successful!"
-      : response.status === "pending"
+      : status === "pending"
       ? "Processing Payment"
       : "Payment Failed");
 
@@ -129,9 +150,9 @@ export default function PaymentStatusViewer({
     <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
       <div
         className={`bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-3 ${
-          response.status === "success"
+          status === "success"
             ? "border-green-500 bg-green-50"
-            : response.status === "pending"
+            : status === "pending"
             ? "border-yellow-500 bg-yellow-50"
             : "border-red-500 bg-red-50"
         }`}
