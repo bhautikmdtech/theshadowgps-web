@@ -46,6 +46,7 @@ export interface Subscription {
   nextPaymentAttempt?: string;
   pauseResumesAt?: string;
   reactivate?: boolean;
+  pauseBehavior: string;
 }
 
 export interface Plan {
