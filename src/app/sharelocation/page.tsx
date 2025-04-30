@@ -74,8 +74,8 @@ export default async function ShareLocationPage({
             This location share link is invalid or has expired.
           </p>
           <Link
-            href="/"
-            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors"
+            href="https://theshadowgps.com/"
+            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors text-decoration-none"
           >
             Go to Home
           </Link>

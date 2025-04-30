@@ -3,6 +3,7 @@ import SubscriptionViewer from "./components/SubscriptionViewer";
 import { Metadata } from "next";
 import axiosClient from "@/lib/axiosClient";
 import Link from "next/link";
+import { Button } from "react-bootstrap";
 
 export const metadata: Metadata = {
   title: "Subscription Management",
@@ -55,9 +56,10 @@ export default async function SubscriptionPage({
           <p className="text-gray-600 mb-4">
             This subscription link is invalid or has no subscription.
           </p>
+
           <Link
-            href="/"
-            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors"
+            href="https://theshadowgps.com/"
+            className="inline-block bg-blue-500 hover:bg-blue-600 text-white font-medium px-4 py-2 rounded-md transition-colors text-decoration-none"
           >
             Go to Home
           </Link>

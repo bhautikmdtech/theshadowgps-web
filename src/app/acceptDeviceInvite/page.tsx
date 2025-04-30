@@ -36,7 +36,6 @@ export default async function SubscriptionPage({
       },
     }
   );
-  console.log(response.data);
   return (
     <Suspense
       fallback={

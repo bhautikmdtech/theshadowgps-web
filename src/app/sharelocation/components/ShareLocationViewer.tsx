@@ -6,7 +6,6 @@ import MapComponent from "@/services/MapService";
 import Image from "next/image";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 import dynamic from "next/dynamic";
-import type { GeoJSON } from "geojson";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "next-themes";
 
@@ -72,7 +71,7 @@ export default function LiveTracker({
         position: latest,
         device: device || undefined,
         mapRef,
-        isMotion: positions.length > 2 ? true :false,
+        isMotion: positions.length > 1 ? true : false,
       });
 
       // Create start marker if it doesn't exist
@@ -233,7 +232,7 @@ export default function LiveTracker({
           />
 
           {/* Divider with custom color */}
-          <div  
+          <div
             className="h-8 mx-2"
             style={{ backgroundColor: "#337CFD", width: "2px" }}
           ></div>

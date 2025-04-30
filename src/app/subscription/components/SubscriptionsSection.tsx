@@ -333,7 +333,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               color: "#3D4B65",
               fontSize: "12px",
             }}
-            bg="warning"
             className="rounded-pill fontWeight-medium"
           >
             active
@@ -401,7 +400,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 color: "#3D4B65",
                 fontSize: "12px",
               }}
-              bg="warning"
               className="rounded-pill fontWeight-medium"
             >
               Grace Period{" "}
@@ -436,7 +434,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 color: "#3D4B65",
                 fontSize: "12px",
               }}
-              bg="warning"
               className="rounded-pill fontWeight-medium"
             >
               Grace Expired{" "}
