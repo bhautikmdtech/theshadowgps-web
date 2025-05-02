@@ -1,12 +1,15 @@
-// components/theme-toggle.tsx
 "use client";
 
-import * as React from "react";
 import { FaMoon, FaSun } from "react-icons/fa";
 import { useTheme } from "next-themes";
+import { useEffect } from "react";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setTheme("dark");
+  }, []);
 
   return (
     <button
@@ -19,10 +22,10 @@ export function ThemeToggle() {
       }}
     >
       {theme === "light" && (
-        <FaMoon className={`h-5 w-5 dark:scale-0 scale-100 transition-transform duration-300`} />
+        <FaMoon className="h-5 w-5 transition-transform duration-300" />
       )}
       {theme === "dark" && (
-        <FaSun className={`h-5 w-5 scale-0 dark:scale-100 transition-transform duration-300`} />
+        <FaSun className="h-5 w-5 transition-transform duration-300" />
       )}
     </button>
   );

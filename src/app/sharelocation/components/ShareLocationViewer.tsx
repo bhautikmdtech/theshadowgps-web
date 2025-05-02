@@ -33,6 +33,7 @@ export default function LiveTracker({
   shareToken: string;
   initialData: any;
 }) {
+  console.log(initialData);
   const { theme, systemTheme } = useTheme();
   const currentTheme = theme === "system" ? systemTheme : theme;
 
@@ -320,7 +321,7 @@ export default function LiveTracker({
               onMapLoad={handleMapLoad}
             />
             {/* Mobile Bottom Panel */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[24px] shadow-lg">
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[24px] shadow-lg z-[9]">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2">
