@@ -167,6 +167,36 @@
   margin-right: 8px;
 }
 
+.badge-active {
+  background-color: #d6e6ff !important;
+  color: #3d4b65 !important;
+  font-size: 12px;
+}
+
+.badge-trialing {
+  background-color: #31c48d !important;
+  color: #fff !important;
+  font-size: 12px;
+}
+
+.badge-paused {
+  background-color: #31c48d !important;
+  color: #fff !important;
+  font-size: 12px;
+}
+
+.badge-canceled {
+  background-color: #fee6da !important;
+  color: #3d4b65 !important;
+  font-size: 12px;
+}
+
+.badge-grace {
+  background-color: #fee6da !important;
+  color: #3d4b65 !important;
+  font-size: 12px;
+}
+
 /* Add payment button styling */
 .add-payment-btn {
   display: flex;

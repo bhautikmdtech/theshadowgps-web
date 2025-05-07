@@ -69,7 +69,6 @@ export default function SubscriptionViewer({
   token,
   initialData,
 }: SubscriptionViewerProps) {
-  console.log(initialData);
   const [subscriptionData, setSubscriptionData] =
     useState<SubscriptionData | null>(initialData?.data || null);
   const [stripeInitialized, setStripeInitialized] = useState(false);

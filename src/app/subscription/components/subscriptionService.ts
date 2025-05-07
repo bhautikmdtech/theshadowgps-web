@@ -173,7 +173,6 @@ export const SubscriptionService = {
         },
       }
     );
-    console.log(response);
     return response.data;
   },
 };

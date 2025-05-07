@@ -53,7 +53,6 @@ export default function AddPaymentModal({
         await stripe.createPaymentMethod({ elements });
 
       if (stripeError) throw new Error(stripeError.message);
-      console.log("paymentMethod", paymentMethod);
       if (!paymentMethod) throw new Error("No payment method returned.");
 
       try {
@@ -73,16 +72,17 @@ export default function AddPaymentModal({
         onClose();
       } catch (apiError: any) {
         // Handle backend API errors
-        const errorMessage = apiError.response?.data?.message || 
-                            apiError.response?.data?.error || 
-                            apiError.message || 
-                            "Failed to add payment method";
+        const errorMessage =
+          apiError.response?.data?.message ||
+          apiError.response?.data?.error ||
+          apiError.message ||
+          "Failed to add payment method";
         throw new Error(errorMessage);
       }
     } catch (err: Error | unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setError(msg);
-      toast.error('Failed to add payment method');
+      toast.error("Failed to add payment method");
     } finally {
       setProcessing(false);
     }

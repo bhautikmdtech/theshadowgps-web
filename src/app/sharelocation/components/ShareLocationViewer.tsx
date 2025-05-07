@@ -33,7 +33,6 @@ export default function LiveTracker({
   shareToken: string;
   initialData: any;
 }) {
-  console.log(initialData);
   const { theme, systemTheme } = useTheme();
   const currentTheme = theme === "system" ? systemTheme : theme;
 
@@ -107,7 +106,6 @@ export default function LiveTracker({
       map.once("style.load", () => updateRoute(positions));
       return;
     }
-    console.log(coordinates);
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
       properties: {},
