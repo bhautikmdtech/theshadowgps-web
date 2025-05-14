@@ -64,16 +64,16 @@ export default function AcceptDeviceInviteViewer({
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center">
         {error ? (
           <div>
-            <HiXCircle className="mx-auto text-red-500 w-12 h-12 mb-4" />
-            <h1 className="text-2xl font-bold text-red-600 mb-2">
+            <HiXCircle className="mx-auto text-[#FF824C] w-12 h-12 mb-4" />
+            <h1 className="text-2xl font-bold text-[#FF824C] mb-2">
               Invite Not Found
             </h1>
             <p className="text-gray-600">{error}</p>
           </div>
         ) : (
           <div>
-            <HiCheckCircle className="mx-auto text-green-500 w-12 h-12 mb-4" />
-            <h1 className="text-2xl font-bold text-green-600 mb-2">
+            <HiCheckCircle className="mx-auto text-[#337CFD] w-12 h-12 mb-4" />
+            <h1 className="text-2xl font-bold text-[#337CFD] mb-2">
               Invite Accepted!
             </h1>
             <p className="text-gray-700">

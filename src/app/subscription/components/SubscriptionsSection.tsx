@@ -330,7 +330,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
             key="active"
             className="rounded-pill fontWeight-medium badge-active"
           >
-            active
+            Active
           </Badge>
         );
 
