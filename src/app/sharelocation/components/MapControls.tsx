@@ -183,7 +183,7 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
 
   return (
     <div
-      className="fixed right-1 bottom-[88px] md:top-2 md:right-4 flex flex-col gap-2 z-10"
+      className="fixed right-2 bottom-[100px] md:top-2 md:right-4 flex flex-col gap-2 z-10"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* Map Type Button */}
