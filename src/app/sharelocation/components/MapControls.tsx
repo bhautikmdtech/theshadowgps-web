@@ -47,7 +47,6 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     },
   ];
 
-  // Update map style when theme changes
   const logMapState = (): boolean => {
     if (!map) {
       console.error("Map instance is null");
@@ -72,8 +71,6 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
 
     try {
       map!.setStyle(styleUrl);
-
-      // Re-add markers after style change
       map!.once("style.load", () => {
         if (markersRef.current.length > 0) {
           const lastPos = markersRef.current[0].getLngLat();
@@ -87,7 +84,6 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   };
 
   const updateDeviceMarker = (lng: number, lat: number) => {
-    // Clear existing markers
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
@@ -137,7 +133,6 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       return;
     }
 
-    // Clear any existing watch
     if (watchIdRef.current) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
@@ -165,6 +160,7 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       { enableHighAccuracy: true }
     );
   };
+
   useEffect(() => {
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
     if (map && mapStyle !== themeStyleUrl) {
@@ -184,17 +180,19 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   return (
     <div
-      className={`relative flex flex-col gap-2 md:right-4 md:top-2 fixed right-1 bottom-25 z-10`}
+      className="fixed right-1 bottom-[88px] md:top-2 md:right-4 flex flex-col gap-2 z-10"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* Map Type Button */}
       <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}
-          className={`map-control-btn bg-white dark:bg-gray-700 w-10 h-10 rounded-lg flex items-center justify-center ${
+          className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center ${
             currentTheme === "dark"
-              ? "bg-gray-700 hover:bg-gray-600 text-white"
+              ? "bg-black hover:bg-gray-800 text-white"
               : "bg-white hover:bg-gray-100 text-gray-800"
           }`}
           aria-label="Change map style"
@@ -203,8 +201,8 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
           <Image
             src={"/images/map/layer.svg"}
             alt={"label"}
-            width={20}
-            height={20}
+            width={18}
+            height={18}
             className="object-contain"
           />
         </button>
@@ -214,7 +212,7 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
           <div
             className={`absolute right-0 bottom-full mb-2 ${
               currentTheme === "dark"
-                ? "bg-gray-700 border-gray-600"
+                ? "bg-black border-gray-600"
                 : "bg-white border-gray-200"
             } border rounded-lg z-50 p-2 flex gap-2 shadow-md`}
           >
@@ -232,8 +230,8 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
                 <Image
                   src={img}
                   alt={label}
-                  width={100}
-                  height={100}
+                  width={18}
+                  height={18}
                   className="rounded-lg object-cover w-full"
                 />
               </button>
@@ -245,9 +243,9 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       {/* Move to Device Location */}
       <button
         onClick={handleDeviceLocationClick}
-        className={`map-control-btn w-10 h-10 rounded-lg flex items-center justify-center ${
+        className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center ${
           currentTheme === "dark"
-            ? "bg-gray-700 hover:bg-gray-600 text-white"
+            ? "bg-black hover:bg-gray-800 text-white"
             : "bg-white hover:bg-gray-100 text-gray-800"
         }`}
         title="Move to Device Location"
@@ -265,9 +263,9 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       {/* Move to User Location */}
       <button
         onClick={handleUserLocationClick}
-        className={`map-control-btn w-10 h-10 rounded-lg flex items-center justify-center ${
+        className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center ${
           currentTheme === "dark"
-            ? "bg-gray-700 hover:bg-gray-600 text-white"
+            ? "bg-black hover:bg-gray-800 text-white"
             : "bg-white hover:bg-gray-100 text-gray-800"
         }`}
         title="Move to My Location"

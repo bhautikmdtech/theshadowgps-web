@@ -1,6 +1,7 @@
 "use client";
 
-import { FaMoon, FaSun } from "react-icons/fa";
+import { FaMoon } from "react-icons/fa";
+import { IoMdSunny } from "react-icons/io";
 import { useTheme } from "next-themes";
 import { useEffect } from "react";
 
@@ -25,7 +26,7 @@ export function ThemeToggle() {
         <FaMoon className="h-5 w-5 transition-transform duration-300" />
       )}
       {theme === "dark" && (
-        <FaSun className="h-5 w-5 transition-transform duration-300" />
+        <IoMdSunny className="h-5 w-5 transition-transform duration-300" />
       )}
     </button>
   );
