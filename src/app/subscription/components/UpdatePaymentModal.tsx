@@ -113,9 +113,34 @@ export default function UpdatePaymentModal({
                             style={{
                               backgroundColor: "#D6E6FF",
                               color: "#3D4B65",
+                              fontSize: "12px",
                             }}
                           >
                             Default
+                          </span>
+                        )}
+                        {method.expired && (
+                          <span
+                            className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: "#fee6da",
+                              color: "#3d4b65",
+                              fontSize: "12px",
+                            }}
+                          >
+                            Expired
+                          </span>
+                        )}
+                        {method.expiredSoon && (
+                          <span
+                            className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                            style={{
+                              backgroundColor: "#fee6da",
+                              color: "#3D4B65",
+                              fontSize: "12px",
+                            }}
+                          >
+                            Expired Soon
                           </span>
                         )}
                       </div>

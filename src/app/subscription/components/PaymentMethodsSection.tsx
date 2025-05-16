@@ -5,22 +5,7 @@ import { SubscriptionService } from "./subscriptionService";
 import { toast } from "react-toastify";
 import Image from "next/image";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
-import { AnyAaaaRecord } from "dns";
-import { PageLoader } from "@/components";
-
-interface PaymentMethod {
-  id: string;
-  brand: string;
-  last4: string;
-  expMonth: number;
-  expYear: number;
-  isDefault: boolean;
-}
-interface Customer {
-  id: string;
-  name: string | null;
-  email: string | null;
-}
+import { Customer, PaymentMethod } from "./types";
 
 interface PaymentMethodsSectionProps {
   token: string;
@@ -202,9 +187,34 @@ export default function PaymentMethodsSection({
                               style={{
                                 backgroundColor: "#D6E6FF",
                                 color: "#3D4B65",
+                                fontSize: "12px",
                               }}
                             >
                               Default
+                            </span>
+                          )}
+                          {method.expired && (
+                            <span
+                              className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: "#fee6da",
+                                color: "#3d4b65",
+                                fontSize: "12px",
+                              }}
+                            >
+                              Expired
+                            </span>
+                          )}
+                          {method.expiredSoon && (
+                            <span
+                              className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                              style={{
+                                backgroundColor: "#fee6da",
+                                color: "#3d4b65",
+                                fontSize: "12px",
+                              }}
+                            >
+                              Expired Soon
                             </span>
                           )}
                         </div>

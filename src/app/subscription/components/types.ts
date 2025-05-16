@@ -12,6 +12,8 @@ export interface PaymentMethod {
   expMonth: number;
   expYear: number;
   isDefault: boolean;
+  expired: boolean;
+  expiredSoon: boolean;
 }
 
 export interface Device {

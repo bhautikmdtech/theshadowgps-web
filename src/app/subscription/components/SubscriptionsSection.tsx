@@ -54,10 +54,12 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   const formatDate = useCallback((dateString?: string): string => {
     if (!dateString) return "N/A";
     try {
-      return new Date(dateString).toLocaleDateString("en-US", {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: "UTC", // Force UTC
       });
     } catch {
       return "N/A";
@@ -325,14 +327,14 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       const badges: JSX.Element[] = [];
 
       if (isActive) {
-        badges.push(
-          <Badge
-            key="active"
-            className="rounded-pill fontWeight-medium badge-active"
-          >
-            Active
-          </Badge>
-        );
+        // badges.push(
+        //   <Badge
+        //     key="active"
+        //     className="rounded-pill fontWeight-medium badge-active"
+        //   >
+        //     Active
+        //   </Badge>
+        // );
 
         if (subscription.status === "trialing") {
           badges.push(
@@ -341,6 +343,21 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               className="rounded-pill fontWeight-medium badge-trialing"
             >
               Trial ends {formatDate(subscription.currentPeriodEnd)}
+            </Badge>
+          );
+        }
+
+        if (
+          subscription.pauseBehavior ||
+          subscription.isCancelled ||
+          subscription.isInGracePeriod
+        ) {
+          badges.push(
+            <Badge
+              key="action-needed"
+              className="rounded-pill fontWeight-medium badge-active"
+            >
+              Action needed
             </Badge>
           );
         }
@@ -384,6 +401,14 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           );
         }
       } else {
+        badges.push(
+          <Badge
+            key="action-needed"
+            className="rounded-pill fontWeight-medium badge-active"
+          >
+            Action needed
+          </Badge>
+        );
         if (["canceled", "incomplete"].includes(subscription.status)) {
           badges.push(
             <Badge
