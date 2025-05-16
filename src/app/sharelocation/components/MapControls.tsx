@@ -133,24 +133,33 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       return;
     }
 
+    // Clear previous watcher if exists
     if (watchIdRef.current) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
 
+    // Start watching user location
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+
+        const bounds = new mapboxgl.LngLatBounds();
+
+        if (deviceLocation?.lng && deviceLocation?.lat) {
+          bounds.extend([deviceLocation?.lng, deviceLocation?.lat]);
+        }
+        bounds.extend([longitude, latitude]);
         updateDeviceMarker(longitude, latitude);
 
         try {
-          map!.flyTo({
-            center: [longitude, latitude],
-            zoom: 16,
-            essential: true,
+          map!.fitBounds(bounds, {
+            padding: 100, // Add padding around markers
+            maxZoom: 16, // Maximum zoom level
+            duration: 1000, // Smooth transition
           });
         } catch (error) {
-          console.error("Failed to fly to user location:", error);
+          console.error("Failed to adjust map view:", error);
         }
       },
       (error) => {
