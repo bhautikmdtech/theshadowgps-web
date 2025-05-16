@@ -182,10 +182,7 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   }, []);
 
   return (
-    <div
-      className="fixed right-2 bottom-[100px] md:top-2 md:right-4 flex flex-col gap-2 z-10"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-    >
+    <div className="fixed right-2 bottom-[100px] md:bottom-[10px] md:right-4 flex flex-col gap-2 z-10">
       {/* Map Type Button */}
       <div ref={dropdownRef} className="relative">
         <button
