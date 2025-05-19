@@ -40,7 +40,6 @@ export default function LiveTracker({
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isReady, setIsReady] = useState(false);
   const [deviceLocationActive, setDeviceLocationActive] = useState(false);
 
   const mapRef = useRef<mapboxgl.Map>(null);
@@ -55,16 +54,18 @@ export default function LiveTracker({
     if (initialData?.deviceInfo && initialData?.latestPoint) {
       setDevice(initialData.deviceInfo);
       setPositions([initialData.latestPoint]);
-      setIsReady(true);
     } else {
       setError("No initial location data available");
     }
   }, [initialData]);
 
   const handleUserInteraction = () => {
-    if (deviceLocationActive) {
-      setDeviceLocationActive(false);
-    }
+    setDeviceLocationActive((prevActive) => {
+      if (prevActive) {
+        return false;
+      }
+      return prevActive;
+    });
   };
 
   const handleMapLoad = useCallback(
@@ -92,23 +93,10 @@ export default function LiveTracker({
 
       // Attach event listeners to detect when user manually interacts with the map
       map.on("dragstart", handleUserInteraction);
-      map.on("zoomstart", handleUserInteraction);
-      map.on("rotatestart", handleUserInteraction);
-      map.on("pitchstart", handleUserInteraction);
-
-      map.on("moveend", () => {
-        handleUserInteraction();
-      });
-
-      // Ensure map is fully loaded before setting isReady
-      if (map.isStyleLoaded()) {
-        setIsReady(true);
-      } else {
-        // Wait for the style to load before setting isReady
-        map.once("style.load", () => {
-          setIsReady(true);
-        });
-      }
+      // map.on("zoomstart", handleUserInteraction);
+      // map.on("rotatestart", handleUserInteraction);
+      // map.on("pitchstart", handleUserInteraction);
+      // map.on("moveend", handleUserInteraction);
     },
     [positions, device, deviceLocationActive]
   );
