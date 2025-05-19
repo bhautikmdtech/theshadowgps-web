@@ -12,13 +12,21 @@ export const MAPBOX_DARK =
   "mapbox://styles/abhishekbhatia02/cm7el93sj00i901s7gawghy7j";
 
 interface MapControlsProps {
-  map: mapboxgl.Map;
+  map: mapboxgl.Map | null;
   deviceLocation?: { lng: number; lat: number };
+  deviceLocationActive: boolean;
+  setDeviceLocationActive: (active: boolean) => void;
 }
 
-const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
+const MapControls = ({
+  map,
+  deviceLocation,
+  deviceLocationActive,
+  setDeviceLocationActive,
+}: MapControlsProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mapStyle, setMapStyle] = useState("streets-v11");
+  const [activeUserButton, setActiveUserButton] = useState<boolean>(false);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -47,16 +55,17 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
     },
   ];
 
-  const logMapState = (): boolean => {
+  const whenMapReady = (operation: () => void) => {
     if (!map) {
-      console.error("Map instance is null");
-      return false;
+      return;
     }
+
     if (!map.isStyleLoaded()) {
-      console.warn("Map style not loaded yet");
-      return false;
+      map.once("style.load", operation);
+      return;
     }
-    return true;
+
+    operation();
   };
 
   const handleLayerToggle = () => {
@@ -64,26 +73,33 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   };
 
   const changeMapStyle = (styleUrl: string) => {
-    if (!logMapState()) return;
+    if (!map) {
+      setMapStyle(styleUrl);
+      setIsDropdownOpen(false);
+      return;
+    }
 
     setMapStyle(styleUrl);
     setIsDropdownOpen(false);
 
-    try {
-      map!.setStyle(styleUrl);
-      map!.once("style.load", () => {
-        if (markersRef.current.length > 0) {
-          const lastPos = markersRef.current[0].getLngLat();
-          updateDeviceMarker(lastPos.lng, lastPos.lat);
-        }
-      });
-    } catch (error) {
-      console.error("Failed to change map style:", error);
-      toast.error("Failed to change map style");
-    }
+    whenMapReady(() => {
+      try {
+        map.setStyle(styleUrl);
+        map.once("style.load", () => {
+          if (markersRef.current.length > 0) {
+            const lastPos = markersRef.current[0].getLngLat();
+            updateDeviceMarker(lastPos.lng, lastPos.lat);
+          }
+        });
+      } catch (error) {
+        console.error("Failed to change map style:", error);
+        toast.error("Failed to change map style");
+      }
+    });
   };
 
   const updateDeviceMarker = (lng: number, lat: number) => {
+    // Clear any existing markers
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
@@ -108,28 +124,87 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   };
 
   const handleDeviceLocationClick = () => {
-    if (!logMapState() || !deviceLocation) {
+    if (!deviceLocation) {
       toast.error("Device location unavailable");
       return;
     }
 
-    try {
-      map!.flyTo({
-        center: [deviceLocation.lng, deviceLocation.lat],
-        zoom: 16,
-        essential: true,
+    // If user location is active, deactivate it
+    if (activeUserButton) {
+      // Clear user location tracking
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+
+      // Clear markers
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current = [];
+
+      // Reset user button state
+      setActiveUserButton(false);
+    }
+
+    // Toggle device location active state
+    const newDeviceActive = !deviceLocationActive;
+    setDeviceLocationActive(newDeviceActive);
+
+    // If turning on device tracking, fly to device location
+    if (newDeviceActive) {
+      whenMapReady(() => {
+        try {
+          if (map) {
+            // Add the marker to the map
+            updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
+
+            // Fly to the device location
+            map.flyTo({
+              center: [deviceLocation.lng, deviceLocation.lat],
+              zoom: 16,
+              essential: true,
+              duration: 500,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fly to device location:", error);
+          toast.error("Failed to navigate to device location");
+        }
       });
-    } catch (error) {
-      console.error("Failed to fly to device location:", error);
-      toast.error("Failed to navigate to device location");
     }
   };
 
   const handleUserLocationClick = () => {
-    if (!logMapState()) return;
+    // Always turn off device tracking when user location is clicked
+    setDeviceLocationActive(false);
 
+    // Toggle user location tracking
+    const newUserActive = !activeUserButton;
+    setActiveUserButton(newUserActive);
+
+    // If turning off user tracking, clean up
+    if (!newUserActive) {
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+
+      // Clear markers
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current = [];
+      return;
+    }
+
+    // Check if geolocation is available
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");
+      setActiveUserButton(false);
+      return;
+    }
+
+    // Need map for user location tracking
+    if (!map) {
+      toast.info("Map is loading. Please try again in a moment.");
+      setActiveUserButton(false);
       return;
     }
 
@@ -138,6 +213,10 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+
+    // Clear existing markers before adding new ones
+    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current = [];
 
     // Start watching user location
     watchIdRef.current = navigator.geolocation.watchPosition(
@@ -153,10 +232,10 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
         updateDeviceMarker(longitude, latitude);
 
         try {
-          map!.fitBounds(bounds, {
-            padding: 100, // Add padding around markers
-            maxZoom: 16, // Maximum zoom level
-            duration: 1000, // Smooth transition
+          map.fitBounds(bounds, {
+            padding: 100,
+            maxZoom: 16,
+            duration: 500,
           });
         } catch (error) {
           console.error("Failed to adjust map view:", error);
@@ -165,17 +244,21 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
       (error) => {
         toast.error(`Location error: ${error.message}`);
         watchIdRef.current = null;
+        setActiveUserButton(false);
       },
       { enableHighAccuracy: true }
     );
   };
 
+  // Update mapStyle when theme changes
   useEffect(() => {
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
     if (map && mapStyle !== themeStyleUrl) {
-      changeMapStyle(themeStyleUrl);
+      whenMapReady(() => {
+        changeMapStyle(themeStyleUrl);
+      });
     }
-  }, [currentTheme]);
+  }, [currentTheme, mapStyle]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -191,29 +274,40 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
   }, []);
 
   return (
-    <div className="fixed right-2 bottom-[100px] md:bottom-[10px] md:right-4 flex flex-col gap-2 z-10">
-      {/* Map Type Button */}
+    <div className="flex flex-col gap-2">
       <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}
-          className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center ${
-            currentTheme === "dark"
-              ? "bg-black hover:bg-gray-800 text-white"
-              : "bg-white hover:bg-gray-100 text-gray-800"
-          }`}
+          className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center
+            ${
+              currentTheme === "dark"
+                ? `${
+                    isDropdownOpen
+                      ? "bg-blue-500 text-white"
+                      : "bg-black hover:bg-gray-800 text-white"
+                  }`
+                : `${
+                    isDropdownOpen
+                      ? "bg-blue-500 text-white"
+                      : "bg-white hover:bg-gray-100 text-gray-800"
+                  }`
+            }`}
           aria-label="Change map style"
           aria-expanded={isDropdownOpen}
         >
           <Image
-            src={"/images/map/layer.svg"}
-            alt={"label"}
-            width={18}
-            height={18}
+            src={
+              isDropdownOpen
+                ? "/images/map/layer-white.svg"
+                : "/images/map/layer.svg"
+            }
+            alt={"Change map style"}
+            width={20}
+            height={20}
             className="object-contain"
           />
         </button>
 
-        {/* Dropdown Menu */}
         {isDropdownOpen && (
           <div
             className={`absolute right-0 bottom-full mb-2 ${
@@ -246,39 +340,63 @@ const MapControls = ({ map, deviceLocation }: MapControlsProps) => {
         )}
       </div>
 
-      {/* Move to Device Location */}
       <button
         onClick={handleDeviceLocationClick}
-        className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center ${
-          currentTheme === "dark"
-            ? "bg-black hover:bg-gray-800 text-white"
-            : "bg-white hover:bg-gray-100 text-gray-800"
-        }`}
+        className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center
+          ${
+            currentTheme === "dark"
+              ? `${
+                  deviceLocationActive
+                    ? "bg-blue-500 text-white"
+                    : "bg-black hover:bg-gray-800 text-white"
+                }`
+              : `${
+                  deviceLocationActive
+                    ? "bg-blue-500 text-white"
+                    : "bg-white hover:bg-gray-100 text-gray-800"
+                }`
+          }`}
         title="Move to Device Location"
         aria-label="Move to device location"
       >
         <Image
-          src={"/images/map/car.svg"}
+          src={
+            deviceLocationActive
+              ? "/images/map/singal-car-white.svg"
+              : "/images/map/car.svg"
+          }
           alt={"Device Location"}
-          width={20}
-          height={20}
+          width={24}
+          height={24}
           className="object-contain"
         />
       </button>
 
-      {/* Move to User Location */}
       <button
         onClick={handleUserLocationClick}
-        className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center ${
-          currentTheme === "dark"
-            ? "bg-black hover:bg-gray-800 text-white"
-            : "bg-white hover:bg-gray-100 text-gray-800"
-        }`}
+        className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center
+          ${
+            currentTheme === "dark"
+              ? `${
+                  activeUserButton
+                    ? "bg-blue-500 text-white"
+                    : "bg-black hover:bg-gray-800 text-white"
+                }`
+              : `${
+                  activeUserButton
+                    ? "bg-blue-500 text-white"
+                    : "bg-white hover:bg-gray-100 text-gray-800"
+                }`
+          }`}
         title="Move to My Location"
         aria-label="Move to my location"
       >
         <Image
-          src={"/images/map/car-mobile-location.svg"}
+          src={
+            activeUserButton
+              ? "/images/map/device-car-white.svg"
+              : "/images/map/car-mobile-location.svg"
+          }
           alt={"My Location"}
           width={20}
           height={20}

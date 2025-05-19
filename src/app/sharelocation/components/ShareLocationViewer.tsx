@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import MapComponent from "@/services/MapService";
-import Image from "next/image";
-import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 import dynamic from "next/dynamic";
-import { ThemeToggle } from "@/components/theme-toggle";
+import Image from "next/image";
 import { useTheme } from "next-themes";
+import { ThemeToggle } from "@/components/theme-toggle";
+import MapComponent from "@/services/MapService";
+import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
+import MapControls from "./MapControls";
 
 const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
 
@@ -40,13 +41,14 @@ export default function LiveTracker({
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [deviceLocationActive, setDeviceLocationActive] = useState(false);
 
-  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const mapRef = useRef<mapboxgl.Map>(null);
   const deviceMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const startMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const socketRef = useRef<Socket | null>(null);
-  const routeSourceRef = useRef<string>("route-arrow");
-  const routeLayerRef = useRef<string>("route-arrow-line");
+  const routeSourceId = "route-arrow";
+  const routeLayerId = "route-arrow-line";
 
   // Initialize with device info and positions
   useEffect(() => {
@@ -55,57 +57,69 @@ export default function LiveTracker({
       setPositions([initialData.latestPoint]);
       setIsReady(true);
     } else {
-      setError("No initial location data available.");
+      setError("No initial location data available");
     }
   }, [initialData]);
 
-  const handleMapLoad = (map: mapboxgl.Map) => {
-    mapRef.current = map;
+  const handleUserInteraction = () => {
+    if (deviceLocationActive) {
+      setDeviceLocationActive(false);
+    }
+  };
 
-    // Only initialize markers and route if we haven't already
-    if (positions.length > 0) {
+  const handleMapLoad = useCallback(
+    (map: mapboxgl.Map) => {
+      if (positions.length === 0) return;
+
       const latest = positions[positions.length - 1];
 
-      // Create device marker if it doesn't exist
       deviceMarkerRef.current = createDeviceMarker({
         position: latest,
-        device: device || undefined,
+        device,
         mapRef,
-        isMotion: positions.length > 1 ? true : false,
+        isMotion: positions.length > 1,
       });
 
-      // Create start marker if it doesn't exist
       startMarkerRef.current = createStartMarker({
         position: positions[0],
-        device: device || undefined,
+        device,
         mapRef,
       });
 
-      // Update route if we have at least 2 positions
       if (positions.length > 1) {
         updateRoute(positions);
       }
-    }
 
-    setIsReady(true);
-  };
+      // Attach event listeners to detect when user manually interacts with the map
+      map.on("dragstart", handleUserInteraction);
+      map.on("zoomstart", handleUserInteraction);
+      map.on("rotatestart", handleUserInteraction);
+      map.on("pitchstart", handleUserInteraction);
 
-  // Update route line
+      map.on("moveend", () => {
+        handleUserInteraction();
+      });
+
+      // Ensure map is fully loaded before setting isReady
+      if (map.isStyleLoaded()) {
+        setIsReady(true);
+      } else {
+        // Wait for the style to load before setting isReady
+        map.once("style.load", () => {
+          setIsReady(true);
+        });
+      }
+    },
+    [positions, device, deviceLocationActive]
+  );
+
   const updateRoute = useCallback((positions: Position[]) => {
     const map = mapRef.current;
-    const sourceId = routeSourceRef.current;
-    const layerId = routeLayerRef.current;
-
-    if (!map || positions.length < 2 || !sourceId || !layerId) return;
+    if (!map || positions.length < 2) return;
 
     const coordinates = positions.map(
       (p) => [p.lng, p.lat] as [number, number]
     );
-
-    if (!map.isStyleLoaded()) {
-      map.once("style.load", () => updateRoute(positions));
-      return;
-    }
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
       properties: {},
@@ -116,31 +130,29 @@ export default function LiveTracker({
     };
 
     try {
-      const source = map.getSource(sourceId) as mapboxgl.GeoJSONSource;
+      const source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
       if (source) {
         source.setData(routeGeoJSON);
       } else {
-        map.addSource(sourceId, {
+        map.addSource(routeSourceId, {
           type: "geojson",
           data: routeGeoJSON,
         });
 
-        if (!map.getLayer(layerId)) {
-          map.addLayer({
-            id: layerId,
-            type: "line",
-            source: sourceId,
-            layout: {
-              "line-join": "round",
-              "line-cap": "round",
-            },
-            paint: {
-              "line-color": "#4d6bfe",
-              "line-width": 4,
-              "line-opacity": 0.9,
-            },
-          });
-        }
+        map.addLayer({
+          id: routeLayerId,
+          type: "line",
+          source: routeSourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#4d6bfe",
+            "line-width": 4,
+            "line-opacity": 0.9,
+          },
+        });
       }
     } catch (error) {
       console.error("Error updating route:", error);
@@ -148,36 +160,38 @@ export default function LiveTracker({
   }, []);
 
   const handlePositionUpdate = useCallback(
-    async (newPosition: Position) => {
-      let updated: Position[] = [];
+    (newPosition: Position) => {
       setPositions((prev) => {
         const last = prev[prev.length - 1];
         if (last?.lat === newPosition.lat && last?.lng === newPosition.lng) {
           return prev;
         }
 
-        updated = [...prev, newPosition];
+        const updated = [...prev, newPosition];
 
+        // Update device marker position if it exists
         if (deviceMarkerRef.current) {
           deviceMarkerRef.current.setLngLat([newPosition.lng, newPosition.lat]);
+        }
+        // Update route with new positions
+        updateRoute(updated);
+
+        // Only center the map if the device location tracking is active
+        if (mapRef.current && deviceLocationActive) {
+          mapRef.current.flyTo({
+            center: [newPosition.lng, newPosition.lat],
+            zoom: 16,
+            speed: 0.8,
+            curve: 1.2,
+            duration: 1000,
+            essential: true,
+          });
         }
 
         return updated;
       });
-      await updateRoute(updated);
-
-      if (mapRef.current) {
-        mapRef.current.flyTo({
-          center: [newPosition.lng, newPosition.lat],
-          zoom: 16,
-          speed: 0.8,
-          curve: 1.2,
-          duration: 2000,
-          essential: true,
-        });
-      }
     },
-    [updateRoute]
+    [updateRoute, deviceLocationActive]
   );
 
   useEffect(() => {
@@ -201,10 +215,35 @@ export default function LiveTracker({
     };
   }, [shareToken, handlePositionUpdate]);
 
+  // Effect to update the map when device location tracking is toggled
+  useEffect(() => {
+    if (deviceLocationActive && mapRef.current && positions.length > 0) {
+      const latest = positions[positions.length - 1];
+      mapRef.current.flyTo({
+        center: [latest.lng, latest.lat],
+        zoom: 16,
+        essential: true,
+        duration: 500,
+      });
+    }
+  }, [deviceLocationActive, positions]);
+
+  // Clean up markers when component unmounts
+  useEffect(() => {
+    return () => {
+      if (deviceMarkerRef.current) {
+        deviceMarkerRef.current.remove();
+      }
+      if (startMarkerRef.current) {
+        startMarkerRef.current.remove();
+      }
+    };
+  }, []);
+
   if (error) {
     return (
-      <div className="h-screen flex items-center justify-center bg-gray-100">
-        <div className="p-6 rounded-lg shadow-md text-center">
+      <div className="h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="p-6 rounded-lg shadow-md text-center bg-white dark:bg-gray-800">
           <h2 className="text-xl font-bold mb-2">Tracking Error</h2>
           <p className="mb-4">{error}</p>
           <button
@@ -221,7 +260,7 @@ export default function LiveTracker({
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <div className="shadow-sm py-2 px-3 flex justify-between items-center">
+      <header className="shadow-sm py-2 px-3 flex justify-between items-center">
         <div className="hidden md:flex items-center gap-3">
           <Image
             src="/images/logoFull.svg"
@@ -306,18 +345,25 @@ export default function LiveTracker({
             />
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="flex-1 relative">
-        {isReady && positions.length > 0 ? (
+      <main className="flex-1 relative">
+        {positions.length > 0 ? (
           <>
             <MapComponent
-              initialPosition={{
-                lng: positions[positions.length - 1].lng,
-                lat: positions[positions.length - 1].lat,
-              }}
+              initialPosition={positions[positions.length - 1]}
               onMapLoad={handleMapLoad}
+              mapRef={mapRef}
             />
+            {/* Always render the MapControls, but pass null if map not ready */}
+            <div className="absolute right-2 bottom-[100px] md:bottom-[10px] md:right-4 z-[999]">
+              <MapControls
+                map={mapRef.current}
+                deviceLocation={positions[positions.length - 1]}
+                deviceLocationActive={deviceLocationActive}
+                setDeviceLocationActive={setDeviceLocationActive}
+              />
+            </div>
             {/* Mobile Bottom Panel */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[24px] shadow-lg z-[9]">
               <div className="flex items-center justify-between p-4">
@@ -354,7 +400,7 @@ export default function LiveTracker({
             </div>
           </>
         ) : (
-          <div className="h-full bg-gray-100 flex flex-col">
+          <div className="h-full bg-gray-100 dark:bg-gray-900 flex flex-col">
             <div className="flex-1 relative overflow-hidden">
               <div
                 className="absolute inset-0"
@@ -375,7 +421,7 @@ export default function LiveTracker({
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }
