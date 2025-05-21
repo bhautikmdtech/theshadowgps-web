@@ -37,20 +37,20 @@ const MapControls = ({
   const mapStyles = [
     {
       id: "custom-default",
-      type: "mapbox://styles/mapbox/streets-v11",
-      label: "Default",
+      type: currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT,
+      label: "Road",
       img: "/images/map/road.svg",
     },
     {
       id: "satellite-streets",
-      type: "mapbox://styles/mapbox/satellite-streets-v11",
+      type: "mapbox://styles/mapbox/satellite-v9",
       label: "Satellite",
       img: "/images/map/satellite.svg",
     },
     {
       id: "theme-toggle",
-      type: currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT,
-      label: currentTheme === "dark" ? "Dark" : "Light",
+      type: "mapbox://styles/mapbox/satellite-streets-v11",
+      label: "Hybrid",
       img: "/images/map/hybrid.svg",
     },
   ];
@@ -255,10 +255,10 @@ const MapControls = ({
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
     if (map && mapStyle !== themeStyleUrl) {
       whenMapReady(() => {
-        changeMapStyle(themeStyleUrl);
+        changeMapStyle(mapStyle);
       });
     }
-  }, [currentTheme, mapStyle]);
+  }, [mapStyle]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -312,30 +312,36 @@ const MapControls = ({
           <div
             className={`absolute right-0 bottom-full mb-2 ${
               currentTheme === "dark"
-                ? "bg-black border-gray-600"
-                : "bg-white border-gray-200"
-            } border rounded-lg z-50 p-2 flex gap-2 shadow-md`}
+                ? "bg-black border-gray-600 text-white"
+                : "bg-white border-gray-200 text-gray-800"
+            } border rounded-lg z-50 p-4 flex flex-col gap-4 shadow-md`}
           >
-            {mapStyles.map(({ id, type, label, img }) => (
-              <button
-                key={id}
-                onClick={() => changeMapStyle(type)}
-                className={`dropdown-button w-20 h-14 rounded-lg ${
-                  mapStyle === type
-                    ? "border-4 border-gray-500"
-                    : "border border-transparent"
-                }`}
-                aria-label={`Switch to ${label} map`}
-              >
-                <Image
-                  src={img}
-                  alt={label}
-                  width={18}
-                  height={18}
-                  className="rounded-lg object-cover w-full"
-                />
-              </button>
-            ))}
+            <h3 className="text-lg font-semibold text-center">
+              Map Appearance
+            </h3>
+            <div className="flex gap-4">
+              {mapStyles.map(({ id, type, label, img }) => (
+                <button
+                  key={id}
+                  onClick={() => changeMapStyle(type)}
+                  className="dropdown-button w-24 h-20 rounded-lg flex flex-col items-center justify-center p-1"
+                  aria-label={`Switch to ${label} map`}
+                >
+                  <Image
+                    src={img}
+                    alt={label}
+                    width={60}
+                    height={40}
+                    className={`rounded-lg object-cover w-full h-full ${
+                      mapStyle === type
+                        ? "border-4 border-blue-500"
+                        : "border border-transparent"
+                    }`}
+                  />
+                  <span className="mt-1 text-sm">{label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
