@@ -274,7 +274,7 @@ const MapControls = ({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="fixed right-2 bottom-[100px] md:bottom-[10px] md:right-4 flex flex-col gap-2 z-10">
       <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}
@@ -339,7 +339,6 @@ const MapControls = ({
           </div>
         )}
       </div>
-
       <button
         onClick={handleDeviceLocationClick}
         className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center
@@ -371,7 +370,6 @@ const MapControls = ({
           className="object-contain"
         />
       </button>
-
       <button
         onClick={handleUserLocationClick}
         className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center
