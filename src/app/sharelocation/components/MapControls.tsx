@@ -149,22 +149,20 @@ const MapControls = ({
     const newDeviceActive = !deviceLocationActive;
     setDeviceLocationActive(newDeviceActive);
 
-    // If turning on device tracking, fly to device location
-    if (newDeviceActive) {
+    // If turning on device tracking and map exists, fly to device location
+    if (newDeviceActive && map) {
       whenMapReady(() => {
         try {
-          if (map) {
-            // Add the marker to the map
-            updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
+          // Add the marker to the map
+          updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
 
-            // Fly to the device location
-            map.flyTo({
-              center: [deviceLocation.lng, deviceLocation.lat],
-              zoom: 16,
-              essential: true,
-              duration: 500,
-            });
-          }
+          // Fly to the device location
+          map.flyTo({
+            center: [deviceLocation.lng, deviceLocation.lat],
+            zoom: 16,
+            essential: true,
+            duration: 500,
+          });
         } catch (error) {
           console.error("Failed to fly to device location:", error);
           toast.error("Failed to navigate to device location");
@@ -252,13 +250,18 @@ const MapControls = ({
 
   // Update mapStyle when theme changes
   useEffect(() => {
+    // Skip if map is not available
+    if (!map) return;
+
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
+
+    // Only update if we're using the default style and the theme changes
     if (map && mapStyle !== themeStyleUrl) {
       whenMapReady(() => {
         changeMapStyle(mapStyle);
       });
     }
-  }, [mapStyle]);
+  }, [currentTheme, map, mapStyle]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

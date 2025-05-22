@@ -8,7 +8,11 @@ import { useTheme } from "next-themes";
 import { ThemeToggle } from "@/components/theme-toggle";
 import MapComponent from "@/services/MapService";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
-import MapControls from "./MapControls";
+// Import MapControls dynamically
+const DynamicMapControls = dynamic(() => import("./MapControls"), { 
+  ssr: false,
+  loading: () => null
+});
 
 const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
 
@@ -97,6 +101,9 @@ export default function LiveTracker({
       // map.on("rotatestart", handleUserInteraction);
       // map.on("pitchstart", handleUserInteraction);
       // map.on("moveend", handleUserInteraction);
+
+      // Force a rerender to update the MapControls component
+      setPositions((prev) => [...prev]);
     },
     [positions, device, deviceLocationActive]
   );
@@ -343,14 +350,16 @@ export default function LiveTracker({
               onMapLoad={handleMapLoad}
               mapRef={mapRef}
             />
-            {/* Always render the MapControls, but pass null if map not ready */}
+            {/* MapControls will be dynamically loaded and will handle its own initialization */}
             <div className="absolute right-2 bottom-[100px] md:bottom-[10px] md:right-4 z-[999]">
-              <MapControls
-                map={mapRef.current}
-                deviceLocation={positions[positions.length - 1]}
-                deviceLocationActive={deviceLocationActive}
-                setDeviceLocationActive={setDeviceLocationActive}
-              />
+              {positions.length > 0 && (
+                <DynamicMapControls
+                  map={mapRef.current}
+                  deviceLocation={positions[positions.length - 1]}
+                  deviceLocationActive={deviceLocationActive}
+                  setDeviceLocationActive={setDeviceLocationActive}
+                />
+              )}
             </div>
             {/* Mobile Bottom Panel */}
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[24px] shadow-lg z-[9]">
