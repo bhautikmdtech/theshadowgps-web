@@ -82,14 +82,31 @@ const MapControls = ({
     setMapStyle(styleUrl);
     setIsDropdownOpen(false);
 
+    // Store reference to any existing markers before changing style
+    const existingMarkers = [...markersRef.current];
+    const markerPositions = existingMarkers.map(marker => marker.getLngLat());
+    
     whenMapReady(() => {
       try {
+        // Set the new style
         map.setStyle(styleUrl);
+        
+        // After style loads, restore route and markers
         map.once("style.load", () => {
-          if (markersRef.current.length > 0) {
-            const lastPos = markersRef.current[0].getLngLat();
-            updateDeviceMarker(lastPos.lng, lastPos.lat);
+          // First restore markers if they existed
+          if (markerPositions.length > 0) {
+            markerPositions.forEach(pos => {
+              updateDeviceMarker(pos.lng, pos.lat);
+            });
           }
+          
+          // Then emit event to restore route
+          setTimeout(() => {
+            const event = new CustomEvent("mapStyleChanged", { 
+              detail: { mapStyle: styleUrl } 
+            });
+            window.dispatchEvent(event);
+          }, 50);
         });
       } catch (error) {
         console.error("Failed to change map style:", error);
@@ -252,13 +269,26 @@ const MapControls = ({
   useEffect(() => {
     // Skip if map is not available
     if (!map) return;
-
+    
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
-
+    
     // Only update if we're using the default style and the theme changes
     if (map && mapStyle !== themeStyleUrl) {
       whenMapReady(() => {
-        changeMapStyle(mapStyle);
+        try {
+          // Set the new style
+          map.setStyle(themeStyleUrl);
+          
+          // After style loads, notify ShareLocationViewer to restore route
+          map.once("style.load", () => {
+            setTimeout(() => {
+              const event = new CustomEvent("mapStyleChanged");
+              window.dispatchEvent(event);
+            }, 50);
+          });
+        } catch (error) {
+          console.error("Failed to update map style with theme:", error);
+        }
       });
     }
   }, [currentTheme, map, mapStyle]);

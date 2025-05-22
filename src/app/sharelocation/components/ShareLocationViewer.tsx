@@ -72,6 +72,77 @@ export default function LiveTracker({
     });
   };
 
+  // Function to update the route on the map
+  const updateRoute = useCallback((positions: Position[]) => {
+    const map = mapRef.current;
+    if (!map || positions.length < 2) return;
+
+    const coordinates = positions.map(
+      (p) => [p.lng, p.lat] as [number, number]
+    );
+    const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        type: "LineString",
+        coordinates,
+      },
+    };
+
+    try {
+      // Check if the source already exists
+      let source: mapboxgl.GeoJSONSource | null = null;
+      try {
+        source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
+      } catch (err) {
+        // Source doesn't exist yet or was removed during style change
+        source = null;
+      }
+
+      if (source) {
+        // Update existing source
+        source.setData(routeGeoJSON);
+      } else {
+        // Create new source and layer
+        try {
+          // First check if the layer exists, and remove it if it does
+          if (map.getLayer(routeLayerId)) {
+            map.removeLayer(routeLayerId);
+          }
+          // Check if source exists and remove it
+          if (map.getSource(routeSourceId)) {
+            map.removeSource(routeSourceId);
+          }
+        } catch (err) {
+          // Layer or source doesn't exist, which is fine
+        }
+
+        // Add new source and layer
+        map.addSource(routeSourceId, {
+          type: "geojson",
+          data: routeGeoJSON,
+        });
+
+        map.addLayer({
+          id: routeLayerId,
+          type: "line",
+          source: routeSourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#4d6bfe",
+            "line-width": 4,
+            "line-opacity": 0.9,
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Error updating route:", error);
+    }
+  }, []);
+
   const handleMapLoad = useCallback(
     (map: mapboxgl.Map) => {
       if (positions.length === 0) return;
@@ -101,58 +172,20 @@ export default function LiveTracker({
       // map.on("rotatestart", handleUserInteraction);
       // map.on("pitchstart", handleUserInteraction);
       // map.on("moveend", handleUserInteraction);
+      
+      // Add listener for style changes directly on the map
+      map.on("style.load", () => {
+        // This will run after any style change
+        if (positions.length > 1) {
+          setTimeout(() => updateRoute(positions), 100);
+        }
+      });
 
       // Force a rerender to update the MapControls component
       setPositions((prev) => [...prev]);
     },
-    [positions, device, deviceLocationActive]
+    [positions, device, deviceLocationActive, updateRoute]
   );
-
-  const updateRoute = useCallback((positions: Position[]) => {
-    const map = mapRef.current;
-    if (!map || positions.length < 2) return;
-
-    const coordinates = positions.map(
-      (p) => [p.lng, p.lat] as [number, number]
-    );
-    const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
-      type: "Feature",
-      properties: {},
-      geometry: {
-        type: "LineString",
-        coordinates,
-      },
-    };
-
-    try {
-      const source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
-      if (source) {
-        source.setData(routeGeoJSON);
-      } else {
-        map.addSource(routeSourceId, {
-          type: "geojson",
-          data: routeGeoJSON,
-        });
-
-        map.addLayer({
-          id: routeLayerId,
-          type: "line",
-          source: routeSourceId,
-          layout: {
-            "line-join": "round",
-            "line-cap": "round",
-          },
-          paint: {
-            "line-color": "#4d6bfe",
-            "line-width": 4,
-            "line-opacity": 0.9,
-          },
-        });
-      }
-    } catch (error) {
-      console.error("Error updating route:", error);
-    }
-  }, []);
 
   const handlePositionUpdate = useCallback(
     (newPosition: Position) => {
@@ -222,6 +255,56 @@ export default function LiveTracker({
       });
     }
   }, [deviceLocationActive, positions]);
+
+  // Function to recreate all markers after style changes
+  const recreateMarkers = useCallback(() => {
+    if (positions.length === 0 || !mapRef.current) return;
+    
+    // Remove existing markers
+    if (deviceMarkerRef.current) {
+      deviceMarkerRef.current.remove();
+    }
+    if (startMarkerRef.current) {
+      startMarkerRef.current.remove();
+    }
+    
+    // Recreate markers
+    const latest = positions[positions.length - 1];
+    deviceMarkerRef.current = createDeviceMarker({
+      position: latest,
+      device,
+      mapRef,
+      isMotion: positions.length > 1,
+    });
+
+    startMarkerRef.current = createStartMarker({
+      position: positions[0],
+      device,
+      mapRef,
+    });
+  }, [positions, device, mapRef]);
+
+  // Effect to listen for map style changes and recreate the route and markers
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    
+    const handleStyleChange = () => {
+      if (positions.length > 1) {
+        // Wait for a moment to ensure the map is fully loaded
+        setTimeout(() => {
+          updateRoute(positions);
+          recreateMarkers();
+        }, 100);
+      }
+    };
+    
+    window.addEventListener("mapStyleChanged", handleStyleChange);
+    
+    return () => {
+      window.removeEventListener("mapStyleChanged", handleStyleChange);
+    };
+  }, [mapRef, positions, updateRoute, recreateMarkers]);
 
   // Clean up markers when component unmounts
   useEffect(() => {
