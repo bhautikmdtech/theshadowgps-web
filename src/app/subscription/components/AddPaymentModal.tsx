@@ -71,18 +71,23 @@ export default function AddPaymentModal({
         await onRefresh();
         onClose();
       } catch (apiError: any) {
-        // Handle backend API errors
-        const errorMessage =
-          apiError.response?.data?.message ||
-          apiError.response?.data?.error ||
-          apiError.message ||
+        // Handle backend API errors with more detail
+        const errorMessage = 
+          apiError.response?.data?.message || 
+          apiError.response?.data?.error || 
+          apiError.message || 
           "Failed to add payment method";
-        throw new Error(errorMessage);
+        
+        // Show detailed error in the form
+        setError(errorMessage);
+        
+        // Show toast with specific error message
+        toast.error(`Payment method error: ${errorMessage}`);
       }
     } catch (err: Error | unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
       setError(msg);
-      toast.error("Failed to add payment method");
+      toast.error(`Payment error: ${msg}`);
     } finally {
       setProcessing(false);
     }
