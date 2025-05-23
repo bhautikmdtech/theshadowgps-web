@@ -16,6 +16,8 @@ interface MapControlsProps {
   deviceLocation?: { lng: number; lat: number };
   deviceLocationActive: boolean;
   setDeviceLocationActive: (active: boolean) => void;
+  mobileLocationActive: boolean;
+  setMobileLocationActive: (active: boolean) => void;
 }
 
 const MapControls = ({
@@ -23,10 +25,11 @@ const MapControls = ({
   deviceLocation,
   deviceLocationActive,
   setDeviceLocationActive,
+  mobileLocationActive,
+  setMobileLocationActive,
 }: MapControlsProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [mapStyle, setMapStyle] = useState("streets-v11");
-  const [activeUserButton, setActiveUserButton] = useState<boolean>(false);
+  const [mapStyle, setMapStyle] = useState("custom-default");
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,12 +63,16 @@ const MapControls = ({
       return;
     }
 
-    if (!map.isStyleLoaded()) {
-      map.once("style.load", operation);
-      return;
+    try {
+      if (!map.isStyleLoaded()) {
+        map.once("style.load", operation);
+        return;
+      }
+      
+      operation();
+    } catch (error) {
+      console.error("Error in whenMapReady:", error);
     }
-
-    operation();
   };
 
   const handleLayerToggle = () => {
@@ -84,26 +91,26 @@ const MapControls = ({
 
     // Store reference to any existing markers before changing style
     const existingMarkers = [...markersRef.current];
-    const markerPositions = existingMarkers.map(marker => marker.getLngLat());
-    
+    const markerPositions = existingMarkers.map((marker) => marker.getLngLat());
+
     whenMapReady(() => {
       try {
         // Set the new style
         map.setStyle(styleUrl);
-        
+
         // After style loads, restore route and markers
         map.once("style.load", () => {
           // First restore markers if they existed
           if (markerPositions.length > 0) {
-            markerPositions.forEach(pos => {
+            markerPositions.forEach((pos) => {
               updateDeviceMarker(pos.lng, pos.lat);
             });
           }
-          
+
           // Then emit event to restore route
           setTimeout(() => {
-            const event = new CustomEvent("mapStyleChanged", { 
-              detail: { mapStyle: styleUrl } 
+            const event = new CustomEvent("mapStyleChanged", {
+              detail: { mapStyle: styleUrl },
             });
             window.dispatchEvent(event);
           }, 50);
@@ -147,7 +154,7 @@ const MapControls = ({
     }
 
     // If user location is active, deactivate it
-    if (activeUserButton) {
+    if (mobileLocationActive) {
       // Clear user location tracking
       if (watchIdRef.current) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -159,7 +166,7 @@ const MapControls = ({
       markersRef.current = [];
 
       // Reset user button state
-      setActiveUserButton(false);
+      setMobileLocationActive(false);
     }
 
     // Toggle device location active state
@@ -193,8 +200,8 @@ const MapControls = ({
     setDeviceLocationActive(false);
 
     // Toggle user location tracking
-    const newUserActive = !activeUserButton;
-    setActiveUserButton(newUserActive);
+    const newUserActive = !mobileLocationActive;
+    setMobileLocationActive(newUserActive);
 
     // If turning off user tracking, clean up
     if (!newUserActive) {
@@ -212,14 +219,14 @@ const MapControls = ({
     // Check if geolocation is available
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");
-      setActiveUserButton(false);
+      setMobileLocationActive(false);
       return;
     }
 
     // Need map for user location tracking
     if (!map) {
       toast.info("Map is loading. Please try again in a moment.");
-      setActiveUserButton(false);
+      setMobileLocationActive(false);
       return;
     }
 
@@ -259,11 +266,21 @@ const MapControls = ({
       (error) => {
         toast.error(`Location error: ${error.message}`);
         watchIdRef.current = null;
-        setActiveUserButton(false);
+        setMobileLocationActive(false);
       },
       { enableHighAccuracy: true }
     );
   };
+
+  // Check if map is ready and initialize markers if needed
+  useEffect(() => {
+    if (!map) return;
+    
+    // If device location tracking is active by default, trigger the location update
+    if (deviceLocationActive && deviceLocation) {
+      updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
+    }
+  }, [map, deviceLocationActive, deviceLocation]);
 
   // Update mapStyle when theme changes
   useEffect(() => {
@@ -273,7 +290,7 @@ const MapControls = ({
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
     
     // Only update if we're using the default style and the theme changes
-    if (map && mapStyle !== themeStyleUrl) {
+    if (mapStyle === "custom-default") {
       whenMapReady(() => {
         try {
           // Set the new style
@@ -307,7 +324,7 @@ const MapControls = ({
   }, []);
 
   return (
-    <div className="fixed right-2 bottom-[100px] md:bottom-[10px] md:right-4 flex flex-col gap-2 z-10">
+    <div className="flex flex-col gap-2 z-10">
       <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}
@@ -415,12 +432,12 @@ const MapControls = ({
           ${
             currentTheme === "dark"
               ? `${
-                  activeUserButton
+                  mobileLocationActive
                     ? "bg-blue-500 text-white"
                     : "bg-black hover:bg-gray-800 text-white"
                 }`
               : `${
-                  activeUserButton
+                  mobileLocationActive
                     ? "bg-blue-500 text-white"
                     : "bg-white hover:bg-gray-100 text-gray-800"
                 }`
@@ -430,7 +447,7 @@ const MapControls = ({
       >
         <Image
           src={
-            activeUserButton
+            mobileLocationActive
               ? "/images/map/device-car-white.svg"
               : "/images/map/car-mobile-location.svg"
           }

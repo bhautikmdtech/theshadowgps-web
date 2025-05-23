@@ -9,9 +9,9 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import MapComponent from "@/services/MapService";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
 // Import MapControls dynamically
-const DynamicMapControls = dynamic(() => import("./MapControls"), { 
+const DynamicMapControls = dynamic(() => import("./MapControls"), {
   ssr: false,
-  loading: () => null
+  loading: () => null,
 });
 
 const ExpiryTimer = dynamic(() => import("./ExpiryTimer"), { ssr: false });
@@ -44,7 +44,8 @@ export default function LiveTracker({
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [deviceLocationActive, setDeviceLocationActive] = useState(false);
+  const [deviceLocationActive, setDeviceLocationActive] = useState(true);
+  const [mobileLocationActive, setMobileLocationActive] = useState(false);
 
   const mapRef = useRef<mapboxgl.Map>(null);
   const deviceMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -64,6 +65,12 @@ export default function LiveTracker({
   }, [initialData]);
 
   const handleUserInteraction = () => {
+    setMobileLocationActive((prevActive) => {
+      if (prevActive) {
+        return false;
+      }
+      return prevActive;
+    });
     setDeviceLocationActive((prevActive) => {
       if (prevActive) {
         return false;
@@ -166,12 +173,22 @@ export default function LiveTracker({
         updateRoute(positions);
       }
 
+      // Center map on device location by default if device location tracking is active
+      if (deviceLocationActive && latest) {
+        map.flyTo({
+          center: [latest.lng, latest.lat],
+          zoom: 16,
+          essential: true,
+          duration: 500,
+        });
+      }
+
       // Attach event listeners to detect when user manually interacts with the map
       map.on("dragstart", handleUserInteraction);
       // map.on("zoomstart", handleUserInteraction);
       // map.on("rotatestart", handleUserInteraction);
       // map.on("pitchstart", handleUserInteraction);
-      // map.on("moveend", handleUserInteraction);
+      // Don't trigger on moveend as it fires after programmatic movements too
       
       // Add listener for style changes directly on the map
       map.on("style.load", () => {
@@ -205,7 +222,7 @@ export default function LiveTracker({
         updateRoute(updated);
 
         // Only center the map if the device location tracking is active
-        if (mapRef.current && deviceLocationActive) {
+        if (mapRef.current && deviceLocationActive && !mobileLocationActive) {
           mapRef.current.flyTo({
             center: [newPosition.lng, newPosition.lat],
             zoom: 16,
@@ -219,7 +236,7 @@ export default function LiveTracker({
         return updated;
       });
     },
-    [updateRoute, deviceLocationActive]
+    [updateRoute, deviceLocationActive, mobileLocationActive]
   );
 
   useEffect(() => {
@@ -259,7 +276,7 @@ export default function LiveTracker({
   // Function to recreate all markers after style changes
   const recreateMarkers = useCallback(() => {
     if (positions.length === 0 || !mapRef.current) return;
-    
+
     // Remove existing markers
     if (deviceMarkerRef.current) {
       deviceMarkerRef.current.remove();
@@ -267,7 +284,7 @@ export default function LiveTracker({
     if (startMarkerRef.current) {
       startMarkerRef.current.remove();
     }
-    
+
     // Recreate markers
     const latest = positions[positions.length - 1];
     deviceMarkerRef.current = createDeviceMarker({
@@ -288,7 +305,7 @@ export default function LiveTracker({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    
+
     const handleStyleChange = () => {
       if (positions.length > 1) {
         // Wait for a moment to ensure the map is fully loaded
@@ -298,9 +315,9 @@ export default function LiveTracker({
         }, 100);
       }
     };
-    
+
     window.addEventListener("mapStyleChanged", handleStyleChange);
-    
+
     return () => {
       window.removeEventListener("mapStyleChanged", handleStyleChange);
     };
@@ -441,6 +458,8 @@ export default function LiveTracker({
                   deviceLocation={positions[positions.length - 1]}
                   deviceLocationActive={deviceLocationActive}
                   setDeviceLocationActive={setDeviceLocationActive}
+                  mobileLocationActive={mobileLocationActive}
+                  setMobileLocationActive={setMobileLocationActive}
                 />
               )}
             </div>
