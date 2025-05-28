@@ -6,6 +6,14 @@ interface ApiError extends Error {
   response?: any;
 }
 
+// API response interface
+interface ApiResponse {
+  success: boolean;
+  data?: any;
+  message?: string;
+  error?: string;
+}
+
 // Helper function to handle API errors consistently
 const handleApiError = (error: any) => {
   if (error.response) {
@@ -24,6 +32,19 @@ const handleApiError = (error: any) => {
   }
 };
 
+// Helper function to validate API response
+const validateResponse = (response: any): ApiResponse => {
+  // If response has success property and it's false, throw an error
+  if (response && response.hasOwnProperty('success') && response.success === false) {
+    const errorMessage = response.message || response.error || "Operation failed";
+    const customError = new Error(errorMessage) as ApiError;
+    customError.response = { data: response };
+    throw customError;
+  }
+  
+  return response;
+};
+
 export const SubscriptionService = {
   async getSubscriptionData(token: string) {
     try {
@@ -39,7 +60,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -57,7 +78,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -75,7 +96,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -99,7 +120,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -128,7 +149,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -152,7 +173,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -180,7 +201,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -204,7 +225,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -221,7 +242,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }
@@ -238,7 +259,7 @@ export const SubscriptionService = {
           },
         }
       );
-      return response.data;
+      return validateResponse(response.data);
     } catch (error) {
       handleApiError(error);
     }

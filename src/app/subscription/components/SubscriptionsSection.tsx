@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, JSX } from "react";
+import React, { useState, useCallback, useMemo, JSX, useEffect } from "react";
 import { Accordion, Badge, Button, Alert } from "react-bootstrap";
 import { FaCreditCard, FaCube } from "react-icons/fa";
 import { PiWarningCircleLight } from "react-icons/pi";
@@ -29,6 +29,14 @@ interface ProcessedSubscription extends Subscription {
   gracePeriodMessage?: string;
 }
 
+// Define response type for subscription actions
+interface ApiResponse {
+  success: boolean;
+  data?: any;
+  message?: string;
+  error?: string;
+}
+
 const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   customer,
   subscriptions,
@@ -40,15 +48,20 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 }) => {
   // State management
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
-  const [currentSubscription, setCurrentSubscription] =
-    useState<Subscription | null>(null);
+  const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
-    string | null
-  >(null);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [reactivateStart, setReactivateStart] = useState(false);
   const [newSubStart, setNewSubStart] = useState(false);
+
+  // Reset state when modals close
+  useEffect(() => {
+    if (activeModal === null) {
+      setReactivateStart(false);
+      setNewSubStart(false);
+    }
+  }, [activeModal]);
 
   // Helper functions
   const formatDate = useCallback((dateString?: string): string => {
@@ -89,14 +102,14 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         },
       };
 
-      const match = intervals[interval.toLowerCase()]?.[count];
+      const match = intervals[interval?.toLowerCase()]?.[count];
       return match
         ? short
           ? match.short
           : match.long
         : short
-        ? `${count} ${interval.charAt(0).toUpperCase() + interval.slice(1)}`
-        : `Every ${count} ${interval.toLowerCase()}${count !== 1 ? "s" : ""}`;
+        ? `${count} ${interval?.charAt(0).toUpperCase() + interval?.slice(1) || ''}`
+        : `Every ${count} ${interval?.toLowerCase() || ''}${count !== 1 ? "s" : ""}`;
     },
     []
   );
@@ -108,7 +121,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       amex: <PaymentIcon type="Amex" format="flatRounded" />,
       discover: <PaymentIcon type="Discover" format="flatRounded" />,
     };
-    return brands[brand.toLowerCase()] || <FaCreditCard size={26} />;
+    return brands[brand?.toLowerCase()] || <FaCreditCard size={26} />;
   }, []);
 
   // Process subscriptions
@@ -163,18 +176,29 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   const closeModal = useCallback(() => {
     setActiveModal(null);
     setCurrentSubscription(null);
+    setSelectedPlanId(null);
+    setSelectedPaymentMethodId(null);
+  }, []);
+
+  // Extract error message helper
+  const getErrorMessage = useCallback((error: any): string => {
+    return error.response?.data?.message || 
+           error.response?.data?.error || 
+           error.message || 
+           "Operation failed";
   }, []);
 
   // Action handlers
   const handleSubscriptionAction = useCallback(
-    async (action: () => Promise<void>, successMessage: string) => {
+    async (action: () => Promise<ApiResponse | undefined>, successMessage: string) => {
       if (!currentSubscription) return;
 
       try {
         setIsProcessing(true);
-        await action();
+        const response = await action();
+        
+        // If we got this far, the action was successful
         await onRefresh();
-        closeModal();
         toast.success(successMessage, {
           position: "top-right",
           autoClose: 5000,
@@ -182,36 +206,27 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
         if (reactivateStart) {
           openModal("updatePayment", currentSubscription);
+        } else {
+          closeModal();
         }
       } catch (error: any) {
         console.error("Subscription action failed:", error);
-        
-        // Extract detailed error message
-        const errorMessage = 
-          error.response?.data?.message || 
-          error.response?.data?.error || 
-          error.message || 
-          "Operation failed";
-        
-        toast.error(`Action failed: ${errorMessage}`, {
+        toast.error(`Action failed: ${getErrorMessage(error)}`, {
           position: "top-right",
           autoClose: 5000,
         });
+        closeModal();
       } finally {
         setIsProcessing(false);
       }
     },
-    [currentSubscription, closeModal, reactivateStart, openModal, onRefresh]
+    [currentSubscription, closeModal, reactivateStart, openModal, onRefresh, getErrorMessage]
   );
 
   const handleCancel = useCallback(
     () =>
       handleSubscriptionAction(
-        () =>
-          SubscriptionService.cancelSubscription(
-            token,
-            currentSubscription!.id
-          ),
+        () => SubscriptionService.cancelSubscription(token, currentSubscription!.id),
         "Subscription cancelled successfully"
       ),
     [currentSubscription, handleSubscriptionAction, token]
@@ -220,11 +235,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   const handleReactivate = useCallback(
     () =>
       handleSubscriptionAction(
-        () =>
-          SubscriptionService.reactivateSubscription(
-            token,
-            currentSubscription!.id
-          ),
+        () => SubscriptionService.reactivateSubscription(token, currentSubscription!.id),
         "Subscription reactivated successfully"
       ),
     [currentSubscription, handleSubscriptionAction, token]
@@ -235,117 +246,121 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
     setIsProcessing(true);
     
-    try {
-      if (!newSubStart) {
-        SubscriptionService.updateSubscriptionPlan(
-          token,
-          currentSubscription.id,
-          selectedPlanId
-        )
-          .then(() => {
-            onRefresh();
-            closeModal();
-            toast.success("Subscription plan updated successfully", {
-              position: "top-right",
-              autoClose: 5000,
-            });
-            
-            if (reactivateStart) {
-              openModal("updatePayment", currentSubscription);
-            }
-          })
-          .catch((error) => {
-            console.error("Plan update failed:", error);
-            const errorMessage = 
-              error.response?.data?.message || 
-              error.response?.data?.error || 
-              error.message || 
-              "Failed to update subscription plan";
-            
-            toast.error(`Plan update failed: ${errorMessage}`, {
-              position: "top-right",
-              autoClose: 5000,
-            });
-          })
-          .finally(() => {
-            setIsProcessing(false);
-          });
+    if (newSubStart) {
+      // If it's a new subscription, we'll handle it in the payment update step
+      if (reactivateStart) {
+        openModal("updatePayment", currentSubscription);
       }
-    } catch (error: any) {
-      console.error("Plan update failed:", error);
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.response?.data?.error || 
-        error.message || 
-        "Operation failed";
-      
-      toast.error(`Plan update failed: ${errorMessage}`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
       setIsProcessing(false);
+      return;
     }
+    
+    SubscriptionService.updateSubscriptionPlan(
+      token,
+      currentSubscription.id,
+      selectedPlanId
+    )
+      .then(async (response) => {
+        // Update successful
+        await onRefresh();
+        toast.success("Subscription plan updated successfully", {
+          position: "top-right",
+          autoClose: 5000,
+        });
+        
+        if (reactivateStart) {
+          openModal("updatePayment", currentSubscription);
+        } else {
+          closeModal();
+        }
+      })
+      .catch((error) => {
+        console.error("Plan update failed:", error);
+        toast.error(`Plan update failed: ${getErrorMessage(error)}`, {
+          position: "top-right",
+          autoClose: 5000,
+        });
+        closeModal();
+      })
+      .finally(() => {
+        setIsProcessing(false);
+      });
   }, [
     selectedPlanId,
     currentSubscription,
-    newSubStart,
     token,
     onRefresh,
     closeModal,
     reactivateStart,
-    openModal
+    openModal,
+    newSubStart,
+    getErrorMessage
   ]);
 
   const handlePaymentUpdate = useCallback(async () => {
-    if (!selectedPaymentMethodId || !currentSubscription || !customer) return;
+    if (!selectedPaymentMethodId || !currentSubscription || !customer) {
+      toast.error("Missing required information. Please try again.", {
+        position: "top-right",
+        autoClose: 5000,
+      });
+      return;
+    }
 
     try {
       setIsProcessing(true);
 
       if (newSubStart) {
-        await SubscriptionService.createNewSubscription(
+        if (!selectedPlanId) {
+          toast.error("Please select a plan first", {
+            position: "top-right",
+            autoClose: 5000,
+          });
+          setIsProcessing(false);
+          return;
+        }
+        
+        const response = await SubscriptionService.createNewSubscription(
           token,
-          selectedPlanId || "",
+          selectedPlanId,
           customer.id,
-          selectedPaymentMethodId || "",
+          selectedPaymentMethodId,
           {
             subscriptionIdDb: currentSubscription.subscriptionIdDb,
             deviceId: currentSubscription.deviceId,
             userId: customer.userId,
           }
         );
+        
+        // Create subscription successful
+        toast.success("New subscription created successfully", { 
+          position: "top-right", 
+          autoClose: 5000 
+        });
       } else {
-        await SubscriptionService.updatePaymentMethod(
+        const response = await SubscriptionService.updatePaymentMethod(
           token,
           currentSubscription.id,
           selectedPaymentMethodId
         );
+        
+        // Update payment method successful
+        toast.success("Payment method updated successfully", { 
+          position: "top-right", 
+          autoClose: 5000 
+        });
       }
 
-      toast.success(
-        newSubStart
-          ? "New subscription created successfully"
-          : "Payment method updated successfully",
-        { position: "top-right", autoClose: 5000 }
-      );
-
+      // Give time for toast to show before reload
       setTimeout(() => {
         window.location.reload();
       }, 2000);
     } catch (error: any) {
       console.error("Payment update failed:", error);
-      
-      // Extract detailed error message
-      const errorMessage = 
-        error.response?.data?.message || 
-        error.response?.data?.error || 
-        error.message || 
-        "Operation failed";
-      
-      toast.error(`Payment update failed: ${errorMessage}`, {
+      toast.error(`Payment update failed: ${getErrorMessage(error)}`, {
         position: "top-right",
         autoClose: 5000,
       });
+      closeModal();
     } finally {
       setIsProcessing(false);
     }
@@ -356,6 +371,8 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     newSubStart,
     token,
     selectedPlanId,
+    getErrorMessage,
+    closeModal
   ]);
 
   // Component rendering helpers
@@ -389,15 +406,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       const badges: JSX.Element[] = [];
 
       if (isActive) {
-        // badges.push(
-        //   <Badge
-        //     key="active"
-        //     className="rounded-pill fontWeight-medium badge-active"
-        //   >
-        //     Active
-        //   </Badge>
-        // );
-
         if (subscription.status === "trialing") {
           badges.push(
             <Badge
@@ -427,7 +435,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         if (subscription.pauseBehavior) {
           badges.push(
             <Badge
-              key="trialing"
+              key="paused"
               className="rounded-pill fontWeight-medium badge-paused"
               title="Payment collection paused indefinitely. All invoices generated by this subscription will remain as drafts and won't advance automatically."
             >
@@ -502,8 +510,8 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   );
 
   const renderAlertMessage = useCallback(
-    (subscription: Subscription, isActive: boolean) => {
-      if (["past_due"].includes(subscription.status)) {
+    (subscription: ProcessedSubscription) => {
+      if ((subscription.status === "past_due" || subscription.isInGracePeriod) && subscription.gracePeriodMessage) {
         return (
           <Alert
             variant="light"
@@ -520,6 +528,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           </Alert>
         );
       }
+      return null;
     },
     []
   );
@@ -542,6 +551,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               onClick={() => openModal("updatePayment", subscription)}
               className="p-0 ms-2 flex align-items-start"
               style={{ color: "#6c757d" }}
+              disabled={isProcessing}
             >
               <Image src="/pencil.svg" alt="Edit" width={20} height={20} />
             </Button>
@@ -549,11 +559,14 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         </div>
       );
     },
-    [getCardIcon, openModal]
+    [getCardIcon, openModal, isProcessing]
   );
 
   const renderSubscriptionActions = useCallback(
     (subscription: Subscription, isActive: boolean) => {
+      const isCurrentSub = currentSubscription?.id === subscription.id;
+      const loading = isCurrentSub && isProcessing;
+
       if (isActive) {
         if (subscription.isCancelled) {
           return (
@@ -562,18 +575,15 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 variant="outline-primary"
                 className="flex-grow-1 lightButton"
                 onClick={() => openModal("reactivate", subscription)}
-                disabled={isProcessing}
+                disabled={loading}
               >
-                {currentSubscription?.id === subscription.id && isProcessing ? (
-                  <PageLoader type="spinner" size="sm" />
-                ) : (
-                  "Renew"
-                )}
+                {loading ? <PageLoader type="spinner" size="sm" /> : "Renew"}
               </Button>
               <Button
                 variant="primary"
                 className="flex-grow-1 darkButton"
                 onClick={() => openModal("updatePlan", subscription)}
+                disabled={loading}
               >
                 Update
               </Button>
@@ -587,18 +597,15 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               variant="outline-primary"
               className="flex-grow-1 lightButton"
               onClick={() => openModal("cancel", subscription)}
-              disabled={isProcessing}
+              disabled={loading}
             >
-              {currentSubscription?.id === subscription.id && isProcessing ? (
-                <PageLoader type="spinner" size="sm" />
-              ) : (
-                "Cancel"
-              )}
+              {loading ? <PageLoader type="spinner" size="sm" /> : "Cancel"}
             </Button>
             <Button
               variant="primary"
               className="flex-grow-1 darkButton"
               onClick={() => openModal("updatePlan", subscription)}
+              disabled={loading}
             >
               Update
             </Button>
@@ -617,13 +624,14 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 setReactivateStart(true);
                 openModal("updatePlan", subscription);
               }}
+              disabled={loading}
             >
-              {subscription.status === "canceled" ? (
-                <>Re-purchase the subscription</>
-              ) : subscription.status === "incomplete" ? (
-                <>Complete the subscription process</>
+              {loading ? (
+                <PageLoader type="spinner" size="sm" />
+              ) : subscription.status === "canceled" ? (
+                "Re-purchase subscription"
               ) : (
-                <>Re-purchase the subscription</>
+                "Complete subscription"
               )}
             </Button>
           );
@@ -638,8 +646,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 setReactivateStart(true);
                 openModal("updatePlan", subscription);
               }}
+              disabled={loading}
             >
-              Reactivate
+              {loading ? <PageLoader type="spinner" size="sm" /> : "Reactivate"}
             </Button>
           );
         }
@@ -737,7 +746,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
             <div style={{ color: "#3D4B65", fontSize: "12px" }}>
               {getStatusMessage(subscription)}
-              {renderAlertMessage(subscription, isActive)}
+              {renderAlertMessage(subscription)}
             </div>
 
             {isActive && renderPaymentMethod(subscription)}
@@ -800,7 +809,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                 <span
                   style={{
                     color: "#0C1F3F",
-                    fontSize: "18px",
+                    fontSize: "16px",
                     fontWeight: "600",
                   }}
                 >

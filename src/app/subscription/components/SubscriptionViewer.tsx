@@ -130,7 +130,7 @@ export default function SubscriptionViewer({
   const refreshSubscriptionData = async () => {
     try {
       const response = await SubscriptionService.getSubscriptionData(token);
-      setSubscriptionData(response.data);
+      setSubscriptionData(response?.data);
     } catch (err: unknown) {
       const error = err as APIError;
       toast.error(
