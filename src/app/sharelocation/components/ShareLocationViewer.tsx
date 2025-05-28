@@ -451,7 +451,7 @@ export default function LiveTracker({
               mapRef={mapRef}
             />
             {/* MapControls will be dynamically loaded and will handle its own initialization */}
-            <div className="absolute right-2 bottom-[100px] md:bottom-[10px] md:right-4 z-[999]">
+            <div className="fixed right-2 bottom-[100px] md:bottom-[10px] md:right-4 z-[999]">
               {positions.length > 0 && (
                 <DynamicMapControls
                   map={mapRef.current}
