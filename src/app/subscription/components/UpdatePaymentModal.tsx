@@ -8,7 +8,7 @@ import React from "react";
 interface UpdatePaymentModalProps {
   show: boolean;
   onClose: () => void;
-  onConfirm: () => any;
+  onConfirm: () => Promise<void>;
   isProcessing: boolean;
   paymentMethods: PaymentMethod[];
   selectedPaymentMethodId: string | null;
@@ -48,6 +48,17 @@ export default function UpdatePaymentModal({
 
     return brands[brand.toLowerCase()] || <FaCreditCard />;
   };
+
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+      onClose(); // Close modal on success
+    } catch {
+      onClose(); // Close modal on error
+      // Note: Error handling should be done in the parent component
+    }
+  };
+
   return (
     <Modal
       show={show}
@@ -68,14 +79,23 @@ export default function UpdatePaymentModal({
               {paymentMethods.map((method: PaymentMethod) => (
                 <div
                   key={method.id}
-                  className={`p-3  mb-3 ${
+                  className={`p-3 mb-3 ${
                     selectedPaymentMethodId === method.id
                       ? "border-primary bg-light"
                       : ""
+                  } ${
+                    method.expired || method.expiredSoon ? "opacity-50" : ""
                   }`}
-                  onClick={() => onPaymentMethodSelect(method.id)}
+                  onClick={() => {
+                    if (!method.expired && !method.expiredSoon) {
+                      onPaymentMethodSelect(method.id);
+                    }
+                  }}
                   style={{
-                    cursor: "pointer",
+                    cursor:
+                      method.expired || method.expiredSoon
+                        ? "not-allowed"
+                        : "pointer",
                     border: "1px solid #CFD2D9",
                     borderRadius: "25px",
                   }}
@@ -225,8 +245,15 @@ export default function UpdatePaymentModal({
             borderRadius: "10px",
             color: "#FFFFFF",
           }}
-          onClick={onConfirm}
-          disabled={isProcessing || !selectedPaymentMethodId}
+          onClick={handleConfirm}
+          disabled={
+            isProcessing ||
+            !selectedPaymentMethodId ||
+            paymentMethods.find((m) => m.id === selectedPaymentMethodId)
+              ?.expired ||
+            paymentMethods.find((m) => m.id === selectedPaymentMethodId)
+              ?.expiredSoon
+          }
         >
           {isProcessing ? (
             <>
