@@ -419,3 +419,20 @@ body.modal-open {
   align-items: center;
   justify-content: center;
 }
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-in-out;
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.h-100 {
+  height: 100%;
+}

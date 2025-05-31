@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { FaChevronLeft, FaExclamationCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js";
+import { Navbar } from "react-bootstrap";
 
 import { SubscriptionData } from "./types";
 import SubscriptionsSection from "./SubscriptionsSection";
@@ -77,6 +78,29 @@ export default function SubscriptionViewer({
   const [stripePromise, setStripePromise] =
     useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isNavFixed, setIsNavFixed] = useState(false);
+  const navbarRef = useRef<HTMLDivElement>(null);
+  const prevScrollY = useRef(0);
+
+  // Handle scroll for fixed navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY > 100) {
+        // Only set state if it changes
+        if (!isNavFixed) setIsNavFixed(true);
+      } else {
+        // Only set state if it changes
+        if (isNavFixed) setIsNavFixed(false);
+      }
+
+      prevScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isNavFixed]);
 
   useEffect(() => {
     if (!initialData) {
@@ -152,30 +176,38 @@ export default function SubscriptionViewer({
 
   return (
     <div className="bg-white min-vh-100">
-      <nav className="bg-white border-bottom mb-3" style={{ height: "58px" }}>
-        <div
-          className="container d-flex align-items-center"
-          style={{ paddingTop: "16px", paddingBottom: "16px" }}
-        >
-          <div>
+      <Navbar
+        ref={navbarRef}
+        className={`bg-white border-bottom transition-all duration-300 ${
+          isNavFixed ? "fixed-top shadow-sm animate-slideDown" : ""
+        }`}
+        style={{
+          height: "58px",
+          zIndex: 1030,
+          transition: "transform 0.3s ease-in-out",
+          transform: isNavFixed ? "translateY(0)" : "",
+        }}
+      >
+        <div className="container d-flex align-items-center h-100 px-4">
+          {/* <div>
             <BackButton />
-          </div>
-          <div className="ms-2">
-            <h5
-              className="mb-0"
-              style={{
-                color: "#0C1F3F",
-                fontSize: "18px",
-                fontWeight: "500",
-              }}
-            >
-              Subscription Management
-            </h5>
-          </div>
+          </div> */}
+          <h5
+            className="mb-0"
+            style={{
+              color: "#0C1F3F",
+              fontSize: "18px",
+              fontWeight: "500",
+            }}
+          >
+            Subscription Management
+          </h5>
         </div>
-      </nav>
+      </Navbar>
 
-      <div className="container mb-5">
+      {isNavFixed && <div style={{ height: "58px" }} />}
+
+      <div className="container mb-5 mt-3">
         <SubscriptionsSection
           customer={subscriptionData.customer}
           subscriptions={subscriptionData.subscriptions}
