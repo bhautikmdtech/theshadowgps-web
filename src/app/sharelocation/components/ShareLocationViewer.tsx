@@ -44,8 +44,7 @@ export default function LiveTracker({
   const [device, setDevice] = useState<DeviceInfo | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [deviceLocationActive, setDeviceLocationActive] = useState(true);
-  const [mobileLocationActive, setMobileLocationActive] = useState(false);
+  const [locationMode, setLocationMode] = useState<string>("device");
 
   const mapRef = useRef<mapboxgl.Map>(null);
   const deviceMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -53,6 +52,7 @@ export default function LiveTracker({
   const socketRef = useRef<Socket | null>(null);
   const routeSourceId = "route-arrow";
   const routeLayerId = "route-arrow-line";
+  const watchIdRef = useRef<number | null>(null);
 
   // Initialize with device info and positions
   useEffect(() => {
@@ -65,17 +65,18 @@ export default function LiveTracker({
   }, [initialData]);
 
   const handleUserInteraction = () => {
-    setMobileLocationActive((prevActive) => {
-      if (prevActive) {
-        return false;
+    // Only clear watch if mobile location was active
+    setLocationMode((prevActive) => {
+      if (prevActive === "mobile" && watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
       }
-      return prevActive;
-    });
-    setDeviceLocationActive((prevActive) => {
-      if (prevActive) {
-        return false;
+
+      if (prevActive === "mobile" || prevActive === "device") {
+        return "none"; // <- must return new state
       }
-      return prevActive;
+
+      return prevActive; // <- fallback to current if no change
     });
   };
 
@@ -174,7 +175,7 @@ export default function LiveTracker({
       }
 
       // Center map on device location by default if device location tracking is active
-      if (deviceLocationActive && latest) {
+      if (locationMode === "device" && latest) {
         map.flyTo({
           center: [latest.lng, latest.lat],
           zoom: 16,
@@ -189,7 +190,7 @@ export default function LiveTracker({
       // map.on("rotatestart", handleUserInteraction);
       // map.on("pitchstart", handleUserInteraction);
       // Don't trigger on moveend as it fires after programmatic movements too
-      
+
       // Add listener for style changes directly on the map
       map.on("style.load", () => {
         // This will run after any style change
@@ -201,7 +202,7 @@ export default function LiveTracker({
       // Force a rerender to update the MapControls component
       setPositions((prev) => [...prev]);
     },
-    [positions, device, deviceLocationActive, updateRoute]
+    [positions, device, locationMode, updateRoute]
   );
 
   const handlePositionUpdate = useCallback(
@@ -222,7 +223,7 @@ export default function LiveTracker({
         updateRoute(updated);
 
         // Only center the map if the device location tracking is active
-        if (mapRef.current && deviceLocationActive && !mobileLocationActive) {
+        if (mapRef.current && locationMode === "device") {
           mapRef.current.flyTo({
             center: [newPosition.lng, newPosition.lat],
             zoom: 16,
@@ -236,7 +237,7 @@ export default function LiveTracker({
         return updated;
       });
     },
-    [updateRoute, deviceLocationActive, mobileLocationActive]
+    [updateRoute, locationMode]
   );
 
   useEffect(() => {
@@ -262,7 +263,7 @@ export default function LiveTracker({
 
   // Effect to update the map when device location tracking is toggled
   useEffect(() => {
-    if (deviceLocationActive && mapRef.current && positions.length > 0) {
+    if (locationMode === "device" && mapRef.current && positions.length > 0) {
       const latest = positions[positions.length - 1];
       mapRef.current.flyTo({
         center: [latest.lng, latest.lat],
@@ -271,7 +272,7 @@ export default function LiveTracker({
         duration: 500,
       });
     }
-  }, [deviceLocationActive, positions]);
+  }, [locationMode, positions]);
 
   // Function to recreate all markers after style changes
   const recreateMarkers = useCallback(() => {
@@ -456,10 +457,9 @@ export default function LiveTracker({
                 <DynamicMapControls
                   map={mapRef.current}
                   deviceLocation={positions[positions.length - 1]}
-                  deviceLocationActive={deviceLocationActive}
-                  setDeviceLocationActive={setDeviceLocationActive}
-                  mobileLocationActive={mobileLocationActive}
-                  setMobileLocationActive={setMobileLocationActive}
+                  locationMode={locationMode}
+                  setLocationMode={setLocationMode}
+                  watchIdRef={watchIdRef}
                 />
               )}
             </div>

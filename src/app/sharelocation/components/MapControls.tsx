@@ -14,19 +14,17 @@ export const MAPBOX_DARK =
 interface MapControlsProps {
   map: mapboxgl.Map | null;
   deviceLocation?: { lng: number; lat: number };
-  deviceLocationActive: boolean;
-  setDeviceLocationActive: (active: boolean) => void;
-  mobileLocationActive: boolean;
-  setMobileLocationActive: (active: boolean) => void;
+  locationMode: string;
+  setLocationMode: (mode: string) => void;
+  watchIdRef: React.MutableRefObject<number | null>;
 }
 
 const MapControls = ({
   map,
   deviceLocation,
-  deviceLocationActive,
-  setDeviceLocationActive,
-  mobileLocationActive,
-  setMobileLocationActive,
+  locationMode,
+  setLocationMode,
+  watchIdRef,
 }: MapControlsProps) => {
   const { theme, systemTheme } = useTheme();
   const currentTheme = theme === "system" ? systemTheme : theme;
@@ -36,7 +34,6 @@ const MapControls = ({
     currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT
   );
   const markersRef = useRef<mapboxgl.Marker[]>([]);
-  const watchIdRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const mapStyles = [
@@ -155,8 +152,8 @@ const MapControls = ({
       return;
     }
 
-    // If user location is active, deactivate it
-    if (mobileLocationActive) {
+    // If user location is active, turn it off
+    if (locationMode === "mobile") {
       // Clear user location tracking
       if (watchIdRef.current) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -166,17 +163,14 @@ const MapControls = ({
       // Clear markers
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
-
-      // Reset user button state
-      setMobileLocationActive(false);
     }
 
     // Toggle device location active state
-    const newDeviceActive = !deviceLocationActive;
-    setDeviceLocationActive(newDeviceActive);
+    const newMode = locationMode === "device" ? "none" : "device";
+    setLocationMode(newMode);
 
     // If turning on device tracking and map exists, fly to device location
-    if (newDeviceActive && map) {
+    if (newMode === "device" && map) {
       whenMapReady(() => {
         try {
           // Add the marker to the map
@@ -199,14 +193,11 @@ const MapControls = ({
 
   const handleUserLocationClick = () => {
     // Always turn off device tracking when user location is clicked
-    setDeviceLocationActive(false);
-
-    // Toggle user location tracking
-    const newUserActive = !mobileLocationActive;
-    setMobileLocationActive(newUserActive);
+    const newMode = locationMode === "mobile" ? "none" : "mobile";
+    setLocationMode(newMode);
 
     // If turning off user tracking, clean up
-    if (!newUserActive) {
+    if (newMode !== "mobile") {
       if (watchIdRef.current) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;
@@ -221,14 +212,14 @@ const MapControls = ({
     // Check if geolocation is available
     if (!navigator.geolocation) {
       toast.error("Geolocation not supported");
-      setMobileLocationActive(false);
+      setLocationMode("none");
       return;
     }
 
     // Need map for user location tracking
     if (!map) {
       toast.info("Map is loading. Please try again in a moment.");
-      setMobileLocationActive(false);
+      setLocationMode("none");
       return;
     }
 
@@ -268,7 +259,7 @@ const MapControls = ({
       (error) => {
         toast.error(`Location error: ${error.message}`);
         watchIdRef.current = null;
-        setMobileLocationActive(false);
+        setLocationMode("none");
       },
       { enableHighAccuracy: true }
     );
@@ -279,10 +270,10 @@ const MapControls = ({
     if (!map) return;
 
     // If device location tracking is active by default, trigger the location update
-    if (deviceLocationActive && deviceLocation) {
+    if (locationMode === "device" && deviceLocation) {
       updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
     }
-  }, [map, deviceLocationActive, deviceLocation]);
+  }, [map, locationMode, deviceLocation]);
 
   // Update mapStyle when theme changes
   useEffect(() => {
@@ -403,12 +394,12 @@ const MapControls = ({
           ${
             currentTheme === "dark"
               ? `${
-                  deviceLocationActive
+                  locationMode === "device"
                     ? "bg-blue-500 text-white"
                     : "bg-black hover:bg-gray-800 text-white"
                 }`
               : `${
-                  deviceLocationActive
+                  locationMode === "device"
                     ? "bg-blue-500 text-white"
                     : "bg-white hover:bg-gray-100 text-gray-800"
                 }`
@@ -418,7 +409,7 @@ const MapControls = ({
       >
         <Image
           src={
-            deviceLocationActive
+            locationMode === "device"
               ? "/images/map/singal-car-white.svg"
               : "/images/map/car.svg"
           }
@@ -434,12 +425,12 @@ const MapControls = ({
           ${
             currentTheme === "dark"
               ? `${
-                  mobileLocationActive
+                  locationMode === "mobile"
                     ? "bg-blue-500 text-white"
                     : "bg-black hover:bg-gray-800 text-white"
                 }`
               : `${
-                  mobileLocationActive
+                  locationMode === "mobile"
                     ? "bg-blue-500 text-white"
                     : "bg-white hover:bg-gray-100 text-gray-800"
                 }`
@@ -449,7 +440,7 @@ const MapControls = ({
       >
         <Image
           src={
-            mobileLocationActive
+            locationMode === "mobile"
               ? "/images/map/device-car-white.svg"
               : "/images/map/car-mobile-location.svg"
           }
