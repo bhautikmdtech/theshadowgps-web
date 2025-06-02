@@ -28,14 +28,16 @@ const MapControls = ({
   mobileLocationActive,
   setMobileLocationActive,
 }: MapControlsProps) => {
+  const { theme, systemTheme } = useTheme();
+  const currentTheme = theme === "system" ? systemTheme : theme;
+
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [mapStyle, setMapStyle] = useState("custom-default");
+  const [mapStyle, setMapStyle] = useState(
+    currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT
+  );
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const watchIdRef = useRef<number | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const { theme, systemTheme } = useTheme();
-  const currentTheme = theme === "system" ? systemTheme : theme;
 
   const mapStyles = [
     {
@@ -68,7 +70,7 @@ const MapControls = ({
         map.once("style.load", operation);
         return;
       }
-      
+
       operation();
     } catch (error) {
       console.error("Error in whenMapReady:", error);
@@ -256,7 +258,7 @@ const MapControls = ({
         try {
           map.fitBounds(bounds, {
             padding: 100,
-            maxZoom: 16,
+            maxZoom: 12,
             duration: 500,
           });
         } catch (error) {
@@ -275,7 +277,7 @@ const MapControls = ({
   // Check if map is ready and initialize markers if needed
   useEffect(() => {
     if (!map) return;
-    
+
     // If device location tracking is active by default, trigger the location update
     if (deviceLocationActive && deviceLocation) {
       updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
@@ -286,16 +288,16 @@ const MapControls = ({
   useEffect(() => {
     // Skip if map is not available
     if (!map) return;
-    
+
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
-    
+
     // Only update if we're using the default style and the theme changes
     if (mapStyle === "custom-default") {
       whenMapReady(() => {
         try {
           // Set the new style
           map.setStyle(themeStyleUrl);
-          
+
           // After style loads, notify ShareLocationViewer to restore route
           map.once("style.load", () => {
             setTimeout(() => {
@@ -329,19 +331,19 @@ const MapControls = ({
         <button
           onClick={handleLayerToggle}
           className={`map-control-btn w-8 h-8 rounded-lg flex items-center justify-center
-            ${
-              currentTheme === "dark"
-                ? `${
-                    isDropdownOpen
-                      ? "bg-blue-500 text-white"
-                      : "bg-black hover:bg-gray-800 text-white"
-                  }`
-                : `${
-                    isDropdownOpen
-                      ? "bg-blue-500 text-white"
-                      : "bg-white hover:bg-gray-100 text-gray-800"
-                  }`
-            }`}
+          ${
+            currentTheme === "dark"
+              ? `${
+                  isDropdownOpen
+                    ? "bg-blue-500 text-white"
+                    : "bg-black hover:bg-gray-800 text-white"
+                }`
+              : `${
+                  isDropdownOpen
+                    ? "bg-blue-500 text-white"
+                    : "bg-white hover:bg-gray-100 text-gray-800"
+                }`
+          }`}
           aria-label="Change map style"
           aria-expanded={isDropdownOpen}
         >
