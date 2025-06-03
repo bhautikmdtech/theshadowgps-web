@@ -75,7 +75,50 @@
 
 /* Improve toast styling */
 .Toastify__toast {
-  border-radius: 4px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.mobile-style-toast {
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  min-height: auto !important;
+  font-weight: 500 !important;
+  transform: translateY(0) !important;
+  transition: transform 0.3s ease !important;
+}
+
+/* Toast animation entrances and exits like mobile */
+.Toastify__toast--enter {
+  transform: translateY(-120%) !important;
+}
+
+.Toastify__toast--enter-active {
+  transform: translateY(0) !important;
+}
+
+.Toastify__toast--exit-active {
+  transform: translateY(-120%) !important;
+}
+
+.Toastify__toast-container {
+  width: 320px !important;
+}
+
+.Toastify__toast--success {
+  background-color: #38b000 !important;
+}
+
+.Toastify__toast--error {
+  background-color: #e5383b !important;
+}
+
+.Toastify__toast--info {
+  background-color: #0077b6 !important;
+}
+
+.Toastify__toast--warning {
+  background-color: #ee9b00 !important;
 }
 
 /* Fix for subscriptions layout */
@@ -435,4 +478,36 @@ body.modal-open {
 
 .h-100 {
   height: 100%;
+}
+
+/* Pull to refresh styling */
+.pull-to-refresh-indicator {
+  background-color: #f8f9fa;
+  width: 100%;
+}
+
+.refresh-spinner {
+  color: #337CFD;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.refresh-spinner.spinning::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  border: 2px solid #337CFD;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }

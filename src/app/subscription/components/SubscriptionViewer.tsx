@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { FaChevronLeft, FaExclamationCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
@@ -79,8 +79,14 @@ export default function SubscriptionViewer({
     useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [isNavFixed, setIsNavFixed] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const navbarRef = useRef<HTMLDivElement>(null);
   const prevScrollY = useRef(0);
+  const pullStartY = useRef(0);
+  const pullMoveY = useRef(0);
+  const refreshDistance = 100; // Minimum distance to pull for refresh
+  const distanceRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll for fixed navbar
   useEffect(() => {
@@ -116,6 +122,68 @@ export default function SubscriptionViewer({
     }
   }, []);
 
+  // Set up pull to refresh
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      const scrollTop = document.documentElement.scrollTop;
+      
+      if (scrollTop <= 0) {
+        pullStartY.current = e.touches[0].screenY;
+      }
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      const scrollTop = document.documentElement.scrollTop;
+      
+      if (scrollTop <= 0 && pullStartY.current > 0) {
+        pullMoveY.current = e.touches[0].screenY;
+        const pullDistance = pullMoveY.current - pullStartY.current;
+        
+        if (pullDistance > 0) {
+          e.preventDefault();
+          
+          if (distanceRef.current && contentRef.current && !refreshing) {
+            const distance = Math.min(pullDistance * 0.5, 150);
+            distanceRef.current.style.height = `${distance}px`;
+            distanceRef.current.style.opacity = (distance / 150).toString();
+            contentRef.current.style.transform = `translateY(${distance}px)`;
+          }
+        }
+      }
+    };
+    
+    const handleTouchEnd = () => {
+      if (pullStartY.current > 0 && pullMoveY.current > 0) {
+        const pullDistance = pullMoveY.current - pullStartY.current;
+        
+        if (pullDistance > refreshDistance && !refreshing) {
+          doRefresh();
+        }
+        
+        // Reset pull distance
+        pullStartY.current = 0;
+        pullMoveY.current = 0;
+        
+        // Reset styles
+        if (distanceRef.current && contentRef.current) {
+          distanceRef.current.style.height = '0px';
+          distanceRef.current.style.opacity = '0';
+          contentRef.current.style.transform = 'translateY(0)';
+        }
+      }
+    };
+    
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd, { passive: false });
+    
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [refreshing]);
+
   const initializeStripe = async (
     publishableKey: string,
     clientSecret: string
@@ -150,6 +218,20 @@ export default function SubscriptionViewer({
       setShowAddPaymentModal(true);
     }
   };
+
+  const doRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshSubscriptionData();
+      toast.success("Data refreshed");
+    } catch (error) {
+      console.error("Refresh failed:", error);
+    } finally {
+      setTimeout(() => {
+        setRefreshing(false);
+      }, 1000); // Give some time for the refresh animation
+    }
+  }, []);
 
   const refreshSubscriptionData = async () => {
     try {
@@ -207,37 +289,66 @@ export default function SubscriptionViewer({
 
       {isNavFixed && <div style={{ height: "58px" }} />}
 
-      <div className="container mb-5 mt-3">
-        <SubscriptionsSection
-          customer={subscriptionData.customer}
-          subscriptions={subscriptionData.subscriptions}
-          token={token}
-          plans={subscriptionData.plans}
-          paymentMethods={subscriptionData.paymentMethods}
-          onAddNewPaymentMethod={handleAddPaymentMethod}
-          onRefresh={refreshSubscriptionData}
-        />
+      {/* Pull to refresh indicator */}
+      <div 
+        ref={distanceRef} 
+        className="pull-to-refresh-indicator"
+        style={{
+          height: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflow: 'hidden',
+          opacity: 0,
+          transition: refreshing ? 'none' : 'all 0.3s ease',
+          position: 'relative',
+          zIndex: 5
+        }}
+      >
+        <div className={`refresh-spinner ${refreshing ? 'spinning' : ''}`}>
+          {refreshing ? 'Refreshing...' : 'Pull to refresh'}
+        </div>
+      </div>
 
-        <PaymentMethodsSection
-          token={token}
-          paymentMethods={subscriptionData.paymentMethods}
-          customer={subscriptionData.customer}
-          handleAddPaymentMethod={handleAddPaymentMethod}
-          onRefresh={refreshSubscriptionData}
-        />
+      <div 
+        ref={contentRef}
+        style={{
+          transition: refreshing ? 'none' : 'transform 0.3s ease',
+          transform: 'translateY(0)'
+        }}
+      >
+        <div className="container mb-5 mt-3">
+          <SubscriptionsSection
+            customer={subscriptionData.customer}
+            subscriptions={subscriptionData.subscriptions}
+            token={token}
+            plans={subscriptionData.plans}
+            paymentMethods={subscriptionData.paymentMethods}
+            onAddNewPaymentMethod={handleAddPaymentMethod}
+            onRefresh={refreshSubscriptionData}
+          />
 
-        <BillingInformationSection
-          customer={subscriptionData.customer}
-          token={token}
-          onRefresh={refreshSubscriptionData}
-        />
+          <PaymentMethodsSection
+            token={token}
+            paymentMethods={subscriptionData.paymentMethods}
+            customer={subscriptionData.customer}
+            handleAddPaymentMethod={handleAddPaymentMethod}
+            onRefresh={refreshSubscriptionData}
+          />
 
-        <InvoiceHistorySection
-          invoices={subscriptionData.invoices}
-          customer={subscriptionData.customer}
-          token={token}
-          onRefresh={refreshSubscriptionData}
-        />
+          <BillingInformationSection
+            customer={subscriptionData.customer}
+            token={token}
+            onRefresh={refreshSubscriptionData}
+          />
+
+          <InvoiceHistorySection
+            invoices={subscriptionData.invoices}
+            customer={subscriptionData.customer}
+            token={token}
+            onRefresh={refreshSubscriptionData}
+          />
+        </div>
       </div>
 
       {showAddPaymentModal && stripePromise && clientSecret && (

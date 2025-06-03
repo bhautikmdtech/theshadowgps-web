@@ -19,8 +19,8 @@ export default function SubscriptionLayout({
       {/* Global Toast Container */}
       <ToastContainer
         position="top-center"
-        autoClose={5000}
-        hideProgressBar={false}
+        autoClose={3000}
+        hideProgressBar={true}
         newestOnTop
         closeOnClick
         rtl={false}
@@ -28,6 +28,7 @@ export default function SubscriptionLayout({
         draggable
         pauseOnHover
         theme="colored"
+        toastClassName="mobile-style-toast"
       />
       {children}
     </div>
