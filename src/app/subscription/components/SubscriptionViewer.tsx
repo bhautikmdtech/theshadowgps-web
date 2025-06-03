@@ -84,7 +84,7 @@ export default function SubscriptionViewer({
   const prevScrollY = useRef(0);
   const pullStartY = useRef(0);
   const pullMoveY = useRef(0);
-  const refreshDistance = 100; // Minimum distance to pull for refresh
+  const refreshDistance = 150; // Minimum distance to pull for refresh
   const distanceRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -126,22 +126,22 @@ export default function SubscriptionViewer({
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
       const scrollTop = document.documentElement.scrollTop;
-      
+
       if (scrollTop <= 0) {
         pullStartY.current = e.touches[0].screenY;
       }
     };
-    
+
     const handleTouchMove = (e: TouchEvent) => {
       const scrollTop = document.documentElement.scrollTop;
-      
+
       if (scrollTop <= 0 && pullStartY.current > 0) {
         pullMoveY.current = e.touches[0].screenY;
         const pullDistance = pullMoveY.current - pullStartY.current;
-        
+
         if (pullDistance > 0) {
           e.preventDefault();
-          
+
           if (distanceRef.current && contentRef.current && !refreshing) {
             const distance = Math.min(pullDistance * 0.5, 150);
             distanceRef.current.style.height = `${distance}px`;
@@ -151,36 +151,38 @@ export default function SubscriptionViewer({
         }
       }
     };
-    
+
     const handleTouchEnd = () => {
       if (pullStartY.current > 0 && pullMoveY.current > 0) {
         const pullDistance = pullMoveY.current - pullStartY.current;
-        
+
         if (pullDistance > refreshDistance && !refreshing) {
-          doRefresh();
+          doRefresh("manual");
+        } else {
+          // Reset styles
+          if (distanceRef.current && contentRef.current) {
+            distanceRef.current.style.height = "0px";
+            distanceRef.current.style.opacity = "0";
+            contentRef.current.style.transform = "translateY(0)";
+          }
         }
-        
+
         // Reset pull distance
         pullStartY.current = 0;
         pullMoveY.current = 0;
-        
-        // Reset styles
-        if (distanceRef.current && contentRef.current) {
-          distanceRef.current.style.height = '0px';
-          distanceRef.current.style.opacity = '0';
-          contentRef.current.style.transform = 'translateY(0)';
-        }
       }
     };
-    
-    document.addEventListener('touchstart', handleTouchStart, { passive: false });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd, { passive: false });
-    
+
+    document.addEventListener("touchstart", handleTouchStart, {
+      passive: false,
+    });
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd, { passive: false });
+
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
     };
   }, [refreshing]);
 
@@ -219,24 +221,33 @@ export default function SubscriptionViewer({
     }
   };
 
-  const doRefresh = useCallback(async () => {
+  const doRefresh = useCallback(async (method: string) => {
     setRefreshing(true);
+    if (distanceRef.current && contentRef.current) {
+      distanceRef.current.style.height = "5rem";
+      distanceRef.current.style.opacity = "100";
+      contentRef.current.style.transform = "translateY(0)";
+    }
     try {
-      await refreshSubscriptionData();
-      toast.success("Data refreshed");
+      await refreshSubscriptionData(method);
     } catch (error) {
       console.error("Refresh failed:", error);
     } finally {
+      // Reset styles
+      if (distanceRef.current && contentRef.current) {
+        distanceRef.current.style.height = "0px";
+        distanceRef.current.style.opacity = "0";
+      }
       setTimeout(() => {
         setRefreshing(false);
       }, 1000); // Give some time for the refresh animation
     }
   }, []);
-
-  const refreshSubscriptionData = async () => {
+  const refreshSubscriptionData = async (method?: string) => {
     try {
       const response = await SubscriptionService.getSubscriptionData(token);
       setSubscriptionData(response?.data);
+      if (method === "manual") toast.success("Data refreshed");
     } catch (err: unknown) {
       const error = err as APIError;
       toast.error(
@@ -290,31 +301,32 @@ export default function SubscriptionViewer({
       {isNavFixed && <div style={{ height: "58px" }} />}
 
       {/* Pull to refresh indicator */}
-      <div 
-        ref={distanceRef} 
+      <div
+        ref={distanceRef}
         className="pull-to-refresh-indicator"
         style={{
           height: 0,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          overflow: 'hidden',
+          maxHeight: "5rem",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          overflow: "hidden",
           opacity: 0,
-          transition: refreshing ? 'none' : 'all 0.3s ease',
-          position: 'relative',
-          zIndex: 5
+          transition: "all 0.3s ease",
+          position: "relative",
+          zIndex: 5,
         }}
       >
-        <div className={`refresh-spinner ${refreshing ? 'spinning' : ''}`}>
-          {refreshing ? 'Refreshing...' : 'Pull to refresh'}
+        <div className={`refresh-spinner ${refreshing ? "spinning" : ""}`}>
+          {refreshing ? "Refreshing..." : "Pull to refresh"}
         </div>
       </div>
 
-      <div 
+      <div
         ref={contentRef}
         style={{
-          transition: refreshing ? 'none' : 'transform 0.3s ease',
-          transform: 'translateY(0)'
+          transition: refreshing ? "none" : "transform 0.3s ease",
+          transform: "translateY(0)",
         }}
       >
         <div className="container mb-5 mt-3">

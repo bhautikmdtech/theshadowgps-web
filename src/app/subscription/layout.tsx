@@ -23,7 +23,7 @@ export default function SubscriptionLayout({
         hideProgressBar={true}
         newestOnTop
         closeOnClick
-        rtl={false}
+        closeButton={true}
         pauseOnFocusLoss
         draggable
         pauseOnHover

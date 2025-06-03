@@ -36,7 +36,11 @@ export default function LiveTracker({
   initialData,
 }: {
   shareToken: string;
-  initialData: any;
+  initialData: {
+    deviceInfo?: DeviceInfo,
+    latestPoint?: Position
+    expiresAt?: string
+  };
 }) {
   const { theme, systemTheme } = useTheme();
   const currentTheme = theme === "system" ? systemTheme : theme;
@@ -102,7 +106,7 @@ export default function LiveTracker({
       let source: mapboxgl.GeoJSONSource | null = null;
       try {
         source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
-      } catch (err) {
+      } catch {
         // Source doesn't exist yet or was removed during style change
         source = null;
       }
@@ -121,7 +125,7 @@ export default function LiveTracker({
           if (map.getSource(routeSourceId)) {
             map.removeSource(routeSourceId);
           }
-        } catch (err) {
+        } catch {
           // Layer or source doesn't exist, which is fine
         }
 

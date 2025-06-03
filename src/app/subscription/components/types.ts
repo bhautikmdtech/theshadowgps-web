@@ -14,6 +14,7 @@ export interface PaymentMethod {
   isDefault: boolean;
   expired: boolean;
   expiredSoon: boolean;
+  isSub: boolean;
 }
 
 export interface Device {

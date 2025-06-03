@@ -226,7 +226,10 @@ export default function PaymentMethodsSection({
                         </div>
                       </div>
                     </div>
-                    <div className="payment-actions relative">
+                    {
+                      (!method.isDefault || !method.isSub)
+                      &&
+                      <div className="payment-actions relative">
                       <button
                         type="button"
                         onClick={(e) => toggleDropdown(method.id, e)}
@@ -258,7 +261,9 @@ export default function PaymentMethodsSection({
                                 Make Default
                               </button>
                             )}
-                            <button
+                            {!method.isSub
+                              &&
+                              <button
                               type="button"
                               className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                               onClick={() => handleDeleteClick(method.id)}
@@ -267,10 +272,12 @@ export default function PaymentMethodsSection({
                               <FaTrash className="mr-2" />
                               Delete
                             </button>
+                            }
                           </div>
                         </div>
                       )}
                     </div>
+                    }
                   </div>
                 ))}
                 <div
