@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js";
 import { Navbar } from "react-bootstrap";
+import { useTheme } from "next-themes";
 
 import { SubscriptionData } from "./types";
 import SubscriptionsSection from "./SubscriptionsSection";
@@ -14,6 +15,7 @@ import BillingInformationSection from "./BillingInformationSection";
 import InvoiceHistorySection from "./InvoiceHistorySection";
 import AddPaymentModal from "./AddPaymentModal";
 import { SubscriptionService } from "./subscriptionService";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 declare global {
   interface Window {
@@ -70,7 +72,7 @@ export default function SubscriptionViewer({
   token,
   initialData,
 }: SubscriptionViewerProps) {
-  console.log(initialData);
+  const { theme } = useTheme();
   const [subscriptionData, setSubscriptionData] =
     useState<SubscriptionData | null>(initialData?.data || null);
   const [stripeInitialized, setStripeInitialized] = useState(false);
@@ -268,10 +270,12 @@ export default function SubscriptionViewer({
   }
 
   return (
-    <div className="bg-white min-vh-100">
+    <div className={`min-vh-100 ${theme === 'dark' ? 'bg-gray-900' : 'bg-white'}`}>
       <Navbar
         ref={navbarRef}
-        className={`bg-white border-bottom transition-all duration-300 ${
+        className={`${
+          theme === 'dark' ? 'bg-gray-800' : 'bg-white'
+        } border-bottom transition-all duration-300 ${
           isNavFixed ? "fixed-top shadow-sm animate-slideDown" : ""
         }`}
         style={{
@@ -288,13 +292,14 @@ export default function SubscriptionViewer({
           <h5
             className="mb-0"
             style={{
-              color: "#0C1F3F",
+              color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F',
               fontSize: "18px",
               fontWeight: "500",
             }}
           >
             Subscription Management
           </h5>
+          <ThemeToggle />
         </div>
       </Navbar>
 

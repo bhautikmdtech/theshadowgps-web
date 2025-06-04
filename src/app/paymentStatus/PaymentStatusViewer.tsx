@@ -7,6 +7,7 @@ import {
   HiClock,
   HiExclamationCircle,
 } from "react-icons/hi";
+import { useTheme } from "next-themes";
 
 interface PaymentStatusViewerProps {
   status: string;
@@ -35,6 +36,7 @@ export default function PaymentStatusViewer({
   response,
   status,
 }: PaymentStatusViewerProps) {
+  const { theme } = useTheme();
   const [isWebView, setIsWebView] = useState(false);
   const [showCloseButton, setShowCloseButton] = useState(false);
 
@@ -43,7 +45,6 @@ export default function PaymentStatusViewer({
       try {
         const message = JSON.stringify(data);
         (window as any).ReactNativeWebView.postMessage(message);
-        console.log("Sent to WebView:", message);
       } catch (error) {
         console.error("Error sending to WebView:", error);
       }
@@ -116,8 +117,8 @@ export default function PaymentStatusViewer({
 
   if (response.error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-3 border-red-500 bg-red-50">
+      <div className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} p-4`}>
+        <div className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-3 border-red-500 ${theme === 'dark' ? 'bg-red-900/20' : 'bg-red-50'}`}>
           <div className="mx-auto text-red-500 w-12 h-12 mb-4 bg-red-100 rounded-full flex items-center justify-center">
             <HiXCircle className="w-12 h-12" />
           </div>
@@ -147,14 +148,14 @@ export default function PaymentStatusViewer({
       : "Payment Failed");
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+    <div className={`flex items-center justify-center min-h-screen ${theme === 'dark' ? 'bg-gray-900' : 'bg-gray-100'} p-4`}>
       <div
-        className={`bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-3 ${
+        className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} p-8 rounded-2xl shadow-xl w-full max-w-md text-center border-3 ${
           status === "success"
-            ? "border-green-500 bg-green-50"
+            ? `${theme === 'dark' ? 'border-green-400 bg-green-900/20' : 'border-green-500 bg-green-50'}`
             : status === "pending"
-            ? "border-yellow-500 bg-yellow-50"
-            : "border-red-500 bg-red-50"
+            ? `${theme === 'dark' ? 'border-yellow-400 bg-yellow-900/20' : 'border-yellow-500 bg-yellow-50'}`
+            : `${theme === 'dark' ? 'border-red-400 bg-red-900/20' : 'border-red-500 bg-red-50'}`
         }`}
       >
         {/* Icon */}
@@ -191,9 +192,9 @@ export default function PaymentStatusViewer({
 
         {/* Transaction ID */}
         {response.transaction_id && (
-          <p className="mb-4">
+          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-4`}>
             Transaction ID:{" "}
-            <span className="font-medium bg-gray-100 px-3 py-1 rounded-full text-sm">
+            <span className={`font-medium ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'} px-3 py-1 rounded-full text-sm`}>
               {response.transaction_id.slice(0, 8)}...
               {response.transaction_id.slice(-4)}
             </span>
@@ -202,7 +203,9 @@ export default function PaymentStatusViewer({
 
         {/* Message */}
         {response.message && (
-          <p className="text-gray-700 mb-6">{response.message}</p>
+          <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} mb-6`}>
+            {response.message}
+          </p>
         )}
 
         {/* Device Name */}
@@ -215,8 +218,8 @@ export default function PaymentStatusViewer({
 
         {/* Subscription Details */}
         {status === "success" && response.subscriptionDetails && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 text-left">
-            <h3 className="text-lg font-semibold border-b border-gray-200 pb-3 mb-4 flex items-center">
+          <div className={`${theme === 'dark' ? 'bg-gray-700 border-gray-600' : 'bg-white border-gray-200'} border rounded-lg p-6 mb-6 text-left`}>
+            <h3 className={`text-lg font-semibold border-b ${theme === 'dark' ? 'border-gray-600' : 'border-gray-200'} pb-3 mb-4 flex items-center`}>
               Subscription Details
             </h3>
             <div className="space-y-3">
@@ -274,11 +277,13 @@ export default function PaymentStatusViewer({
 
         {/* Next Steps */}
         {response.nextStep && (
-          <div className="bg-gray-50 p-4 rounded-lg mb-6 text-left">
+          <div className={`${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'} p-4 rounded-lg mb-6 text-left`}>
             <h3 className="text-lg font-semibold mb-3 flex items-center">
               Next Steps
             </h3>
-            <p className="text-gray-700">{response.nextStep}</p>
+            <p className={`${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>
+              {response.nextStep}
+            </p>
           </div>
         )}
 
@@ -298,7 +303,7 @@ export default function PaymentStatusViewer({
           </button>
         )}
 
-        <div className="mt-8 pt-4 border-t border-gray-200 text-sm text-gray-500">
+        <div className={`mt-8 pt-4 border-t ${theme === 'dark' ? 'border-gray-700' : 'border-gray-200'} text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
           &copy; {new Date().getFullYear()} ShadowGPS - All rights reserved
         </div>
       </div>

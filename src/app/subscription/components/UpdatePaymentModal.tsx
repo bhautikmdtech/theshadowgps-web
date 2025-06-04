@@ -4,6 +4,7 @@ import { PaymentMethod } from "./types";
 import { FaCreditCard } from "react-icons/fa";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import React from "react";
+import { useTheme } from "next-themes";
 
 interface UpdatePaymentModalProps {
   show: boolean;
@@ -28,6 +29,7 @@ export default function UpdatePaymentModal({
   onPaymentMethodSelect,
   onAddNewPaymentMethod,
 }: UpdatePaymentModalProps) {
+  const { theme } = useTheme();
   // Helper function to get card label from the brand
   const getCardLabel = (brand: string): string => {
     if (!brand) return "Card";
@@ -68,7 +70,7 @@ export default function UpdatePaymentModal({
       style={{ zIndex: 9999 }}
       className="update-payment-modal"
     >
-      <Modal.Header closeButton style={{ backgroundColor: "#f8f9fa" }}>
+      <Modal.Header closeButton className={theme === "dark" ? "bg-dark text-white" : "bg-light"}>
         <Modal.Title>Update Payment Method</Modal.Title>
       </Modal.Header>
       <Modal.Body>

@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Accordion } from "react-bootstrap";
+// import { Accordion } from "react-bootstrap";
+import Accordion from 'react-bootstrap/Accordion';
 import { PageLoader } from "@/components";
 import { SubscriptionService } from "./subscriptionService";
 import { toast } from "react-toastify";
+import { useTheme } from "next-themes";
 
 interface Invoice {
   id: string;
@@ -34,6 +36,7 @@ export default function InvoiceHistorySection({
   customer,
   invoices,
 }: InvoiceHistorySectionProps) {
+  const { theme } = useTheme();
   const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
   const [invoicesData, setInvoicesData] = useState<Invoice[]>(
     invoices?.data || []
@@ -79,14 +82,18 @@ export default function InvoiceHistorySection({
   return (
     <Accordion defaultActiveKey="0" className="mb-3 border-0">
       <Accordion.Item eventKey="0" className="border-0">
-        <Accordion.Header className="bg-white">
+        <Accordion.Header className={theme === 'dark' ? 'bg-gray-800' : 'bg-white'}>
           <span
-            style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
+            style={{ 
+              color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F', 
+              fontSize: "18px", 
+              fontWeight: "700" 
+            }}
           >
             Invoice History
           </span>
         </Accordion.Header>
-        <Accordion.Body className="p-0">
+        <Accordion.Body className={`${theme === 'dark' ? 'bg-gray-800' : 'bg-white'} p-0`}>
           {isLoadingInvoices && invoicesData.length === 0 ? (
             <div className="text-center py-3" id="invoice-loading">
               <PageLoader type="spinner" color="#007bff" />
@@ -98,16 +105,24 @@ export default function InvoiceHistorySection({
                   href={invoice.url}
                   target="_blank"
                   key={`${invoice.id}-${index}`}
-                  className="invoice d-flex justify-content-between align-items-center py-2 text-decoration-none"
+                  className={`invoice d-flex justify-content-between align-items-center py-2 text-decoration-none ${
+                    theme === 'dark' ? 'text-gray-200 hover:bg-gray-700' : 'text-gray-800 hover:bg-gray-50'
+                  }`}
                 >
-                  <div className="invoice-date">
+                  <div 
+                    className="invoice-date"
+                    style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}
+                  >
                     {new Date(invoice.date).toLocaleDateString("en-US", {
                       month: "long",
                       day: "numeric",
                       year: "numeric",
                     })}
                   </div>
-                  <div className="invoice-amount">
+                  <div 
+                    className="invoice-amount"
+                    style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}
+                  >
                     ${parseFloat(invoice.amount).toFixed(2)}
                   </div>
                   <div className="invoice-status-container text-center">
@@ -116,20 +131,20 @@ export default function InvoiceHistorySection({
                       style={{
                         backgroundColor:
                           invoice.status === "paid"
-                            ? "#D6E6FF"
+                            ? theme === 'dark' ? '#D6E6FF' : '#D6E6FF'
                             : invoice.status === "failed"
-                            ? "#ffe6e6"
+                            ? theme === 'dark' ? '#742A2A' : '#ffe6e6'
                             : invoice.status === "draft"
-                            ? "#ffe6e6"
+                            ? theme === 'dark' ? '#742A2A' : '#ffe6e6'
                             : invoice.status === "uncollectible"
-                            ? "#ffe6e6"
+                            ? theme === 'dark' ? '#742A2A' : '#ffe6e6'
                             : invoice.status === "void"
-                            ? "#f0f0f5"
-                            : "#6c757d", // default color for any other status
+                            ? theme === 'dark' ? '#2D3748' : '#6c757d'
+                            : theme === 'dark' ? 'rgb(121 121 121)' : '#6c757d',
                         color:
                           invoice.status === "paid" || invoice.status === "open"
-                            ? "#3D4B65"
-                            : "white",
+                            ? theme === 'dark' ? '#E2E8F0' : '#3D4B65'
+                            : theme === 'dark' ? '#E2E8F0' : 'white',
                         fontSize: "12px",
                         fontWeight: "700",
                       }}
@@ -144,7 +159,9 @@ export default function InvoiceHistorySection({
               {hasMore && (
                 <div className="text-center py-3" id="load-more-container">
                   <button
-                    className="btn btn-link text-decoration-none"
+                    className={`btn btn-link text-decoration-none ${
+                      theme === 'dark' ? 'text-blue-400' : 'text-primary'
+                    }`}
                     onClick={loadMoreInvoices}
                     disabled={isLoadingInvoices}
                   >
@@ -161,8 +178,12 @@ export default function InvoiceHistorySection({
               )}
             </div>
           ) : (
-            <div id="no-invoices-message" className="text-center py-3">
-              <p className="text-muted mb-0">No invoices found.</p>
+            <div 
+              id="no-invoices-message" 
+              className="text-center py-3"
+              style={{ color: theme === 'dark' ? '#A0AEC0' : '#6c757d' }}
+            >
+              <p className="mb-0">No invoices found.</p>
             </div>
           )}
         </Accordion.Body>

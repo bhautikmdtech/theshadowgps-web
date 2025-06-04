@@ -1,8 +1,10 @@
+"use client";
 import React, { useState } from "react";
 import { Accordion } from "react-bootstrap";
 import Image from "next/image";
 import UpdateBillingModal from "./UpdateBillingModal";
 import { SubscriptionService } from "./subscriptionService";
+import { useTheme } from "next-themes";
 
 interface Customer {
   id: string;
@@ -21,6 +23,7 @@ export default function BillingInformationSection({
   token,
   onRefresh,
 }: BillingInformationSectionProps) {
+  const { theme } = useTheme();
   const [showUpdateBillingModal, setShowUpdateBillingModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [billingFormData, setBillingFormData] = useState({
@@ -61,45 +64,45 @@ export default function BillingInformationSection({
       setIsProcessing(false);
     }
   };
+
+  const bgColor = theme === "dark" ? "#0f172a" : "#f9fafb"; // full background
+  const headerBg = theme === "dark" ? "#1e293b" : "#ffffff";
+  const cardBg = theme === "dark" ? "#1A202C" : "#FFFFFF";
+  const borderColor = theme === "dark" ? "#2D3748" : "#E5E7EB";
+  const textColor = theme === "dark" ? "#E2E8F0" : "#0C1F3F";
+  const labelColor = theme === "dark" ? "#A0AEC0" : "#3D4B65";
+
   return (
-    <>
+    <div>
       <Accordion defaultActiveKey="0" className="mb-3 border-0">
         <Accordion.Item eventKey="0" className="border-0">
-          <Accordion.Header>
+          <Accordion.Header style={{ backgroundColor: headerBg }}>
             <span
-              style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
+              style={{
+                color: textColor,
+                fontSize: "18px",
+                fontWeight: "700",
+              }}
             >
               Billing And Shipping Information
             </span>
           </Accordion.Header>
-          <Accordion.Body className="p-3">
+          <Accordion.Body className="p-3" style={{ backgroundColor: bgColor }}>
             <div
               style={{
-                border: "1px solid #E5E7EB",
+                border: `1px solid ${borderColor}`,
                 borderRadius: "16px",
                 padding: "24px",
-                backgroundColor: "#FFFFFF",
+                backgroundColor: cardBg,
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "12px",
-                  maxWidth: "100%",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "24px",
-                  }}
-                >
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {/* Name */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "24px" }}>
                   <div
                     style={{
                       minWidth: "60px",
-                      color: "#3D4B65",
+                      color: labelColor,
                       fontSize: "14px",
                       fontWeight: "700",
                       whiteSpace: "nowrap",
@@ -109,7 +112,7 @@ export default function BillingInformationSection({
                   </div>
                   <div
                     style={{
-                      color: "#0C1F3F",
+                      color: textColor,
                       fontSize: "14px",
                       wordBreak: "break-word",
                       flex: 1,
@@ -118,17 +121,13 @@ export default function BillingInformationSection({
                     {customer.name || "Not available"}
                   </div>
                 </div>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "24px",
-                  }}
-                >
+
+                {/* Email */}
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "24px" }}>
                   <div
                     style={{
                       minWidth: "60px",
-                      color: "#3D4B65",
+                      color: labelColor,
                       fontSize: "14px",
                       fontWeight: "700",
                       whiteSpace: "nowrap",
@@ -138,7 +137,7 @@ export default function BillingInformationSection({
                   </div>
                   <div
                     style={{
-                      color: "#0C1F3F",
+                      color: textColor,
                       fontSize: "14px",
                       wordBreak: "break-word",
                       flex: 1,
@@ -149,24 +148,22 @@ export default function BillingInformationSection({
                 </div>
               </div>
             </div>
-            <div>
+
+            {/* Update Button */}
+            <div className="mt-3">
               <div
-                className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2 "
+                className="add-payment-btn flex items-center cursor-pointer gap-2"
                 onClick={handleShowUpdateBilling}
-                style={{
-                  display: "flex",
-                  gap: "5px",
-                }}
+                style={{ display: "flex", gap: "5px" }}
               >
                 <Image src="/pencil.svg" alt="Edit" width={20} height={20} />
                 <span
                   style={{
-                    color: "#0C1F3F",
+                    color: textColor,
                     fontSize: "16px",
                     fontWeight: "600",
                   }}
                 >
-                  {" "}
                   Update information
                 </span>
               </div>
@@ -174,6 +171,8 @@ export default function BillingInformationSection({
           </Accordion.Body>
         </Accordion.Item>
       </Accordion>
+
+      {/* Modal */}
       <UpdateBillingModal
         show={showUpdateBillingModal}
         onClose={() => setShowUpdateBillingModal(false)}
@@ -181,6 +180,6 @@ export default function BillingInformationSection({
         isProcessing={isProcessing}
         initialData={billingFormData}
       />
-    </>
+    </div>
   );
 }

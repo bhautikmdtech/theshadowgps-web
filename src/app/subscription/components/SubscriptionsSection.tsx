@@ -12,6 +12,7 @@ import UpdatePaymentModal from "./UpdatePaymentModal";
 import CancelSubscriptionModal from "./CancelSubscriptionModal";
 import ReactivateSubscriptionModal from "./ReactivateSubscriptionModal";
 import { toast } from "react-toastify";
+import { useTheme } from "next-themes";
 
 type ModalType = "updatePlan" | "updatePayment" | "cancel" | "reactivate";
 
@@ -46,6 +47,9 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
   onAddNewPaymentMethod,
   onRefresh,
 }) => {
+  // Add theme hook
+  const { theme } = useTheme();
+
   // State management
   const [activeModal, setActiveModal] = useState<ModalType | null>(null);
   const [currentSubscription, setCurrentSubscription] =
@@ -674,11 +678,11 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     (subscription: ProcessedSubscription, isActive: boolean) => (
       <div
         style={{
-          border: "1px solid #CFD2D9",
+          border: `1px solid ${theme === 'dark' ? '#2D3748' : '#CFD2D9'}`,
           padding: "16px",
           borderRadius: "16px",
-          backgroundColor: "#FFFFFF",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.05)",
+          backgroundColor: theme === 'dark' ? '#1A202C' : '#FFFFFF',
+          boxShadow: theme === 'dark' ? '0 2px 10px rgba(0,0,0,0.2)' : '0 2px 10px rgba(0,0,0,0.05)',
         }}
       >
         <div className="flex items-start flex-wrap gap-3">
@@ -720,13 +724,13 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
           <div className="flex-grow-1">
             <h6
               className="fw-bold mb-0"
-              style={{ color: "#0C1F3F", fontSize: "16px" }}
+              style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F', fontSize: "16px" }}
             >
               {subscription.device?.deviceName || "My Device"}
             </h6>
             <div
               className="d-flex flex-wrap align-items-center gap-2 my-1.5"
-              style={{ color: "#0C1F3F", fontSize: "12px" }}
+              style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F', fontSize: "12px" }}
             >
               {formatInterval(
                 subscription.interval,
@@ -740,12 +744,12 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
             <div
               className="gap-1 flex align-items-center my-1"
-              style={{ color: "#0C1F3F", fontSize: "14px" }}
+              style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F', fontSize: "14px" }}
             >
               <span className="fw-bold subscription-interval">
                 ${subscription.amount}
               </span>
-              <span style={{ color: "#3D4B65", fontSize: "14px" }}>
+              <span style={{ color: theme === 'dark' ? '#A0AEC0' : '#3D4B65', fontSize: "14px" }}>
                 per{" "}
                 {formatInterval(
                   subscription.interval,
@@ -755,7 +759,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               </span>
             </div>
 
-            <div style={{ color: "#3D4B65", fontSize: "12px" }}>
+            <div style={{ color: theme === 'dark' ? '#A0AEC0' : '#3D4B65', fontSize: "12px" }}>
               {getStatusMessage(subscription)}
               {renderAlertMessage(subscription)}
             </div>
@@ -775,6 +779,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       renderAlertMessage,
       renderPaymentMethod,
       renderSubscriptionActions,
+      theme
     ]
   );
 
@@ -782,19 +787,23 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     <>
       <Accordion defaultActiveKey="0" className="mb-3 border-0">
         <Accordion.Item eventKey="0" className="border-0">
-          <Accordion.Header className="bg-white">
+          <Accordion.Header className={theme === 'dark' ? 'bg-dark' : 'bg-white'}>
             <span
-              style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
+              style={{ 
+                color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F', 
+                fontSize: "18px", 
+                fontWeight: "700" 
+              }}
             >
               Subscriptions
             </span>
           </Accordion.Header>
-          <Accordion.Body className="p-0">
+          <Accordion.Body className={`${theme === 'dark' ? 'bg-dark' : 'bg-white'} p-0`}>
             <div className="mb-4">
               <div className="pb-2 pt-2 px-3 mb-0">
                 <span
                   style={{
-                    color: "#0C1F3F",
+                    color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F',
                     fontSize: "16px",
                     fontWeight: "600",
                   }}
@@ -809,7 +818,10 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                   </div>
                 ))
               ) : (
-                <p className="px-3 text-muted text-center">
+                <p
+                  style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}
+                  className="px-3 text-center"
+                >
                   No active subscriptions
                 </p>
               )}
@@ -819,7 +831,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
               <div className="pb-2 pt-2 px-3 mb-0">
                 <span
                   style={{
-                    color: "#0C1F3F",
+                    color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F',
                     fontSize: "16px",
                     fontWeight: "600",
                   }}
@@ -834,7 +846,10 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
                   </div>
                 ))
               ) : (
-                <p className="px-3 text-muted text-center">
+                <p
+                  style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}
+                  className="px-3 text-center"
+                >
                   No inactive subscriptions
                 </p>
               )}

@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import Image from "next/image";
 import { PaymentIcon } from "react-svg-credit-card-payment-icons";
 import { Customer, PaymentMethod } from "./types";
+import { useTheme } from "next-themes";
 
 interface PaymentMethodsSectionProps {
   token: string;
@@ -22,6 +23,7 @@ export default function PaymentMethodsSection({
   handleAddPaymentMethod,
   onRefresh,
 }: PaymentMethodsSectionProps) {
+  const { theme } = useTheme();
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<
@@ -137,21 +139,27 @@ export default function PaymentMethodsSection({
     <>
       <Accordion defaultActiveKey="0" className="mb-3 border-0">
         <Accordion.Item eventKey="0" className="border-0">
-          <Accordion.Header className="bg-white">
+          <Accordion.Header className={theme === 'dark' ? 'bg-gray-800' : 'bg-white'}>
             <span
-              style={{ color: "#0C1F3F", fontSize: "18px", fontWeight: "700" }}
+              style={{ 
+                color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F', 
+                fontSize: "18px", 
+                fontWeight: "700" 
+              }}
             >
               Payment Methods
             </span>
           </Accordion.Header>
-          <Accordion.Body className="p-3">
+          <Accordion.Body className={`${theme === 'dark' ? 'bg-dark' : 'bg-white'} p-3`}>
             {/* Display Payment Methods */}
             {paymentMethods.length > 0 ? (
               <div className="payment-methods-list">
                 {paymentMethods.map((method: PaymentMethod) => (
                   <div
                     key={method.id}
-                    className="payment-method flex justify-between items-center py-2 border-b"
+                    className={`payment-method flex justify-between items-center py-2 border-b ${
+                      theme === 'dark' ? 'border-gray-700' : 'border-gray-200'
+                    }`}
                   >
                     <div className="payment-info flex items-center">
                       <div className="card-icon mr-3">
@@ -164,7 +172,7 @@ export default function PaymentMethodsSection({
                               ) : (
                                 <FaCreditCard
                                   size={26}
-                                  className="text-gray-800"
+                                  className={theme === 'dark' ? 'text-gray-300' : 'text-gray-800'}
                                 />
                               )}
                             </>
@@ -175,7 +183,7 @@ export default function PaymentMethodsSection({
                         <div
                           className="card-number"
                           style={{
-                            color: "#0C1F3F",
+                            color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F',
                             fontSize: "16px",
                             fontWeight: "600",
                           }}
@@ -183,10 +191,10 @@ export default function PaymentMethodsSection({
                           {getCardLabel(method.brand)} **** {method.last4}
                           {method.isDefault && (
                             <span
-                              className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
+                              className="ml-2 text-xs px-2.5 py-0.5 rounded-full"
                               style={{
-                                backgroundColor: "#D6E6FF",
-                                color: "#3D4B65",
+                                backgroundColor: theme === 'dark' ? '#2D3748' : '#D6E6FF',
+                                color: theme === 'dark' ? '#E2E8F0' : '#3D4B65',
                                 fontSize: "12px",
                               }}
                             >
@@ -219,8 +227,11 @@ export default function PaymentMethodsSection({
                           )}
                         </div>
                         <div
-                          className="card-expiry text-gray-500 text-sm"
-                          style={{ color: "#0C1F3F", fontSize: "14px" }}
+                          className="card-expiry text-sm"
+                          style={{ 
+                            color: theme === 'dark' ? '#A0AEC0' : '#0C1F3F', 
+                            fontSize: "14px" 
+                          }}
                         >
                           Expires {method.expMonth}/{method.expYear}
                         </div>
@@ -281,11 +292,12 @@ export default function PaymentMethodsSection({
                   </div>
                 ))}
                 <div
-                  className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2 "
+                  className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2"
                   onClick={handleAddPaymentMethod}
+                  style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}
                 >
                   <Image
-                    src="/add-circle.svg"
+                    src={theme === 'dark' ? "/add-circle.svg" : "/add-circle.svg"}
                     alt="Edit"
                     width={24}
                     height={24}
@@ -295,11 +307,10 @@ export default function PaymentMethodsSection({
               </div>
             ) : (
               <div
-                className="add-payment-btn flex items-center cursor-pointer gap-2 "
+                className="add-payment-btn flex items-center cursor-pointer gap-2"
                 onClick={handleAddPaymentMethod}
-                style={{ color: "#0C1F3F" }}
+                style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}
               >
-                {" "}
                 <Image
                   src="/add-circle.svg"
                   alt="Edit"
@@ -313,15 +324,21 @@ export default function PaymentMethodsSection({
         </Accordion.Item>
       </Accordion>
 
-      <Modal show={showDeleteModal} onHide={() => setShowDeleteModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Delete Payment Method?</Modal.Title>
+      <Modal 
+        show={showDeleteModal} 
+        onHide={() => setShowDeleteModal(false)}
+        className={theme === 'dark' ? 'dark-modal' : ''}
+      >
+        <Modal.Header closeButton className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}>
+          <Modal.Title style={{ color: theme === 'dark' ? '#E2E8F0' : '#0C1F3F' }}>
+            Delete Payment Method?
+          </Modal.Title>
         </Modal.Header>
-        <Modal.Body>
+        <Modal.Body className={theme === 'dark' ? 'bg-gray-800 text-gray-200' : ''}>
           Deleting this card may interrupt your subscription if no backup is
           available.
         </Modal.Body>
-        <Modal.Footer>
+        <Modal.Footer className={theme === 'dark' ? 'bg-gray-800 border-gray-700' : ''}>
           <Button
             style={{
               backgroundColor: "#E1ECFF",
