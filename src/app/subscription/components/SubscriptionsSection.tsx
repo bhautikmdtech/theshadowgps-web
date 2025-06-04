@@ -331,63 +331,44 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
     try {
       // If we're coming from reactivation flow or new subscription flow
-      if (reactivateStart || newSubStart) {
-        // First handle the payment update
+      if (newSubStart) {
+        if (!selectedPlanId) {
+          toast.error("Please select a plan first", {
+            position: "top-right",
+            autoClose: 5000,
+          });
+          setIsProcessing(false);
+          return;
+        }
+        await SubscriptionService.createNewSubscription(
+          token,
+          selectedPlanId,
+          customer.id,
+          selectedPaymentMethodId,
+          {
+            subscriptionIdDb: currentSubscription.subscriptionIdDb,
+            deviceId: currentSubscription.deviceId,
+            userId: customer.userId,
+          }
+        );
+        closeModal();
+        toast.success("New subscription created successfully");
+      } else {
         await SubscriptionService.updatePaymentMethod(
           token,
           currentSubscription.id,
           selectedPaymentMethodId
         );
-
-        // Now handle reactivation without refreshing the page to maintain state
-        if (reactivateStart && !currentSubscription.isCancelled) {
-          await SubscriptionService.reactivateSubscription(
-            token,
-            currentSubscription.id
-          );
-        }
-
-        // Handle plan update if needed
-        if (selectedPlanId && selectedPlanId !== currentSubscription.planId) {
-          await SubscriptionService.updateSubscriptionPlan(
-            token,
-            currentSubscription.id,
-            selectedPlanId
-          );
-        }
-
-        // Only refresh data once after all operations
-        await onRefresh();
-
-        toast.success("Subscription updated successfully", {
-          position: "top-right",
-          autoClose: 5000,
-        });
-
         closeModal();
-        return;
+        toast.success("Subscription updated successfully");
       }
 
-      // Regular payment method update flow
-      await SubscriptionService.updatePaymentMethod(
-        token,
-        currentSubscription.id,
-        selectedPaymentMethodId
-      );
-
-      await onRefresh();
-      toast.success("Payment method updated successfully", {
-        position: "top-right",
-        autoClose: 5000,
-      });
-
-      closeModal();
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       console.error("Payment update failed:", error);
-      toast.error(`Payment update failed: ${getErrorMessage(error)}`, {
-        position: "top-right",
-        autoClose: 5000,
-      });
+      toast.error(`Payment update failed: ${getErrorMessage(error)}`);
     } finally {
       setIsProcessing(false);
     }
@@ -400,8 +381,6 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
     selectedPlanId,
     getErrorMessage,
     closeModal,
-    reactivateStart,
-    onRefresh,
   ]);
 
   // Component rendering helpers
