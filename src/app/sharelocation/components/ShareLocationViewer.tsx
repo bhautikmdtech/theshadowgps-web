@@ -49,6 +49,7 @@ export default function LiveTracker({
   const [positions, setPositions] = useState<Position[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [locationMode, setLocationMode] = useState<string>("device");
+  const [isMapStable, setIsMapStable] = useState<boolean>(false);
 
   const mapRef = useRef<mapboxgl.Map>(null);
   const deviceMarkerRef = useRef<mapboxgl.Marker | null>(null);
@@ -57,6 +58,7 @@ export default function LiveTracker({
   const routeSourceId = "route-arrow";
   const routeLayerId = "route-arrow-line";
   const watchIdRef = useRef<number | null>(null);
+  const prevLocationModeRef = useRef<string>("device");
 
   // Initialize with device info and positions
   useEffect(() => {
@@ -76,7 +78,10 @@ export default function LiveTracker({
         watchIdRef.current = null;
       }
 
+      // Don't change mode automatically on every interaction
+      // Only if we're in one of the tracking modes
       if (prevActive === "mobile" || prevActive === "device") {
+        prevLocationModeRef.current = "none";
         return "none"; // <- must return new state
       }
 
@@ -203,6 +208,9 @@ export default function LiveTracker({
         }
       });
 
+      // Once map is loaded, mark it as stable to allow position updates
+      setIsMapStable(true);
+
       // Force a rerender to update the MapControls component
       setPositions((prev) => [...prev]);
     },
@@ -227,7 +235,8 @@ export default function LiveTracker({
         updateRoute(updated);
 
         // Only center the map if the device location tracking is active
-        if (mapRef.current && locationMode === "device") {
+        // and the map is already stable (prevents constant refreshing)
+        if (mapRef.current && locationMode === "device" && isMapStable) {
           mapRef.current.flyTo({
             center: [newPosition.lng, newPosition.lat],
             zoom: 16,
@@ -241,7 +250,7 @@ export default function LiveTracker({
         return updated;
       });
     },
-    [updateRoute, locationMode]
+    [updateRoute, locationMode, isMapStable]
   );
 
   useEffect(() => {
@@ -267,7 +276,12 @@ export default function LiveTracker({
 
   // Effect to update the map when device location tracking is toggled
   useEffect(() => {
-    if (locationMode === "device" && mapRef.current && positions.length > 0) {
+    if (!mapRef.current || !isMapStable) return;
+    
+    // Store current location mode in ref for future reference
+    prevLocationModeRef.current = locationMode;
+    
+    if (locationMode === "device" && positions.length > 0) {
       const latest = positions[positions.length - 1];
       mapRef.current.flyTo({
         center: [latest.lng, latest.lat],
@@ -276,7 +290,7 @@ export default function LiveTracker({
         duration: 500,
       });
     }
-  }, [locationMode, positions]);
+  }, [locationMode, positions, isMapStable]);
 
   // Function to recreate all markers after style changes
   const recreateMarkers = useCallback(() => {
