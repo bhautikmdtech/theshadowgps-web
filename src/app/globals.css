@@ -131,3 +131,47 @@ body {
   font-family: "Airbnb Cereal", sans-serif !important;
   color: #3d4b65;
 }
+
+/* ---------------------- Toast CSS ------------------------------- */
+
+/* Improve toast styling */
+.Toastify__toast {
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Toast animation entrances and exits like mobile */
+.Toastify__close-button {
+  top: 15px;
+  right: 10px;
+}
+
+.Toastify__toast--success {
+  background-color: #337cfd !important;
+}
+
+.Toastify__toast--error {
+  background-color: #ff824c !important;
+}
+
+.Toastify__toast--info {
+  background-color: #0077b6 !important;
+}
+
+.Toastify__toast--warning {
+  background-color: #ee9b00 !important;
+}
+
+.mobile-style-toast {
+  border-radius: 50px !important;
+  padding: 12px 16px !important;
+  min-height: auto !important;
+  font-weight: 500 !important;
+}
+
+@media only screen and (max-width: 480px) {
+  .Toastify__toast {
+    max-width: 350px;
+    margin: 15px;
+  }
+}

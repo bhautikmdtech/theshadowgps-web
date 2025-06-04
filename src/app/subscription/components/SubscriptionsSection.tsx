@@ -211,10 +211,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
 
         // If we got this far, the action was successful
         await onRefresh();
-        toast.success(successMessage, {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        toast.success(successMessage);
 
         if (reactivateStart) {
           openModal("updatePayment", currentSubscription);
@@ -223,10 +220,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
         }
       } catch (error: any) {
         console.error("Subscription action failed:", error);
-        toast.error(`Action failed: ${getErrorMessage(error)}`, {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        toast.error(`Action failed: ${getErrorMessage(error)}`);
         closeModal();
       } finally {
         setIsProcessing(false);
@@ -290,10 +284,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       .then(async (response) => {
         // Update successful
         await onRefresh();
-        toast.success("Subscription plan updated successfully", {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        toast.success("Subscription plan updated successfully");
 
         if (reactivateStart) {
           openModal("updatePayment", currentSubscription);
@@ -303,10 +294,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       })
       .catch((error) => {
         console.error("Plan update failed:", error);
-        toast.error(`Plan update failed: ${getErrorMessage(error)}`, {
-          position: "top-right",
-          autoClose: 5000,
-        });
+        toast.error(`Plan update failed: ${getErrorMessage(error)}`);
         closeModal();
       })
       .finally(() => {
@@ -333,10 +321,7 @@ const SubscriptionSection: React.FC<SubscriptionsSectionProps> = ({
       // If we're coming from reactivation flow or new subscription flow
       if (newSubStart) {
         if (!selectedPlanId) {
-          toast.error("Please select a plan first", {
-            position: "top-right",
-            autoClose: 5000,
-          });
+          toast.error("Please select a plan first");
           setIsProcessing(false);
           return;
         }

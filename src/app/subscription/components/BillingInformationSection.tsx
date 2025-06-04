@@ -3,6 +3,7 @@ import { Accordion } from "react-bootstrap";
 import Image from "next/image";
 import UpdateBillingModal from "./UpdateBillingModal";
 import { SubscriptionService } from "./subscriptionService";
+import { toast } from "react-toastify";
 
 interface Customer {
   id: string;
@@ -53,7 +54,8 @@ export default function BillingInformationSection({
     setIsProcessing(true);
     try {
       await SubscriptionService.updateBillingInfo(token, customer?.id, data);
-      await onRefresh();
+      toast.success("Customer Information Updated Successfully!")
+      onRefresh();
     } catch (error) {
       console.error("Failed to update plan:", error);
     } finally {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ToastContainer } from "react-toastify";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -24,6 +25,21 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <ToastContainer
+            position="top-center"
+            autoClose={3000}
+            hideProgressBar={true}
+            newestOnTop={true}
+            closeOnClick={true}
+            closeButton={false}
+            pauseOnFocusLoss={true}
+            draggable={"touch"}
+            draggableDirection="y"
+            pauseOnHover={true}
+            draggablePercent={100}
+            theme="colored"
+            toastClassName="mobile-style-toast"
+          />
           {children}
         </ThemeProvider>
       </body>
