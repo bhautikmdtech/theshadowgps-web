@@ -51,9 +51,7 @@ export default function PaymentMethodsSection({
 
   const toggleDropdown = (paymentMethodId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setOpenDropdownId(
-      openDropdownId === paymentMethodId ? null : paymentMethodId
-    );
+    setOpenDropdownId(paymentMethodId || null);
   };
 
   useEffect(() => {
@@ -210,7 +208,8 @@ export default function PaymentMethodsSection({
                         </div>
                       </div>
 
-                      {!method.isDefault || !method.isSub ? (
+                      {((!method.isDefault && !method.expired) ||
+                        !method.isSub) && (
                         <div className="payment-actions relative">
                           <button
                             type="button"
@@ -258,7 +257,7 @@ export default function PaymentMethodsSection({
                             </div>
                           )}
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   );
                 })}

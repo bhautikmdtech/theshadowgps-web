@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Button, Form, Spinner } from "react-bootstrap";
+import { toast } from "react-toastify";
+import * as Yup from "yup";
 
 interface UpdateBillingModalProps {
   show: boolean;
@@ -11,6 +13,11 @@ interface UpdateBillingModalProps {
     email: string;
   };
 }
+
+const validationSchema = Yup.object().shape({
+  name: Yup.string().required("Name is required"),
+  email: Yup.string().email("Invalid email").required("Email is required"),
+});
 
 export default function UpdateBillingModal({
   show,
@@ -36,7 +43,14 @@ export default function UpdateBillingModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onConfirm(formData);
+    validationSchema
+      .validate(formData)
+      .then(() => {
+        onConfirm(formData);
+      })
+      .catch((err: Yup.ValidationError) => {
+        toast.error(err.message);
+      });
   };
 
   return (
@@ -47,11 +61,15 @@ export default function UpdateBillingModal({
       <Modal.Body>
         <Form id="billing-form" onSubmit={handleSubmit}>
           <Form.Group className="mb-4">
-            <Form.Label style={{ 
-              fontSize: '14px',
-              color: '#0C1F3F',
-              marginBottom: '8px'
-            }}>Name</Form.Label>
+            <Form.Label
+              style={{
+                fontSize: "14px",
+                color: "#0C1F3F",
+                marginBottom: "8px",
+              }}
+            >
+              Name
+            </Form.Label>
             <Form.Control
               type="text"
               name="name"
@@ -65,16 +83,20 @@ export default function UpdateBillingModal({
                 border: "1px solid #E5E7EB",
                 borderRadius: "8px",
                 backgroundColor: "#FFFFFF",
-                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
               }}
             />
           </Form.Group>
           <Form.Group className="mb-4">
-            <Form.Label style={{ 
-              fontSize: '14px',
-              color: '#0C1F3F',
-              marginBottom: '8px'
-            }}>Email</Form.Label>
+            <Form.Label
+              style={{
+                fontSize: "14px",
+                color: "#0C1F3F",
+                marginBottom: "8px",
+              }}
+            >
+              Email
+            </Form.Label>
             <Form.Control
               type="email"
               name="email"
@@ -88,8 +110,9 @@ export default function UpdateBillingModal({
                 border: "1px solid #E5E7EB",
                 borderRadius: "8px",
                 backgroundColor: "#FFFFFF",
-                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+                boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
               }}
+              disabled
             />
           </Form.Group>
         </Form>

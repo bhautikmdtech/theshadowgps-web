@@ -54,8 +54,8 @@ export default function BillingInformationSection({
     setIsProcessing(true);
     try {
       await SubscriptionService.updateBillingInfo(token, customer?.id, data);
-      toast.success("Customer Information Updated Successfully!")
-      onRefresh();
+      await onRefresh();
+      toast.success("Customer Information Updated Successfully!");
     } catch (error) {
       console.error("Failed to update plan:", error);
     } finally {

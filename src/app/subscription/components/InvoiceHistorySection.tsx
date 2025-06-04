@@ -114,18 +114,20 @@ export default function InvoiceHistorySection({
                     <span
                       className="invoice-status badge rounded-pill"
                       style={{
-                        backgroundColor:
-                          invoice.status === "paid"
-                            ? "#D6E6FF"
-                            : invoice.status === "failed"
-                            ? "#ffe6e6"
-                            : invoice.status === "draft"
-                            ? "#ffe6e6"
-                            : invoice.status === "uncollectible"
-                            ? "#ffe6e6"
-                            : invoice.status === "void"
-                            ? "#f0f0f5"
-                            : "#6c757d", // default color for any other status
+                        backgroundColor: (() => {
+                          switch (invoice.status) {
+                            case "paid":
+                              return "#D6E6FF";
+                            case "failed":
+                            case "draft":
+                            case "uncollectible":
+                              return "#ffe6e6";
+                            case "void":
+                              return "#f0f0f5";
+                            default:
+                              return "#6c757d"; // default color for any other status
+                          }
+                        })(),
                         color:
                           invoice.status === "paid" || invoice.status === "open"
                             ? "#3D4B65"
