@@ -148,145 +148,128 @@ export default function PaymentMethodsSection({
             {/* Display Payment Methods */}
             {paymentMethods.length > 0 ? (
               <div className="payment-methods-list">
-                {paymentMethods.map((method: PaymentMethod) => (
-                  <div
-                    key={method.id}
-                    className="payment-method flex justify-between items-center py-2 border-b"
-                  >
-                    <div className="payment-info flex items-center">
-                      <div className="card-icon mr-3">
-                        {(() => {
-                          const IconComponent = getCardIcon(method.brand);
-                          return (
-                            <>
-                              {React.isValidElement(IconComponent) ? (
-                                IconComponent
-                              ) : (
-                                <FaCreditCard
-                                  size={26}
-                                  className="text-gray-800"
-                                />
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                      <div className="card-details">
-                        <div
-                          className="card-number"
-                          style={{
-                            color: "#0C1F3F",
-                            fontSize: "16px",
-                            fontWeight: "600",
-                          }}
-                        >
-                          {getCardLabel(method.brand)} **** {method.last4}
-                          {method.isDefault && (
-                            <span
-                              className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: "#D6E6FF",
-                                color: "#3D4B65",
-                                fontSize: "12px",
-                              }}
-                            >
-                              Default
-                            </span>
-                          )}
-                          {method.expired && (
-                            <span
-                              className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: "#fee6da",
-                                color: "#3d4b65",
-                                fontSize: "12px",
-                              }}
-                            >
-                              Expired
-                            </span>
-                          )}
-                          {method.expiredSoon && (
-                            <span
-                              className="ml-2  text-xs px-2.5 py-0.5 rounded-full"
-                              style={{
-                                backgroundColor: "#fee6da",
-                                color: "#3d4b65",
-                                fontSize: "12px",
-                              }}
-                            >
-                              Expired Soon
-                            </span>
-                          )}
+                {paymentMethods.map((method: PaymentMethod) => {
+                  return (
+                    <div
+                      key={method.id}
+                      className={`payment-method flex justify-between items-center py-2 border-b `}
+                    >
+                      <div className="payment-info flex items-center">
+                        <div className="card-icon mr-3">
+                          {(() => {
+                            const IconComponent = getCardIcon(method.brand);
+                            return React.isValidElement(IconComponent) ? (
+                              IconComponent
+                            ) : (
+                              <FaCreditCard
+                                size={26}
+                                className="text-gray-800"
+                              />
+                            );
+                          })()}
                         </div>
-                        <div
-                          className="card-expiry text-gray-500 text-sm"
-                          style={{ color: "#0C1F3F", fontSize: "14px" }}
-                        >
-                          Expires {method.expMonth}/{method.expYear}
-                        </div>
-                      </div>
-                    </div>
-                    {
-                      (!method.isDefault || !method.isSub)
-                      &&
-                      <div className="payment-actions relative">
-                      <button
-                        type="button"
-                        onClick={(e) => toggleDropdown(method.id, e)}
-                        className="text-gray-600 hover:text-gray-800 p-1 focus:outline-none"
-                        aria-expanded={openDropdownId === method.id}
-                      >
-                        <FaEllipsisV />
-                      </button>
 
-                      {openDropdownId === method.id && (
-                        <div
-                          ref={(el) => {
-                            dropdownRefs.current[method.id] = el;
-                          }}
-                          className="absolute right-0 z-50 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
-                        >
-                          <div className="py-1">
-                            {!method.isDefault && (
-                              <button
-                                type="button"
-                                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                                onClick={() => {
-                                  handleMakeDefaultPaymentMethod(method.id);
-                                  setOpenDropdownId(null);
-                                }}
-                                disabled={isProcessing}
+                        <div className="card-details">
+                          <div
+                            className="card-number text-[#0C1F3F] text-[16px] font-semibold"
+                            style={{ fontSize: "16px" }}
+                          >
+                            {getCardLabel(method.brand)} **** {method.last4}
+                            {method.isDefault && (
+                              <span
+                                className="ml-2 text-xs px-2.5 py-0.5 rounded-full bg-[#D6E6FF] text-[#3D4B65]"
+                                style={{ fontSize: "12px" }}
                               >
-                                <FaCheck className="mr-2" />
-                                Make Default
-                              </button>
+                                Default
+                              </span>
                             )}
-                            {!method.isSub
-                              &&
-                              <button
-                              type="button"
-                              className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-                              onClick={() => handleDeleteClick(method.id)}
-                              disabled={isProcessing}
-                            >
-                              <FaTrash className="mr-2" />
-                              Delete
-                            </button>
-                            }
+                            {method.expired && (
+                              <span
+                                className="ml-2 text-xs px-2.5 py-0.5 rounded-full bg-[#fee6da] text-[#3d4b65]"
+                                style={{ fontSize: "12px" }}
+                              >
+                                Expired
+                              </span>
+                            )}
+                            {method.expiredSoon && (
+                              <span
+                                className="ml-2 text-xs px-2.5 py-0.5 rounded-full bg-[#fee6da] text-[#3d4b65]"
+                                style={{ fontSize: "12px" }}
+                              >
+                                Expired Soon
+                              </span>
+                            )}
+                          </div>
+
+                          <div
+                            className="card-expiry text-[#0C1F3F]"
+                            style={{ fontSize: "14px" }}
+                          >
+                            Expires {method.expMonth}/{method.expYear}
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {!method.isDefault || !method.isSub ? (
+                        <div className="payment-actions relative">
+                          <button
+                            type="button"
+                            onClick={(e) => toggleDropdown(method.id, e)}
+                            className="text-gray-600 hover:text-gray-800 p-1 focus:outline-none"
+                            aria-expanded={openDropdownId === method.id}
+                          >
+                            <FaEllipsisV />
+                          </button>
+
+                          {openDropdownId === method.id && (
+                            <div
+                              ref={(el) => {
+                                dropdownRefs.current[method.id] = el;
+                              }}
+                              className="absolute right-0 z-50 mt-1 w-48 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none"
+                            >
+                              <div className="py-1">
+                                {!method.isDefault && !method.expired && (
+                                  <button
+                                    type="button"
+                                    className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                                    onClick={() => {
+                                      handleMakeDefaultPaymentMethod(method.id);
+                                      setOpenDropdownId(null);
+                                    }}
+                                    disabled={isProcessing}
+                                  >
+                                    <FaCheck className="mr-2" />
+                                    Make Default
+                                  </button>
+                                )}
+                                {!method.isSub && (
+                                  <button
+                                    type="button"
+                                    className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                    onClick={() => handleDeleteClick(method.id)}
+                                    disabled={isProcessing}
+                                  >
+                                    <FaTrash className="mr-2" />
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
-                    }
-                  </div>
-                ))}
+                  );
+                })}
+
                 <div
-                  className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2 "
+                  className="add-payment-btn mt-3 flex items-center cursor-pointer gap-2"
                   onClick={handleAddPaymentMethod}
                 >
                   <Image
                     src="/add-circle.svg"
-                    alt="Edit"
+                    alt="Add"
                     width={24}
                     height={24}
                   />
@@ -295,17 +278,11 @@ export default function PaymentMethodsSection({
               </div>
             ) : (
               <div
-                className="add-payment-btn flex items-center cursor-pointer gap-2 "
+                className="add-payment-btn flex items-center cursor-pointer gap-2"
                 onClick={handleAddPaymentMethod}
                 style={{ color: "#0C1F3F" }}
               >
-                {" "}
-                <Image
-                  src="/add-circle.svg"
-                  alt="Edit"
-                  width={24}
-                  height={24}
-                />
+                <Image src="/add-circle.svg" alt="Add" width={24} height={24} />
                 <span>Add payment method</span>
               </div>
             )}
