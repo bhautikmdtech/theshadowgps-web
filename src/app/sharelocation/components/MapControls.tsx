@@ -284,7 +284,7 @@ const MapControls = ({
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 z-10">
+    <div className="flex flex-col gap-4 z-10">
       <div ref={dropdownRef} className="relative">
         <button
           onClick={handleLayerToggle}

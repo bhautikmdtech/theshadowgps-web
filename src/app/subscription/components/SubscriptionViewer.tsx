@@ -5,7 +5,7 @@ import { FaChevronLeft, FaExclamationCircle } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe, Stripe, StripeElementsOptions } from "@stripe/stripe-js";
-import { Navbar } from "react-bootstrap";
+import { FadeLoader } from "react-spinners";
 
 import { SubscriptionData } from "./types";
 import SubscriptionsSection from "./SubscriptionsSection";
@@ -143,9 +143,9 @@ export default function SubscriptionViewer({
           e.preventDefault();
 
           if (distanceRef.current && contentRef.current && !refreshing) {
-            const distance = Math.min(pullDistance * 0.5, 150);
+            const distance = Math.min(pullDistance * 0.5, 100);
             distanceRef.current.style.height = `${distance}px`;
-            distanceRef.current.style.opacity = (distance / 150).toString();
+            distanceRef.current.style.opacity = (distance / 100).toString();
             contentRef.current.style.transform = `translateY(${distance}px)`;
           }
         }
@@ -314,8 +314,26 @@ export default function SubscriptionViewer({
           zIndex: 5,
         }}
       >
-        <div className={`refresh-spinner ${refreshing ? "spinning" : ""}`}>
-          {refreshing ? "Refreshing..." : "Pull to refresh"}
+        <div className="d-flex flex-column align-items-center">
+          {refreshing ? (
+            <>
+              <FadeLoader
+                color="#000000"
+                height={12}
+                width={3}
+                radius={2}
+                margin={2}
+              />
+            </>
+          ) : (
+            <FadeLoader
+              color="#000000"
+              height={12}
+              width={3}
+              radius={2}
+              margin={2}
+            />
+          )}
         </div>
       </div>
 
