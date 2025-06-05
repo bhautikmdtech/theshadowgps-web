@@ -78,10 +78,10 @@ export default function SubscriptionViewer({
   const [stripePromise, setStripePromise] =
     useState<Promise<Stripe | null> | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [isNavFixed, setIsNavFixed] = useState(false);
+  // const [isNavFixed, setIsNavFixed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const navbarRef = useRef<HTMLDivElement>(null);
-  const prevScrollY = useRef(0);
+  // const navbarRef = useRef<HTMLDivElement>(null);
+  // const prevScrollY = useRef(0);
   const pullStartY = useRef(0);
   const pullMoveY = useRef(0);
   const refreshDistance = 150; // Minimum distance to pull for refresh
@@ -89,24 +89,24 @@ export default function SubscriptionViewer({
   const contentRef = useRef<HTMLDivElement>(null);
 
   // Handle scroll for fixed navbar
-  useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+  // useEffect(() => {
+  //   const handleScroll = () => {
+  //     const currentScrollY = window.scrollY;
 
-      if (currentScrollY > 100) {
-        // Only set state if it changes
-        if (!isNavFixed) setIsNavFixed(true);
-      } else {
-        // Only set state if it changes
-        if (isNavFixed) setIsNavFixed(false);
-      }
+  //     if (currentScrollY > 100) {
+  //       // Only set state if it changes
+  //       if (!isNavFixed) setIsNavFixed(true);
+  //     } else {
+  //       // Only set state if it changes
+  //       if (isNavFixed) setIsNavFixed(false);
+  //     }
 
-      prevScrollY.current = currentScrollY;
-    };
+  //     prevScrollY.current = currentScrollY;
+  //   };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [isNavFixed]);
+  //   window.addEventListener("scroll", handleScroll, { passive: true });
+  //   return () => window.removeEventListener("scroll", handleScroll);
+  // }, [isNavFixed]);
 
   useEffect(() => {
     if (!initialData) {
@@ -269,7 +269,7 @@ export default function SubscriptionViewer({
 
   return (
     <div className="bg-white min-vh-100">
-      <Navbar
+      {/* <Navbar
         ref={navbarRef}
         className={`bg-white border-bottom transition-all duration-300 ${
           isNavFixed ? "fixed-top shadow-sm animate-slideDown" : ""
@@ -282,9 +282,6 @@ export default function SubscriptionViewer({
         }}
       >
         <div className="container d-flex align-items-center h-100 px-4">
-          {/* <div>
-            <BackButton />
-          </div> */}
           <h5
             className="mb-0"
             style={{
@@ -296,9 +293,9 @@ export default function SubscriptionViewer({
             Subscription Management
           </h5>
         </div>
-      </Navbar>
+      </Navbar> */}
 
-      {isNavFixed && <div style={{ height: "58px" }} />}
+      {/* {isNavFixed && <div style={{ height: "58px" }} />} */}
 
       {/* Pull to refresh indicator */}
       <div
