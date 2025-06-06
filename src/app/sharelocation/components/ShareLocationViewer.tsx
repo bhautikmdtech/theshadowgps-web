@@ -8,7 +8,12 @@ import { useTheme } from "next-themes";
 import { ThemeToggle } from "@/components/theme-toggle";
 import MapComponent from "@/services/MapService";
 import { createDeviceMarker, createStartMarker } from "./DeviceMarker";
-// Import MapControls dynamically
+
+// Event name constants to avoid typos
+const EVENT_TRACKING_MODE_CHANGED = "trackingModeChanged";
+const EVENT_MAP_STYLE_CHANGED = "mapStyleChanged";
+
+// Import components dynamically
 const DynamicMapControls = dynamic(() => import("./MapControls"), {
   ssr: false,
   loading: () => null,
@@ -37,9 +42,9 @@ export default function LiveTracker({
 }: {
   shareToken: string;
   initialData: {
-    deviceInfo?: DeviceInfo,
-    latestPoint?: Position
-    expiresAt?: string
+    deviceInfo?: DeviceInfo;
+    latestPoint?: Position;
+    expiresAt?: string;
   };
 }) {
   const { theme, systemTheme } = useTheme();
@@ -58,7 +63,24 @@ export default function LiveTracker({
   const routeSourceId = "route-arrow";
   const routeLayerId = "route-arrow-line";
   const watchIdRef = useRef<number | null>(null);
-  const prevLocationModeRef = useRef<string>("device");
+  const locationModeRef = useRef<string>(locationMode);
+
+  // testing point adding using page up button
+  // useEffect(() => {
+  //   let lat = 18.479866;
+  //   window.addEventListener("keydown", function (event) {
+  //     if (event.key === "PageUp") {
+  //       handlePositionUpdate({
+  //         address: "Middlecroft Rd 164, Elkton, MD 21921, USA",
+  //         lat: lat,
+  //         lng: 73.827647,
+  //         speed: 0,
+  //         tm: 1749177370,
+  //       });
+  //     }
+  //     lat = lat + 0.001;
+  //   });
+  // }, []);
 
   // Initialize with device info and positions
   useEffect(() => {
@@ -70,23 +92,21 @@ export default function LiveTracker({
     }
   }, [initialData]);
 
+  // Update the ref whenever locationMode changes
+  useEffect(() => {
+    locationModeRef.current = locationMode;
+  }, [locationMode]);
+
+  // Function to handle user interaction with the map
   const handleUserInteraction = () => {
-    // Only clear watch if mobile location was active
-    setLocationMode((prevActive) => {
-      if (prevActive === "mobile" && watchIdRef.current) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
+    if (locationMode === "mobile" && watchIdRef.current) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
 
-      // Don't change mode automatically on every interaction
-      // Only if we're in one of the tracking modes
-      if (prevActive === "mobile" || prevActive === "device") {
-        prevLocationModeRef.current = "none";
-        return "none"; // <- must return new state
-      }
-
-      return prevActive; // <- fallback to current if no change
-    });
+    if (locationMode === "mobile" || locationMode === "device") {
+      setLocationMode("none");
+    }
   };
 
   // Function to update the route on the map
@@ -97,6 +117,7 @@ export default function LiveTracker({
     const coordinates = positions.map(
       (p) => [p.lng, p.lat] as [number, number]
     );
+
     const routeGeoJSON: GeoJSON.Feature<GeoJSON.LineString> = {
       type: "Feature",
       properties: {},
@@ -112,7 +133,6 @@ export default function LiveTracker({
       try {
         source = map.getSource(routeSourceId) as mapboxgl.GeoJSONSource;
       } catch {
-        // Source doesn't exist yet or was removed during style change
         source = null;
       }
 
@@ -122,11 +142,10 @@ export default function LiveTracker({
       } else {
         // Create new source and layer
         try {
-          // First check if the layer exists, and remove it if it does
+          // Remove existing layer and source if they exist
           if (map.getLayer(routeLayerId)) {
             map.removeLayer(routeLayerId);
           }
-          // Check if source exists and remove it
           if (map.getSource(routeSourceId)) {
             map.removeSource(routeSourceId);
           }
@@ -160,12 +179,49 @@ export default function LiveTracker({
     }
   }, []);
 
+  // Handle position updates from the socket
+  function handlePositionUpdate(newPosition: Position) {
+    setPositions((prev) => {
+      const last = prev[prev.length - 1];
+      // Skip if position hasn't changed
+      if (last?.lat === newPosition.lat && last?.lng === newPosition.lng) {
+        return prev;
+      }
+
+      const updated = [...prev, newPosition];
+
+      // Update device marker position if it exists
+      if (deviceMarkerRef.current) {
+        deviceMarkerRef.current.setLngLat([newPosition.lng, newPosition.lat]);
+      }
+
+      // Update route with new positions
+      updateRoute(updated);
+
+      // Only center the map if device location tracking is active
+      if (
+        mapRef.current &&
+        locationModeRef.current === "device" &&
+        isMapStable
+      ) {
+        mapRef.current.easeTo({
+          center: [newPosition.lng, newPosition.lat],
+          duration: 500,
+        });
+      }
+
+      return updated;
+    });
+  }
+
+  // Handle map load and initialize markers
   const handleMapLoad = useCallback(
     (map: mapboxgl.Map) => {
       if (positions.length === 0) return;
 
       const latest = positions[positions.length - 1];
 
+      // Create device marker
       deviceMarkerRef.current = createDeviceMarker({
         position: latest,
         device,
@@ -173,86 +229,41 @@ export default function LiveTracker({
         isMotion: positions.length > 1,
       });
 
+      // Create start marker
       startMarkerRef.current = createStartMarker({
         position: positions[0],
         device,
         mapRef,
       });
 
+      // Create route if multiple positions exist
       if (positions.length > 1) {
         updateRoute(positions);
       }
 
-      // Center map on device location by default if device location tracking is active
-      if (locationMode === "device" && latest) {
-        map.flyTo({
-          center: [latest.lng, latest.lat],
-          zoom: 16,
-          essential: true,
-          duration: 500,
-        });
+      // Center map on device location if tracking is active
+      if (locationMode === "device" && latest && !isMapStable) {
+        map.setCenter([latest.lng, latest.lat]);
+        map.setZoom(16);
       }
 
-      // Attach event listeners to detect when user manually interacts with the map
+      // Add event listener for user interaction
       map.on("dragstart", handleUserInteraction);
-      // map.on("zoomstart", handleUserInteraction);
-      // map.on("rotatestart", handleUserInteraction);
-      // map.on("pitchstart", handleUserInteraction);
-      // Don't trigger on moveend as it fires after programmatic movements too
 
-      // Add listener for style changes directly on the map
+      // Add listener for style changes
       map.on("style.load", () => {
-        // This will run after any style change
         if (positions.length > 1) {
           setTimeout(() => updateRoute(positions), 100);
         }
       });
 
-      // Once map is loaded, mark it as stable to allow position updates
+      // Mark map as stable
       setIsMapStable(true);
-
-      // Force a rerender to update the MapControls component
-      setPositions((prev) => [...prev]);
     },
     [positions, device, locationMode, updateRoute]
   );
 
-  const handlePositionUpdate = useCallback(
-    (newPosition: Position) => {
-      setPositions((prev) => {
-        const last = prev[prev.length - 1];
-        if (last?.lat === newPosition.lat && last?.lng === newPosition.lng) {
-          return prev;
-        }
-
-        const updated = [...prev, newPosition];
-
-        // Update device marker position if it exists
-        if (deviceMarkerRef.current) {
-          deviceMarkerRef.current.setLngLat([newPosition.lng, newPosition.lat]);
-        }
-        // Update route with new positions
-        updateRoute(updated);
-
-        // Only center the map if the device location tracking is active
-        // and the map is already stable (prevents constant refreshing)
-        if (mapRef.current && locationMode === "device" && isMapStable) {
-          mapRef.current.flyTo({
-            center: [newPosition.lng, newPosition.lat],
-            zoom: 16,
-            speed: 0.8,
-            curve: 1.2,
-            duration: 1000,
-            essential: true,
-          });
-        }
-
-        return updated;
-      });
-    },
-    [updateRoute, locationMode, isMapStable]
-  );
-
+  // Connect to socket for location updates
   useEffect(() => {
     if (!shareToken) return;
 
@@ -272,27 +283,70 @@ export default function LiveTracker({
       socket.off("sharedPositionUpdate", handlePositionUpdate);
       socket.disconnect();
     };
-  }, [shareToken, handlePositionUpdate]);
+  }, [shareToken]);
 
-  // Effect to update the map when device location tracking is toggled
+  // Listen for tracking mode changes
+  useEffect(() => {
+    const handleTrackingModeChange = (event: CustomEvent) => {
+      const { mode } = event.detail;
+      locationModeRef.current = mode;
+
+      // If mode is 'device', ensure we're showing the device on the map
+      if (mode === "device" && positions.length > 0) {
+        const latest = positions[positions.length - 1];
+
+        // Ensure the device marker is visible
+        if (!deviceMarkerRef.current && mapRef.current) {
+          deviceMarkerRef.current = createDeviceMarker({
+            position: latest,
+            device,
+            mapRef,
+            isMotion: positions.length > 1,
+          });
+        }
+
+        // Center the map on the device
+        if (mapRef.current) {
+          mapRef.current.easeTo({
+            center: [latest.lng, latest.lat],
+            zoom: 16,
+            duration: 500,
+          });
+        }
+      }
+    };
+
+    window.addEventListener(
+      EVENT_TRACKING_MODE_CHANGED,
+      handleTrackingModeChange as EventListener
+    );
+
+    return () => {
+      window.removeEventListener(
+        EVENT_TRACKING_MODE_CHANGED,
+        handleTrackingModeChange as EventListener
+      );
+    };
+  }, [positions, device]);
+
+  // Update map when location mode changes
   useEffect(() => {
     if (!mapRef.current || !isMapStable) return;
-    
-    // Store current location mode in ref for future reference
-    prevLocationModeRef.current = locationMode;
-    
+
+    locationModeRef.current = locationMode;
+
+    // Only fly to device location if changing to device mode
     if (locationMode === "device" && positions.length > 0) {
       const latest = positions[positions.length - 1];
-      mapRef.current.flyTo({
+      mapRef.current.easeTo({
         center: [latest.lng, latest.lat],
         zoom: 16,
-        essential: true,
         duration: 500,
       });
     }
   }, [locationMode, positions, isMapStable]);
 
-  // Function to recreate all markers after style changes
+  // Function to recreate markers after style changes
   const recreateMarkers = useCallback(() => {
     if (positions.length === 0 || !mapRef.current) return;
 
@@ -320,29 +374,35 @@ export default function LiveTracker({
     });
   }, [positions, device, mapRef]);
 
-  // Effect to listen for map style changes and recreate the route and markers
+  // Handle map style changes
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const handleStyleChange = () => {
-      if (positions.length > 1) {
-        // Wait for a moment to ensure the map is fully loaded
-        setTimeout(() => {
+      map.once("style.load", () => {
+        if (positions.length > 1) {
           updateRoute(positions);
-          recreateMarkers();
-        }, 100);
-      }
+        }
+        recreateMarkers();
+      });
     };
 
-    window.addEventListener("mapStyleChanged", handleStyleChange);
+    // Listen for style change events
+    window.addEventListener(EVENT_MAP_STYLE_CHANGED, handleStyleChange);
+    map.on("style.load", () => {
+      if (positions.length > 1) {
+        updateRoute(positions);
+      }
+      recreateMarkers();
+    });
 
     return () => {
-      window.removeEventListener("mapStyleChanged", handleStyleChange);
+      window.removeEventListener(EVENT_MAP_STYLE_CHANGED, handleStyleChange);
     };
   }, [mapRef, positions, updateRoute, recreateMarkers]);
 
-  // Clean up markers when component unmounts
+  // Clean up markers on unmount
   useEffect(() => {
     return () => {
       if (deviceMarkerRef.current) {
@@ -350,6 +410,9 @@ export default function LiveTracker({
       }
       if (startMarkerRef.current) {
         startMarkerRef.current.remove();
+      }
+      if (watchIdRef.current) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
   }, []);
@@ -468,8 +531,9 @@ export default function LiveTracker({
               initialPosition={positions[positions.length - 1]}
               onMapLoad={handleMapLoad}
               mapRef={mapRef}
+              zoom={16}
             />
-            {/* MapControls will be dynamically loaded and will handle its own initialization */}
+            {/* Map Controls */}
             <div className="fixed right-3 bottom-[110px] md:bottom-[10px] md:right-4 z-[999]">
               {positions.length > 0 && (
                 <DynamicMapControls
@@ -485,25 +549,23 @@ export default function LiveTracker({
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 rounded-t-[24px] shadow-lg z-[9]">
               <div className="flex items-center justify-between p-4">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    {device?.imageUrl ? (
-                      <Image
-                        src={device.imageUrl}
-                        alt="Device"
-                        width={40}
-                        height={40}
-                        className="rounded-full object-cover border"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold">
-                        {device?.deviceName?.charAt(0) || "T"}
-                      </div>
-                    )}
-                    <div>
-                      <h6 className="font-medium text-base m-0 text-gray-900 dark:text-gray-100">
-                        {device?.deviceName || "My Tracker"}
-                      </h6>
+                  {device?.imageUrl ? (
+                    <Image
+                      src={device.imageUrl}
+                      alt="Device"
+                      width={40}
+                      height={40}
+                      className="rounded-full object-cover border"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center font-bold">
+                      {device?.deviceName?.charAt(0) || "T"}
                     </div>
+                  )}
+                  <div>
+                    <h6 className="font-medium text-base m-0 text-gray-900 dark:text-gray-100">
+                      {device?.deviceName || "My Tracker"}
+                    </h6>
                   </div>
                 </div>
                 <div>

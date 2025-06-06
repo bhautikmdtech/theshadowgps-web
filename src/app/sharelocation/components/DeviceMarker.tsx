@@ -27,10 +27,7 @@ export const createDeviceMarker = ({
   mapRef,
   isMotion,
 }: DeviceMarkerProps): mapboxgl.Marker | null => {
-  if (!mapRef.current) {
-    console.error('Map instance is not available');
-    return null;
-  }
+  if (!mapRef.current) return null;
 
   try {
     const container = document.createElement('div');
@@ -60,9 +57,9 @@ export const createDeviceMarker = ({
       maxWidth: '200px',
       className: 'custom-popup z-2',
     }).setHTML(`
-        <div class="p-2.5 shadow-sm border-0 bg-white rounded-lg " style="border-radius: 25px !important;">
+        <div class="p-2.5 shadow-sm border-0 bg-white rounded-lg" style="border-radius: 25px !important;">
            <div class="flex flex-col gap-0.5">
-<div class="flex items-center space-x-2 mb-2">
+              <div class="flex items-center space-x-2 mb-2">
                 ${
                   device?.imageUrl
                     ? `<img src="${device.imageUrl}" class="w-6 h-6 rounded-full object-cover" onerror="this.style.display='none'">`
@@ -71,35 +68,30 @@ export const createDeviceMarker = ({
                       </div>`
                 }
                 <div>
-                    <p class=" text-sm m-0" style="font-size: 16px !important;font-weight: 700 !important;color: #0C1F3F !important;">${
+                    <p class="text-sm m-0" style="font-size: 16px !important;font-weight: 700 !important;color: #0C1F3F !important;">${
                       device?.deviceName || 'Current Location'
                     }</p> 
                 </div>
-            </div>
-                
-                ${
-                  position.address
-                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        position.address
-                      )}" 
-                         target="_blank"
-                         class="text-[14px]"
-                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${
-                           position.address
-                         }</a>`
-                    : ''
-                }
-                ${
-                  position.tm
-                    ? `<span class="text-[14px] " style="font-size: 14px !important;font-weight: 400 !important;color: #6E798B !important;">${new Date(
-                        position.tm * 1000
-                      ).toLocaleTimeString('en-US', {
-                        hour: 'numeric',
-                        minute: '2-digit',
-                        hour12: true,
-                      })}</span>`
-                    : ''
-                }
+              </div>
+              ${
+                position.address
+                  ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position.address)}" 
+                       target="_blank"
+                       class="text-[14px]"
+                       style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${position.address}</a>`
+                  : ''
+              }
+              ${
+                position.tm
+                  ? `<span class="text-[14px]" style="font-size: 14px !important;font-weight: 400 !important;color: #6E798B !important;">${new Date(
+                      position.tm * 1000
+                    ).toLocaleTimeString('en-US', {
+                      hour: 'numeric',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}</span>`
+                  : ''
+              }
             </div>
         </div>
       `);
@@ -114,14 +106,9 @@ export const createDeviceMarker = ({
 
 export const createStartMarker = ({
   position,
-  // device,
   mapRef,
 }: DeviceMarkerProps): mapboxgl.Marker | null => {
-  const map = mapRef.current;
-  if (!map) {
-    console.error('Map instance is not available');
-    return null;
-  }
+  if (!mapRef.current) return null;
 
   try {
     const el = document.createElement('div');
@@ -134,7 +121,7 @@ export const createStartMarker = ({
 
     const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
       .setLngLat([position.lng, position.lat])
-      .addTo(map);
+      .addTo(mapRef.current);
 
     const popup = new mapboxgl.Popup({
       offset: [0, 0],
@@ -144,26 +131,19 @@ export const createStartMarker = ({
       maxWidth: '200px',
       className: 'custom-popup z-2',
     }).setHTML(`
-        <div class="p-2.5 shadow-sm border-0 bg-white rounded-full " style="border-radius: 25px !important;">
+        <div class="p-2.5 shadow-sm border-0 bg-white rounded-full" style="border-radius: 25px !important;">
             <div class="flex flex-col gap-0.5">
-               
-                ${
+               ${
                   position.address
-                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        position.address
-                      )}" 
+                    ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(position.address)}" 
                          target="_blank"
                          class="text-[14px]"
-                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${
-                           position.address
-                         }</a>`
+                         style="text-decoration: none; color: #337CFD !important; border: none !important; outline: none !important; -webkit-tap-highlight-color: transparent;">${position.address}</a>`
                     : ''
                 }
                 ${
                   position.tm
-                    ? `<span class="text-[11px] text-gray-500">${new Date(
-                        position.tm * 1000
-                      ).toLocaleTimeString('en-US', {
+                    ? `<span class="text-[11px] text-gray-500">${new Date(position.tm * 1000).toLocaleTimeString('en-US', {
                         hour: 'numeric',
                         minute: '2-digit',
                         hour12: true,
@@ -178,6 +158,32 @@ export const createStartMarker = ({
     return marker;
   } catch (error) {
     console.error('Error creating start marker:', error);
+    return null;
+  }
+};
+
+export const createPhoneLocationMarker = (
+  map: mapboxgl.Map,
+  lng: number,
+  lat: number
+): mapboxgl.Marker | null => {
+  try {
+    const el = document.createElement('div');
+    el.className = 'phone-location-marker';
+    Object.assign(el.style, {
+      width: '16px',
+      height: '16px',
+      borderRadius: '50%',
+      backgroundColor: '#4285F4',
+      border: '2px solid white',
+      boxShadow: '0 2px 5px rgba(0,0,0,0.3)'
+    });
+
+    return new mapboxgl.Marker({ element: el, anchor: 'center' })
+      .setLngLat([lng, lat])
+      .addTo(map);
+  } catch (error) {
+    console.error('Error creating phone location marker:', error);
     return null;
   }
 };

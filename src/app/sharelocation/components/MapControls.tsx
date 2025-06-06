@@ -5,11 +5,17 @@ import mapboxgl from "mapbox-gl";
 import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
 import Image from "next/image";
+import { 
+  MAPBOX_LIGHT, 
+  MAPBOX_DARK, 
+  MAPBOX_SATELLITE, 
+  MAPBOX_HYBRID 
+} from "@/services/MapService";
+import { createPhoneLocationMarker } from "./DeviceMarker";
 
-export const MAPBOX_LIGHT =
-  "mapbox://styles/abhishekbhatia02/cm7ektl0a006601r3ednqdyxu";
-export const MAPBOX_DARK =
-  "mapbox://styles/abhishekbhatia02/cm7el93sj00i901s7gawghy7j";
+// Event name constants to avoid typos
+const EVENT_TRACKING_MODE_CHANGED = "trackingModeChanged";
+const EVENT_MAP_STYLE_CHANGED = "mapStyleChanged";
 
 interface MapControlsProps {
   map: mapboxgl.Map | null;
@@ -44,19 +50,20 @@ const MapControls = ({
       img: "/images/map/road.svg",
     },
     {
-      id: "satellite-streets",
-      type: "mapbox://styles/mapbox/satellite-v9",
+      id: "satellite",
+      type: MAPBOX_SATELLITE,
       label: "Satellite",
       img: "/images/map/satellite.svg",
     },
     {
-      id: "theme-toggle",
-      type: "mapbox://styles/mapbox/satellite-streets-v11",
+      id: "hybrid",
+      type: MAPBOX_HYBRID,
       label: "Hybrid",
       img: "/images/map/hybrid.svg",
     },
   ];
 
+  // Helper function to wait for map to be ready
   const whenMapReady = (operation: () => void) => {
     if (!map) return;
 
@@ -69,6 +76,14 @@ const MapControls = ({
     } catch (error) {
       console.error("Error in whenMapReady:", error);
     }
+  };
+
+  // Helper function to dispatch tracking mode change events
+  const dispatchTrackingModeChange = (mode: string) => {
+    const event = new CustomEvent(EVENT_TRACKING_MODE_CHANGED, {
+      detail: { mode }
+    });
+    window.dispatchEvent(event);
   };
 
   const handleLayerToggle = () => {
@@ -85,6 +100,7 @@ const MapControls = ({
     setMapStyle(styleUrl);
     setIsDropdownOpen(false);
 
+    // Store marker positions before style change
     const existingMarkers = [...markersRef.current];
     const markerPositions = existingMarkers.map((marker) => marker.getLngLat());
 
@@ -92,20 +108,18 @@ const MapControls = ({
       try {
         map.setStyle(styleUrl);
         map.once("style.load", () => {
-          // First restore markers if they existed
+          // Restore markers if they existed
           if (markerPositions.length > 0) {
             markerPositions.forEach((pos) => {
-              updateDeviceMarker(pos.lng, pos.lat);
+              if (map) createPhoneLocationMarker(map, pos.lng, pos.lat);
             });
           }
 
-          // Then emit event to restore route
-          setTimeout(() => {
-            const event = new CustomEvent("mapStyleChanged", {
-              detail: { mapStyle: styleUrl },
-            });
-            window.dispatchEvent(event);
-          }, 50);
+          // Emit style change event
+          const event = new CustomEvent(EVENT_MAP_STYLE_CHANGED, {
+            detail: { mapStyle: styleUrl }
+          });
+          window.dispatchEvent(event);
         });
       } catch (error) {
         console.error("Failed to change map style:", error);
@@ -114,36 +128,13 @@ const MapControls = ({
     });
   };
 
-  const updateDeviceMarker = (lng: number, lat: number) => {
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
-
-    if (!map) return;
-
-    const el = document.createElement("div");
-    el.className = "device-marker";
-    Object.assign(el.style, {
-      width: "16px",
-      height: "16px",
-      borderRadius: "50%",
-      backgroundColor: "#4285F4",
-      border: "2px solid white",
-      boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
-    });
-
-    const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-      .setLngLat([lng, lat])
-      .addTo(map);
-
-    markersRef.current.push(marker);
-  };
-
   const handleDeviceLocationClick = () => {
     if (!deviceLocation) {
       toast.error("Device location unavailable");
       return;
     }
 
+    // If mobile tracking is active, disable it first
     if (locationMode === "mobile") {
       if (watchIdRef.current) {
         navigator.geolocation.clearWatch(watchIdRef.current);
@@ -153,31 +144,39 @@ const MapControls = ({
       markersRef.current = [];
     }
 
+    // Toggle between device tracking and no tracking
     const newMode = locationMode === "device" ? "none" : "device";
     setLocationMode(newMode);
 
     if (newMode === "device" && map) {
       whenMapReady(() => {
         try {
-          // Add the marker to the map
-          updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
-
           // Fly to the device location
           map.flyTo({
             center: [deviceLocation.lng, deviceLocation.lat],
             zoom: 16,
-            essential: true,
             duration: 500,
           });
+
+          // Dispatch tracking mode change event
+          dispatchTrackingModeChange("device");
         } catch (error) {
           console.error("Failed to fly to device location:", error);
           toast.error("Failed to navigate to device location");
         }
       });
+    } else if (newMode === "none") {
+      // Remove all mobile markers when deactivating tracking
+      markersRef.current.forEach((marker) => marker.remove());
+      markersRef.current = [];
+
+      // Dispatch event for mode change
+      dispatchTrackingModeChange("none");
     }
   };
 
   const handleUserLocationClick = () => {
+    // Toggle between mobile tracking and no tracking
     const newMode = locationMode === "mobile" ? "none" : "mobile";
     setLocationMode(newMode);
 
@@ -188,6 +187,9 @@ const MapControls = ({
       }
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
+
+      // Dispatch event for mode change
+      dispatchTrackingModeChange("none");
       return;
     }
 
@@ -203,23 +205,30 @@ const MapControls = ({
       return;
     }
 
+    // Clear previous watch if exists
     if (watchIdRef.current) {
       navigator.geolocation.clearWatch(watchIdRef.current);
     }
 
+    // Clear existing markers
     markersRef.current.forEach((marker) => marker.remove());
     markersRef.current = [];
 
+    // Start watching user's position
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        const bounds = new mapboxgl.LngLatBounds();
+        
+        // Create a marker for the user's location
+        const marker = createPhoneLocationMarker(map, longitude, latitude);
+        if (marker) markersRef.current.push(marker);
 
+        // Create bounds that include both device and user locations
+        const bounds = new mapboxgl.LngLatBounds();
         if (deviceLocation?.lng && deviceLocation?.lat) {
           bounds.extend([deviceLocation.lng, deviceLocation.lat]);
         }
         bounds.extend([longitude, latitude]);
-        updateDeviceMarker(longitude, latitude);
 
         try {
           map?.fitBounds(bounds, {
@@ -227,6 +236,9 @@ const MapControls = ({
             maxZoom: 12,
             duration: 500,
           });
+
+          // Dispatch event for mobile tracking mode
+          dispatchTrackingModeChange("mobile");
         } catch (error) {
           console.error("Failed to adjust map view:", error);
         }
@@ -235,19 +247,15 @@ const MapControls = ({
         toast.error(`Location error: ${error.message}`);
         watchIdRef.current = null;
         setLocationMode("none");
+
+        // Dispatch event for mode change
+        dispatchTrackingModeChange("none");
       },
       { enableHighAccuracy: true }
     );
   };
 
-  useEffect(() => {
-    if (!map) return;
-
-    if (locationMode === "device" && deviceLocation) {
-      updateDeviceMarker(deviceLocation.lng, deviceLocation.lat);
-    }
-  }, [map, locationMode, deviceLocation]);
-
+  // Update theme-based map style
   useEffect(() => {
     if (!map) return;
 
@@ -258,10 +266,8 @@ const MapControls = ({
         try {
           map.setStyle(themeStyleUrl);
           map.once("style.load", () => {
-            setTimeout(() => {
-              const event = new CustomEvent("mapStyleChanged");
-              window.dispatchEvent(event);
-            }, 50);
+            const event = new CustomEvent(EVENT_MAP_STYLE_CHANGED);
+            window.dispatchEvent(event);
           });
         } catch (error) {
           console.error("Failed to update map style with theme:", error);
@@ -270,6 +276,7 @@ const MapControls = ({
     }
   }, [currentTheme, map, mapStyle]);
 
+  // Handle clicks outside dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (

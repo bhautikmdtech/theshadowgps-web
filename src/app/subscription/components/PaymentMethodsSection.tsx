@@ -108,7 +108,7 @@ export default function PaymentMethodsSection({
 
       await onRefresh();
       setIsProcessing(false);
-      toast.success("Default payment method updated successfully");
+      toast.success("Payment method deleted successfully!");
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message ||

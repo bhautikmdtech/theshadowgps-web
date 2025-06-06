@@ -11,16 +11,21 @@ export const MAPBOX_LIGHT =
 export const MAPBOX_DARK =
   "mapbox://styles/abhishekbhatia02/cm7el93sj00i901s7gawghy7j";
 
+export const MAPBOX_SATELLITE = "mapbox://styles/mapbox/satellite-v9";
+export const MAPBOX_HYBRID = "mapbox://styles/mapbox/satellite-streets-v11";
+
 interface MapComponentProps {
   initialPosition: { lng: number; lat: number };
   onMapLoad?: (map: mapboxgl.Map) => void;
   mapRef?: React.RefObject<mapboxgl.Map | null>;
+  zoom?: number;
 }
 
 export default function MapComponent({
   initialPosition,
   onMapLoad,
   mapRef,
+  zoom = 14,
 }: MapComponentProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const internalMapRef = useRef<mapboxgl.Map | null>(null);
@@ -38,7 +43,7 @@ export default function MapComponent({
       container: mapContainerRef.current,
       style: currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT,
       center: [initialPosition.lng, initialPosition.lat],
-      zoom: 14,
+      zoom: zoom,
       minZoom: 1,
       attributionControl: false,
       renderWorldCopies: true,
@@ -70,6 +75,10 @@ export default function MapComponent({
         currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
 
       effectiveMapRef.current.setStyle(themeStyleUrl);
+
+      // Emit style change event
+      const event = new CustomEvent("mapStyleChanged");
+      window.dispatchEvent(event);
     }
   }, [currentTheme, effectiveMapRef, styleLoaded]);
 
