@@ -8,13 +8,14 @@ import {
 import { toast } from "react-toastify";
 import { PageLoader } from "@/components";
 import { useSearchParams } from "next/navigation";
-import axiosClient from "@/lib/axiosClient";
+import { attachPaymentMethod } from "@/services/StripeService";
 
 interface AddPaymentModalProps {
   show: boolean;
   onClose: () => void;
   onRefresh: () => Promise<void>;
   customerId: string;
+  secret_key: string; // Use lowercase `string` for TypeScript primitive
 }
 
 export default function AddPaymentModal({
@@ -22,9 +23,11 @@ export default function AddPaymentModal({
   onClose,
   onRefresh,
   customerId,
+  secret_key,
 }: AddPaymentModalProps) {
   const stripe = useStripe();
   const elements = useElements();
+
   const [processing, setProcessing] = useState(false);
   const [paymentElementReady, setPaymentElementReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,53 +44,54 @@ export default function AddPaymentModal({
     setProcessing(true);
     setError(null);
 
+    if (!stripe || !elements || !customerId) {
+      setError("Stripe is not fully initialized or customer ID is missing.");
+      setProcessing(false);
+      return;
+    }
+
     try {
-      if (!stripe || !elements || !token || !customerId) {
-        throw new Error("Missing required payment details.");
+      // Submit PaymentElement fields (validate input)
+      const { error: submitError } = await elements.submit();
+      if (submitError) {
+        throw new Error(submitError.message);
       }
 
-      const { error: submitError } = await elements.submit();
-      if (submitError) throw new Error(submitError.message);
-
+      // Create the payment method
       const { error: stripeError, paymentMethod } =
         await stripe.createPaymentMethod({ elements });
 
       if (stripeError) throw new Error(stripeError.message);
-      if (!paymentMethod) throw new Error("No payment method returned.");
+      if (!paymentMethod?.id)
+        throw new Error("Payment method creation failed.");
 
-      try {
-        await axiosClient.post(
-          `/api/app/subscription/payment-methods/${customerId}`,
-          { paymentMethodId: paymentMethod.id },
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: "application/json",
-            },
-          }
+      // Attach the payment method to customer using the StripeService
+      const result: any = await attachPaymentMethod(
+        paymentMethod.id,
+        customerId,
+        secret_key
+      );
+
+      if (result.error) {
+        const errorCode = result.error?.code;
+
+        if (errorCode === "card_declined") {
+          throw new Error("Your card was declined.");
+        }
+
+        throw new Error(
+          result.error.message || "Failed to attach payment method."
         );
-
-        await onRefresh();
-        toast.success("Payment method added successfully!");
-        onClose();
-      } catch (apiError: any) {
-        // Handle backend API errors with more detail
-        const errorMessage =
-          apiError.response?.data?.message ||
-          apiError.response?.data?.error ||
-          apiError.message ||
-          "Failed to add payment method";
-
-        // Show detailed error in the form
-        setError(errorMessage);
-
-        // Show toast with specific error message
-        toast.error(`Payment method error: ${errorMessage}`);
       }
-    } catch (err: Error | unknown) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
+
+      await onRefresh();
+      toast.success("Payment method added successfully!");
+      onClose();
+    } catch (err: any) {
+      const msg =
+        err?.message || "An unexpected error occurred. Please try again.";
       setError(msg);
-      toast.error(`Payment error: ${msg}`);
+      toast.error(`${msg}`);
     } finally {
       setProcessing(false);
     }
@@ -104,6 +108,7 @@ export default function AddPaymentModal({
       <Modal.Header closeButton>
         <Modal.Title>Add Payment Method</Modal.Title>
       </Modal.Header>
+
       <Modal.Body>
         <form onSubmit={handleSubmit} id="payment-form">
           {!paymentElementReady && (
@@ -125,29 +130,32 @@ export default function AddPaymentModal({
           {error && <div className="alert alert-danger mt-3 mb-0">{error}</div>}
         </form>
       </Modal.Body>
+
       <Modal.Footer>
         <Button
-          style={{
-            backgroundColor: "#E1ECFF",
-            border: 0,
-            borderRadius: "10px",
-            color: "#337CFD",
-          }}
+          variant="light"
           onClick={onClose}
           disabled={processing}
+          style={{
+            backgroundColor: "#E1ECFF",
+            borderRadius: "10px",
+            color: "#337CFD",
+            border: 0,
+          }}
         >
           Cancel
         </Button>
+
         <Button
-          style={{
-            backgroundColor: "#337CFD",
-            border: 0,
-            borderRadius: "10px",
-            color: "#FFFFFF",
-          }}
           type="submit"
           form="payment-form"
           disabled={!stripe || !paymentElementReady || processing}
+          style={{
+            backgroundColor: "#337CFD",
+            borderRadius: "10px",
+            color: "#fff",
+            border: 0,
+          }}
         >
           {processing ? (
             <>

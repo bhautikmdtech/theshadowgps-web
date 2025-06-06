@@ -405,6 +405,7 @@ export default function SubscriptionViewer({
             onClose={() => setShowAddPaymentModal(false)}
             onRefresh={refreshSubscriptionData}
             customerId={subscriptionData.customer.id}
+            secret_key={subscriptionData.secret_key}
           />
         </Elements>
       )}

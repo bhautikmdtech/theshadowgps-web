@@ -74,6 +74,7 @@ export interface SubscriptionData {
   paymentMethods: PaymentMethod[];
   plans: Plan[];
   stripePublishableKey: string;
+  secret_key: string;
   clientSecret: string;
   endDate: Date;
   invoices?: {

@@ -5,11 +5,11 @@ import mapboxgl from "mapbox-gl";
 import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import { 
-  MAPBOX_LIGHT, 
-  MAPBOX_DARK, 
-  MAPBOX_SATELLITE, 
-  MAPBOX_HYBRID 
+import {
+  MAPBOX_LIGHT,
+  MAPBOX_DARK,
+  MAPBOX_SATELLITE,
+  MAPBOX_HYBRID,
 } from "@/services/MapService";
 import { createPhoneLocationMarker } from "./DeviceMarker";
 
@@ -41,7 +41,6 @@ const MapControls = ({
 
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const mapStyles = [
     {
       id: "custom-default",
@@ -81,7 +80,7 @@ const MapControls = ({
   // Helper function to dispatch tracking mode change events
   const dispatchTrackingModeChange = (mode: string) => {
     const event = new CustomEvent(EVENT_TRACKING_MODE_CHANGED, {
-      detail: { mode }
+      detail: { mode },
     });
     window.dispatchEvent(event);
   };
@@ -117,7 +116,7 @@ const MapControls = ({
 
           // Emit style change event
           const event = new CustomEvent(EVENT_MAP_STYLE_CHANGED, {
-            detail: { mapStyle: styleUrl }
+            detail: { mapStyle: styleUrl },
           });
           window.dispatchEvent(event);
         });
@@ -151,13 +150,6 @@ const MapControls = ({
     if (newMode === "device" && map) {
       whenMapReady(() => {
         try {
-          // Fly to the device location
-          map.flyTo({
-            center: [deviceLocation.lng, deviceLocation.lat],
-            zoom: 16,
-            duration: 500,
-          });
-
           // Dispatch tracking mode change event
           dispatchTrackingModeChange("device");
         } catch (error) {
@@ -218,7 +210,7 @@ const MapControls = ({
     watchIdRef.current = navigator.geolocation.watchPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        
+
         // Create a marker for the user's location
         const marker = createPhoneLocationMarker(map, longitude, latitude);
         if (marker) markersRef.current.push(marker);
@@ -258,23 +250,9 @@ const MapControls = ({
   // Update theme-based map style
   useEffect(() => {
     if (!map) return;
-
     const themeStyleUrl = currentTheme === "dark" ? MAPBOX_DARK : MAPBOX_LIGHT;
-
-    if (mapStyle === "custom-default") {
-      whenMapReady(() => {
-        try {
-          map.setStyle(themeStyleUrl);
-          map.once("style.load", () => {
-            const event = new CustomEvent(EVENT_MAP_STYLE_CHANGED);
-            window.dispatchEvent(event);
-          });
-        } catch (error) {
-          console.error("Failed to update map style with theme:", error);
-        }
-      });
-    }
-  }, [currentTheme, map, mapStyle]);
+    setMapStyle(themeStyleUrl);
+  }, [currentTheme]); // eslint-disable-line
 
   // Handle clicks outside dropdown
   useEffect(() => {

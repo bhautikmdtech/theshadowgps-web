@@ -67,18 +67,20 @@ export default function LiveTracker({
 
   // testing point adding using page up button
   // useEffect(() => {
-  //   let lat = 18.479866;
+  //   let lat = initialData.latestPoint?.lat || 0;
+  //   let lng = initialData.latestPoint?.lng || 0;
   //   window.addEventListener("keydown", function (event) {
   //     if (event.key === "PageUp") {
   //       handlePositionUpdate({
-  //         address: "Middlecroft Rd 164, Elkton, MD 21921, USA",
-  //         lat: lat,
-  //         lng: 73.827647,
+  //         // address: "Middlecroft Rd 164, Elkton, MD 21921, USA",
+  //         lat,
+  //         lng,
   //         speed: 0,
   //         tm: 1749177370,
   //       });
   //     }
-  //     lat = lat + 0.001;
+  //     lat = lat + (Math.random() - 0.5) / 3000;
+  //     lng = lng + Math.random() / 1000;
   //   });
   // }, []);
 
@@ -206,7 +208,10 @@ export default function LiveTracker({
       ) {
         mapRef.current.easeTo({
           center: [newPosition.lng, newPosition.lat],
-          duration: 500,
+          curve: 1,
+          zoom: 16,
+          duration: 800,
+          essential: true,
         });
       }
 
@@ -307,10 +312,13 @@ export default function LiveTracker({
 
         // Center the map on the device
         if (mapRef.current) {
-          mapRef.current.easeTo({
+          mapRef.current.flyTo({
             center: [latest.lng, latest.lat],
+            curve: 0.5,
+            speed: 0.5,
             zoom: 16,
-            duration: 500,
+            duration: 1000,
+            essential: true,
           });
         }
       }
@@ -340,11 +348,13 @@ export default function LiveTracker({
       const latest = positions[positions.length - 1];
       mapRef.current.easeTo({
         center: [latest.lng, latest.lat],
+        curve: 1,
         zoom: 16,
-        duration: 500,
+        duration: 800,
+        essential: true,
       });
     }
-  }, [locationMode, positions, isMapStable]);
+  }, [positions, isMapStable]); // eslint-disable-line
 
   // Function to recreate markers after style changes
   const recreateMarkers = useCallback(() => {
