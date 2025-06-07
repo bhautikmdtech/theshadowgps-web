@@ -14,6 +14,7 @@ import BillingInformationSection from "./BillingInformationSection";
 import InvoiceHistorySection from "./InvoiceHistorySection";
 import AddPaymentModal from "./AddPaymentModal";
 import { SubscriptionService } from "./subscriptionService";
+import { Spinner } from "react-bootstrap";
 
 declare global {
   interface Window {
@@ -314,27 +315,27 @@ export default function SubscriptionViewer({
           zIndex: 5,
         }}
       >
-
-
         <div className="d-flex flex-column align-items-center">
           {refreshing ? (
             <>
-              <FadeLoader
+              {/* <FadeLoader
                 color="#000000"
                 height={12}
                 width={3}
                 radius={2}
                 margin={2}
-              />
+              /> */}
+              <Spinner animation="border" variant="primary" />
             </>
           ) : (
-            <FadeLoader
-              color="#000000"
-              height={12}
-              width={3}
-              radius={2}
-              margin={2}
-            />
+            // <FadeLoader
+            //   color="#000000"
+            //   height={12}
+            //   width={3}
+            //   radius={2}
+            //   margin={2}
+            // />
+            <Spinner animation="border" variant="primary" />
           )}
         </div>
       </div>

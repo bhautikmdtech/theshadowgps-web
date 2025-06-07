@@ -191,7 +191,7 @@ export default function PaymentMethodsSection({
                             )}
                             {method.expiredSoon && (
                               <span
-                                className="ml-2 text-xs px-2.5 py-0.5 rounded-full bg-[#fee6da] text-[#3d4b65]"
+                                className="ml-2 text-xs px-2.5 py-0.5 rounded-full bg-[#fee6da] text-[#3d4b65] inline-block"
                                 style={{ fontSize: "12px" }}
                               >
                                 Expired Soon
